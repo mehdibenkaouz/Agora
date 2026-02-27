@@ -354,6 +354,7 @@
 
       <div class="account" id="accountArea">
         <button id="loginBtn" class="primary-btn" style="min-height:40px;padding:8px 14px;">Login</button>
+        <button id="googleBtn" class="primary-btn" style="min-height:40px;padding:8px 14px;">Google</button>
       </div>
     </div>
   </header>
@@ -423,6 +424,7 @@
   </main>
 
 <script>
+  const googleBtn = document.getElementById("googleBtn");
   const API_BASE = "https://agora-api.convergegame.workers.dev";
   const TOKEN_KEY = "agora_token";
 
@@ -513,6 +515,21 @@
     await refreshMe();
     await loadFeed();
   });
+
+
+  googleBtn.addEventListener("click", () => {
+    const returnTo = window.location.origin + window.location.pathname;
+    window.location.href = API_BASE + "/api/auth/google/start?returnTo=" + encodeURIComponent(returnTo);
+  });
+
+  // se torni con #token=...
+  (function pickTokenFromHash(){
+    const m = (window.location.hash || "").match(/token=([^&]+)/);
+    if (!m) return;
+    const t = decodeURIComponent(m[1]);
+    localStorage.setItem(TOKEN_KEY, t);
+    history.replaceState(null, "", window.location.pathname); // pulisce l'hash
+  })();
 
   publishBtn.addEventListener("click", async () => {
     const token = getToken();
