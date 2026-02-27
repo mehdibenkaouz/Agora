@@ -352,7 +352,9 @@
         <a href="manifesto.html">Manifesto</a>
       </nav>
 
-      <div class="account">Account</div>
+      <div class="account" id="accountArea">
+        <button id="loginBtn" class="primary-btn" style="min-height:40px;padding:8px 14px;">Login</button>
+      </div>
     </div>
   </header>
 
@@ -391,24 +393,20 @@
           <div class="media-zone">
             <p>Here we place possible images</p>
           </div>
-
-          <div class="text-zone">
-            <p>Here we insert the text</p>
+          <div class="text-zone" style="padding:0;">
+            <textarea id="postContent" placeholder="Write your post..."
+              style="width:100%;height:140px;border:0;outline:0;background:transparent;padding:22px 24px;font:inherit;font-size:1.25rem;resize:none;"></textarea>
           </div>
-
           <div class="composer-actions">
             <span class="soft-note">Static layout for now. Real posts will appear after login and backend connection.</span>
-            <button class="primary-btn">Publish</button>
-          </div>
+            <button class="primary-btn" id="publishBtn">Publish</button>          </div>
+        </section>
+        <section class="empty-feed">
+          <h2>Feed</h2>
+          <p id="feedHint">Login, then publish your first post.</p>
+          <div id="feed" style="margin-top:14px; display:grid; gap:12px;"></div>
         </section>
 
-        <section class="empty-feed">
-          <h2>No posts yet</h2>
-          <p>
-            This main page is now correctly set as a social layout.  
-            Once you access with two accounts and we connect the backend, the feed will appear here naturally.
-          </p>
-        </section>
       </div>
 
       <aside class="right-column">
@@ -423,5 +421,125 @@
       </aside>
     </section>
   </main>
+
+<script>
+  const API_BASE = "https://agora-api.YOUR_SUBDOMAIN.workers.dev"; // <-- cambia con il tuo URL reale worker
+  const TOKEN_KEY = "agora_token";
+
+  const loginBtn = document.getElementById("loginBtn");
+  const publishBtn = document.getElementById("publishBtn");
+  const postContent = document.getElementById("postContent");
+  const feed = document.getElementById("feed");
+  const feedHint = document.getElementById("feedHint");
+
+  function getToken() {
+    return localStorage.getItem(TOKEN_KEY) || "";
+  }
+  function setToken(t) {
+    localStorage.setItem(TOKEN_KEY, t);
+  }
+
+  async function api(path, opts = {}) {
+    const headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+    const token = getToken();
+    if (token) headers["Authorization"] = "Bearer " + token;
+    const res = await fetch(API_BASE + path, { ...opts, headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data && data.error) ? data.error : ("http_" + res.status));
+    return data;
+  }
+
+  async function refreshMe() {
+    const token = getToken();
+    if (!token) {
+      feedHint.textContent = "Login, then publish your first post.";
+      return;
+    }
+    try {
+      const me = await api("/api/me", { method: "GET" });
+      feedHint.textContent = "Logged in as: " + me.user.email;
+      loginBtn.textContent = "Logout";
+    } catch {
+      localStorage.removeItem(TOKEN_KEY);
+      loginBtn.textContent = "Login";
+      feedHint.textContent = "Login, then publish your first post.";
+    }
+  }
+
+  function renderPosts(posts) {
+    feed.innerHTML = "";
+    if (!posts.length) {
+      feed.innerHTML = "<div style='color:#666;'>No posts yet.</div>";
+      return;
+    }
+    for (const p of posts) {
+      const card = document.createElement("div");
+      card.style.background = "rgba(255,255,255,0.65)";
+      card.style.border = "1px solid rgba(0,0,0,0.08)";
+      card.style.borderRadius = "18px";
+      card.style.padding = "14px 16px";
+      card.innerHTML = `
+        <div style="display:flex;justify-content:space-between;gap:10px;color:#666;font-size:0.9rem;">
+          <span>${escapeHtml(p.author_email || "anon")}</span>
+          <span>${new Date(p.created_at).toLocaleString()}</span>
+        </div>
+        <div style="margin-top:8px;font-size:1.05rem;line-height:1.5;color:#111;">
+          ${escapeHtml(p.content)}
+        </div>
+      `;
+      feed.appendChild(card);
+    }
+  }
+
+  async function loadFeed() {
+    const data = await api("/api/posts", { method: "GET" });
+    renderPosts(data.posts || []);
+  }
+
+  loginBtn.addEventListener("click", async () => {
+    if (getToken()) {
+      // logout
+      localStorage.removeItem(TOKEN_KEY);
+      loginBtn.textContent = "Login";
+      await refreshMe();
+      await loadFeed();
+      return;
+    }
+    const email = prompt("Email for login:");
+    if (!email) return;
+    const data = await api("/api/login", { method: "POST", body: JSON.stringify({ email }) });
+    setToken(data.token);
+    loginBtn.textContent = "Logout";
+    await refreshMe();
+    await loadFeed();
+  });
+
+  publishBtn.addEventListener("click", async () => {
+    const token = getToken();
+    if (!token) {
+      alert("Please login first.");
+      return;
+    }
+    const content = (postContent.value || "").trim();
+    if (!content) {
+      alert("Write something first.");
+      return;
+    }
+    await api("/api/posts", { method: "POST", body: JSON.stringify({ content }) });
+    postContent.value = "";
+    await loadFeed();
+  });
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c]));
+  }
+
+  // init
+  (async () => {
+    await refreshMe();
+    await loadFeed();
+  })();
+</script>
+
 </body>
 </html>
