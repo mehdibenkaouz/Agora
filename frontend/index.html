@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AGORA — Home</title>
+
   <style>
     :root {
       --bg: #e8e5de;
@@ -22,9 +23,7 @@
       --brand: #571929;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     html, body {
       margin: 0;
@@ -34,15 +33,11 @@
       font-family: Inter, Arial, Helvetica, sans-serif;
     }
 
-    body {
-      min-height: 100vh;
-    }
+    body { min-height: 100vh; }
 
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
+    a { color: inherit; text-decoration: none; }
 
+    /* Topbar */
     .topbar {
       height: var(--topbar-h);
       background: #dddcd6;
@@ -78,15 +73,9 @@
       font-size: 0.95rem;
     }
 
-    .top-links a:hover {
-      color: var(--brand);
-    }
+    .top-links a:hover { color: var(--brand); }
 
-    .account {
-      font-size: 1rem;
-      font-weight: 500;
-    }
-
+    /* Page layout */
     .page {
       width: min(calc(100% - 24px), var(--maxw));
       margin: 0 auto;
@@ -202,16 +191,21 @@
       border-radius: 26px;
       background: var(--panel-2);
       border: 1px solid rgba(0,0,0,0.06);
-      padding: 22px 24px;
+      padding: 0;
       display: flex;
       align-items: flex-start;
     }
 
-    .text-zone p {
-      margin: 0;
-      font-size: clamp(1.5rem, 4vw, 3.2rem);
-      line-height: 1.05;
-      font-weight: 300;
+    .post-textarea {
+      width: 100%;
+      height: 140px;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      padding: 22px 24px;
+      font: inherit;
+      font-size: 1.25rem;
+      resize: none;
     }
 
     .composer-actions {
@@ -237,6 +231,7 @@
       font-weight: 600;
       cursor: pointer;
       box-shadow: 0 8px 18px rgba(87, 25, 41, 0.24);
+      min-height: 44px;
     }
 
     .empty-feed {
@@ -287,26 +282,190 @@
       font-weight: 700;
     }
 
+    /* --- Account button + dropdown --- */
+    .account { font-size: 1rem; font-weight: 500; }
+    .account-wrap { position: relative; display: inline-flex; align-items: center; }
+
+    .account-btn{
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(248,247,243,0.85);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.20);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
+    .account-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 28px rgba(0,0,0,0.24); }
+    .account-btn svg{
+      width: 22px;
+      height: 22px;
+      stroke: #111;
+      stroke-width: 2.2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .account-menu{
+      position: absolute;
+      right: 0;
+      top: calc(100% + 10px);
+      width: 270px;
+      background: rgba(252,251,248,0.98);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 20px;
+      box-shadow: 0 18px 38px rgba(0,0,0,0.22);
+      overflow: hidden;
+      display: none;
+      z-index: 30;
+    }
+    .account-menu.open{ display: block; }
+
+    .account-menu-head{
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0));
+    }
+    .account-menu-title{ font-weight: 700; letter-spacing: .01em; }
+    .account-menu-sub{ margin-top: 4px; font-size: .9rem; color: var(--muted); overflow:hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .account-menu-actions{ padding: 10px; display: grid; gap: 8px; }
+    .menu-item{
+      width: 100%;
+      text-align: left;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: rgba(248,247,243,0.86);
+      border-radius: 14px;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: 650;
+      transition: transform .12s ease, background .12s ease;
+    }
+    .menu-item:hover{ transform: translateY(-1px); background: rgba(248,247,243,1); }
+    .menu-item.danger{ border-color: rgba(87,25,41,0.24); color: var(--brand); }
+
+    /* --- Modal Auth --- */
+    .modal-backdrop{
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(0,0,0,0.42);
+      backdrop-filter: blur(6px);
+      z-index: 1000;
+    }
+    .modal-backdrop.open{ display: flex; }
+
+    .modal{
+      width: min(540px, 100%);
+      background: rgba(252,251,248,0.98);
+      border: 1px solid rgba(0,0,0,0.10);
+      border-radius: 28px;
+      box-shadow: 0 26px 60px rgba(0,0,0,0.35);
+      overflow: hidden;
+    }
+    .modal-head{
+      padding: 18px 18px 14px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+    }
+    .modal-title{ font-size: 1.25rem; font-weight: 800; }
+    .modal-sub{ margin-top: 4px; color: var(--muted); font-size: .95rem; }
+
+    .icon-x{
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(248,247,243,0.85);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .icon-x svg{
+      width: 18px; height: 18px;
+      stroke: #111; stroke-width: 2.4; fill: none;
+      stroke-linecap: round; stroke-linejoin: round;
+    }
+
+    .modal-body{ padding: 18px; display: grid; gap: 14px; }
+
+    .oauth-btn{
+      width: 100%;
+      min-height: 46px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.12);
+      background: rgba(248,247,243,0.92);
+      cursor: pointer;
+      font-weight: 750;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+    .oauth-dot{
+      width: 10px; height: 10px; border-radius: 999px;
+      background: var(--brand);
+      box-shadow: 0 0 0 4px rgba(87,25,41,0.14);
+    }
+
+    .divider{
+      display: grid;
+      place-items: center;
+      position: relative;
+      margin: 6px 0 2px;
+    }
+    .divider::before{
+      content: "";
+      position: absolute;
+      left: 0; right: 0;
+      height: 1px;
+      background: rgba(0,0,0,0.10);
+    }
+    .divider span{
+      position: relative;
+      padding: 0 10px;
+      background: rgba(252,251,248,0.98);
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .form{ display: grid; gap: 12px; }
+    .field{ display: grid; gap: 6px; }
+    .field span{ font-weight: 750; font-size: .92rem; }
+    .field input{
+      width: 100%;
+      min-height: 44px;
+      border-radius: 16px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(248,247,243,0.92);
+      padding: 10px 12px;
+      outline: none;
+      font: inherit;
+    }
+    .field input:focus{
+      border-color: rgba(87,25,41,0.35);
+      box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
+    }
+    .form-note{ color: var(--muted); font-size: .88rem; line-height: 1.35; }
+
+    /* Responsive */
     @media (max-width: 1080px) {
-      .layout {
-        grid-template-columns: 76px minmax(0, 1fr);
-      }
-
-      .right-column {
-        grid-column: 2;
-      }
-
-      .comments-card {
-        min-height: 280px;
-      }
+      .layout { grid-template-columns: 76px minmax(0, 1fr); }
+      .right-column { grid-column: 2; }
+      .comments-card { min-height: 280px; }
     }
 
     @media (max-width: 760px) {
-      .topbar-inner {
-        flex-wrap: wrap;
-        justify-content: space-between;
-      }
-
+      .topbar-inner { flex-wrap: wrap; justify-content: space-between; }
       .top-links {
         width: 100%;
         order: 3;
@@ -315,204 +474,15 @@
         font-size: 0.9rem;
       }
 
-      .layout {
-        grid-template-columns: 1fr;
-      }
-
-      .left-rail {
-        flex-direction: row;
-        padding-top: 0;
-        gap: 14px;
-      }
-
-      .action-btn {
-        width: 60px;
-        height: 60px;
-      }
-
-      .composer-card,
-      .comments-card {
-        min-height: auto;
-      }
-
-      .media-zone p {
-        max-width: 100%;
-      }
-      /* --- Account button + menu --- */
-      .account-wrap { position: relative; display: inline-flex; align-items: center; }
-
-      .account-btn{
-        width: 44px;
-        height: 44px;
-        border-radius: 999px;
-        border: 1px solid rgba(0,0,0,0.10);
-        background: rgba(248,247,243,0.8);
-        box-shadow: 0 8px 18px rgba(0,0,0,0.14);
-        display: grid;
-        place-items: center;
-        cursor: pointer;
-        transition: transform .15s ease, box-shadow .15s ease;
-      }
-      .account-btn:hover { transform: translateY(-1px); box-shadow: 0 12px 22px rgba(0,0,0,0.18); }
-      .account-btn svg{
-        width: 22px;
-        height: 22px;
-        stroke: #111;
-        stroke-width: 2.2;
-        fill: none;
-        stroke-linecap: round;
-        stroke-linejoin: round;
-      }
-
-      .account-menu{
-        position: absolute;
-        right: 0;
-        top: calc(100% + 10px);
-        width: 260px;
-        background: rgba(252,251,248,0.98);
-        border: 1px solid rgba(0,0,0,0.08);
-        border-radius: 20px;
-        box-shadow: 0 18px 38px rgba(0,0,0,0.22);
-        overflow: hidden;
-        display: none;
-      }
-      .account-menu.open{ display: block; }
-
-      .account-menu-head{
-        padding: 14px 14px 10px;
-        border-bottom: 1px solid rgba(0,0,0,0.06);
-        background: linear-gradient(180deg, rgba(255,255,255,0.45), rgba(255,255,255,0));
-      }
-      .account-menu-title{ font-weight: 700; letter-spacing: .01em; }
-      .account-menu-sub{ margin-top: 4px; font-size: .9rem; color: var(--muted); }
-
-      .account-menu-actions{ padding: 10px; display: grid; gap: 8px; }
-      .menu-item{
-        width: 100%;
-        text-align: left;
-        border: 1px solid rgba(0,0,0,0.08);
-        background: rgba(248,247,243,0.8);
-        border-radius: 14px;
-        padding: 10px 12px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: transform .12s ease, background .12s ease;
-      }
-      .menu-item:hover{ transform: translateY(-1px); background: rgba(248,247,243,1); }
-      .menu-item.danger{ border-color: rgba(87,25,41,0.22); color: var(--brand); }
-
-      /* --- Modal --- */
-      .modal-backdrop{
-        position: fixed;
-        inset: 0;
-        display: none;
-        align-items: center;
-        justify-content: center;
-        padding: 18px;
-        background: rgba(0,0,0,0.42);
-        backdrop-filter: blur(6px);
-        z-index: 1000;
-      }
-      .modal-backdrop.open{ display: flex; }
-
-      .modal{
-        width: min(520px, 100%);
-        background: rgba(252,251,248,0.98);
-        border: 1px solid rgba(0,0,0,0.10);
-        border-radius: 28px;
-        box-shadow: 0 26px 60px rgba(0,0,0,0.35);
-        overflow: hidden;
-      }
-      .modal-head{
-        padding: 18px 18px 14px;
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 12px;
-        border-bottom: 1px solid rgba(0,0,0,0.06);
-      }
-      .modal-title{ font-size: 1.25rem; font-weight: 800; }
-      .modal-sub{ margin-top: 4px; color: var(--muted); font-size: .95rem; }
-
-      .icon-x{
-        width: 40px;
-        height: 40px;
-        border-radius: 999px;
-        border: 1px solid rgba(0,0,0,0.10);
-        background: rgba(248,247,243,0.8);
-        display: grid;
-        place-items: center;
-        cursor: pointer;
-      }
-      .icon-x svg{
-        width: 18px; height: 18px;
-        stroke: #111; stroke-width: 2.4; fill: none;
-        stroke-linecap: round; stroke-linejoin: round;
-      }
-
-      .modal-body{ padding: 18px; display: grid; gap: 14px; }
-
-      .oauth-btn{
-        width: 100%;
-        min-height: 46px;
-        border-radius: 999px;
-        border: 1px solid rgba(0,0,0,0.12);
-        background: rgba(248,247,243,0.9);
-        cursor: pointer;
-        font-weight: 700;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-      }
-      .oauth-dot{
-        width: 10px; height: 10px; border-radius: 999px;
-        background: var(--brand);
-        box-shadow: 0 0 0 4px rgba(87,25,41,0.14);
-      }
-
-      .divider{
-        display: grid;
-        place-items: center;
-        position: relative;
-        margin: 4px 0;
-      }
-      .divider::before{
-        content: "";
-        position: absolute;
-        left: 0; right: 0;
-        height: 1px;
-        background: rgba(0,0,0,0.10);
-      }
-      .divider span{
-        position: relative;
-        padding: 0 10px;
-        background: rgba(252,251,248,0.98);
-        color: var(--muted);
-        font-size: .9rem;
-      }
-
-      .form{ display: grid; gap: 12px; }
-      .field{ display: grid; gap: 6px; }
-      .field span{ font-weight: 700; font-size: .92rem; }
-      .field input{
-        width: 100%;
-        min-height: 44px;
-        border-radius: 16px;
-        border: 1px solid rgba(0,0,0,0.10);
-        background: rgba(248,247,243,0.9);
-        padding: 10px 12px;
-        outline: none;
-        font: inherit;
-      }
-      .field input:focus{
-        border-color: rgba(87,25,41,0.35);
-        box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
-      }
-      .form-note{ color: var(--muted); font-size: .88rem; line-height: 1.35; }
+      .layout { grid-template-columns: 1fr; }
+      .left-rail { flex-direction: row; padding-top: 0; gap: 14px; }
+      .action-btn { width: 60px; height: 60px; }
+      .composer-card, .comments-card { min-height: auto; }
+      .media-zone p { max-width: 100%; }
     }
   </style>
 </head>
+
 <body>
   <header class="topbar">
     <div class="topbar-inner">
@@ -527,10 +497,9 @@
       <div class="account" id="accountArea">
         <div class="account-wrap">
           <button id="accountBtn" class="account-btn" aria-label="Account" aria-haspopup="menu" aria-expanded="false">
-            <!-- user icon -->
             <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M20 21a8 8 0 0 0-16 0" />
-              <circle cx="12" cy="8" r="4" />
+              <path d="M20 21a8 8 0 0 0-16 0"></path>
+              <circle cx="12" cy="8" r="4"></circle>
             </svg>
           </button>
 
@@ -542,48 +511,6 @@
             <div class="account-menu-actions">
               <button id="menuPrimaryAction" class="menu-item" role="menuitem">Login</button>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Modal Login -->
-      <div id="authModal" class="modal-backdrop" aria-hidden="true">
-        <div class="modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
-          <div class="modal-head">
-            <div>
-              <div class="modal-title" id="authTitle">Sign in</div>
-              <div class="modal-sub">Access your AGORA identity.</div>
-            </div>
-            <button id="authClose" class="icon-x" aria-label="Close">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M6 6l12 12" />
-                <path d="M18 6L6 18" />
-              </svg>
-            </button>
-          </div>
-
-          <div class="modal-body">
-            <button id="googleLoginBtn" class="oauth-btn">
-              <span class="oauth-dot" aria-hidden="true"></span>
-              Continue with Google
-            </button>
-
-            <div class="divider"><span>or</span></div>
-
-            <form id="emailLoginForm" class="form">
-              <label class="field">
-                <span>Email</span>
-                <input id="emailInput" type="email" placeholder="you@email.com" autocomplete="email" required />
-              </label>
-
-              <label class="field">
-                <span>Password</span>
-                <input id="passwordInput" type="password" placeholder="••••••••" autocomplete="current-password" />
-              </label>
-
-              <button class="primary-btn" type="submit" style="width:100%;min-height:44px;">Login</button>
-              <div class="form-note">Email/password is placeholder for now. We’ll wire it properly later.</div>
-            </form>
           </div>
         </div>
       </div>
@@ -625,20 +552,22 @@
           <div class="media-zone">
             <p>Here we place possible images</p>
           </div>
-          <div class="text-zone" style="padding:0;">
-            <textarea id="postContent" placeholder="Write your post..."
-              style="width:100%;height:140px;border:0;outline:0;background:transparent;padding:22px 24px;font:inherit;font-size:1.25rem;resize:none;"></textarea>
+
+          <div class="text-zone">
+            <textarea id="postContent" class="post-textarea" placeholder="Write your post..."></textarea>
           </div>
+
           <div class="composer-actions">
             <span class="soft-note">Static layout for now. Real posts will appear after login and backend connection.</span>
-            <button class="primary-btn" id="publishBtn">Publish</button>          </div>
+            <button class="primary-btn" id="publishBtn">Publish</button>
+          </div>
         </section>
+
         <section class="empty-feed">
           <h2>Feed</h2>
           <p id="feedHint">Login, then publish your first post.</p>
           <div id="feed" style="margin-top:14px; display:grid; gap:12px;"></div>
         </section>
-
       </div>
 
       <aside class="right-column">
@@ -654,213 +583,276 @@
     </section>
   </main>
 
-<script>
-  const API_BASE = "https://agora-api.convergegame.workers.dev";
-  const TOKEN_KEY = "agora_token";
-
-  const publishBtn = document.getElementById("publishBtn");
-  const postContent = document.getElementById("postContent");
-  const feed = document.getElementById("feed");
-  const feedHint = document.getElementById("feedHint");
-
-  // Account UI
-  const accountBtn = document.getElementById("accountBtn");
-  const accountMenu = document.getElementById("accountMenu");
-  const accountMenuSub = document.getElementById("accountMenuSub");
-  const menuPrimaryAction = document.getElementById("menuPrimaryAction");
-
-  // Auth modal
-  const authModal = document.getElementById("authModal");
-  const authClose = document.getElementById("authClose");
-  const googleLoginBtn = document.getElementById("googleLoginBtn");
-  const emailLoginForm = document.getElementById("emailLoginForm");
-  const emailInput = document.getElementById("emailInput");
-  const passwordInput = document.getElementById("passwordInput");
-
-  function getToken() {
-    return localStorage.getItem(TOKEN_KEY) || "";
-  }
-  function setToken(t) {
-    localStorage.setItem(TOKEN_KEY, t);
-  }
-
-  async function api(path, opts = {}) {
-    const headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
-    const token = getToken();
-    if (token) headers["Authorization"] = "Bearer " + token;
-    const res = await fetch(API_BASE + path, { ...opts, headers });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error((data && data.error) ? data.error : ("http_" + res.status));
-    return data;
-  }
-
-  async function refreshMe() {
-    const token = getToken();
-
-    if (!token) {
-      feedHint.textContent = "Login, then publish your first post.";
-      accountMenuSub.textContent = "Not logged in";
-      menuPrimaryAction.textContent = "Login";
-      menuPrimaryAction.classList.remove("danger");
-      return;
-    }
-
-    try {
-      const me = await api("/api/me", { method: "GET" });
-      feedHint.textContent = "Logged in as: " + me.user.email;
-      accountMenuSub.textContent = me.user.email;
-      menuPrimaryAction.textContent = "Logout";
-      menuPrimaryAction.classList.add("danger");
-    } catch {
-      localStorage.removeItem(TOKEN_KEY);
-      accountMenuSub.textContent = "Not logged in";
-      menuPrimaryAction.textContent = "Login";
-      menuPrimaryAction.classList.remove("danger");
-      feedHint.textContent = "Login, then publish your first post.";
-    }
-  }
-
-  function renderPosts(posts) {
-    feed.innerHTML = "";
-    if (!posts.length) {
-      feed.innerHTML = "<div style='color:#666;'>No posts yet.</div>";
-      return;
-    }
-    for (const p of posts) {
-      const card = document.createElement("div");
-      card.style.background = "rgba(255,255,255,0.65)";
-      card.style.border = "1px solid rgba(0,0,0,0.08)";
-      card.style.borderRadius = "18px";
-      card.style.padding = "14px 16px";
-      card.innerHTML = `
-        <div style="display:flex;justify-content:space-between;gap:10px;color:#666;font-size:0.9rem;">
-          <span>${escapeHtml(p.author_email || "anon")}</span>
-          <span>${new Date(p.created_at).toLocaleString()}</span>
+  <!-- Modal Login (overlay) -->
+  <div id="authModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title" id="authTitle">Sign in</div>
+          <div class="modal-sub">Access your AGORA identity.</div>
         </div>
-        <div style="margin-top:8px;font-size:1.05rem;line-height:1.5;color:#111;">
-          ${escapeHtml(p.content)}
-        </div>
-      `;
-      feed.appendChild(card);
+        <button id="authClose" class="icon-x" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12" />
+            <path d="M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <button id="googleLoginBtn" class="oauth-btn">
+          <span class="oauth-dot" aria-hidden="true"></span>
+          Continue with Google
+        </button>
+
+        <div class="divider"><span>or</span></div>
+
+        <form id="emailLoginForm" class="form">
+          <label class="field">
+            <span>Email</span>
+            <input id="emailInput" type="email" placeholder="you@email.com" autocomplete="email" required />
+          </label>
+
+          <label class="field">
+            <span>Password</span>
+            <input id="passwordInput" type="password" placeholder="••••••••" autocomplete="current-password" />
+          </label>
+
+          <button class="primary-btn" type="submit" style="width:100%;">Login</button>
+          <div class="form-note">Email/password is placeholder for now. We’ll wire it properly later.</div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = "https://agora-api.convergegame.workers.dev";
+    const TOKEN_KEY = "agora_token";
+
+    const publishBtn = document.getElementById("publishBtn");
+    const postContent = document.getElementById("postContent");
+    const feed = document.getElementById("feed");
+    const feedHint = document.getElementById("feedHint");
+
+    // Account UI
+    const accountBtn = document.getElementById("accountBtn");
+    const accountMenu = document.getElementById("accountMenu");
+    const accountMenuSub = document.getElementById("accountMenuSub");
+    const menuPrimaryAction = document.getElementById("menuPrimaryAction");
+
+    // Auth modal
+    const authModal = document.getElementById("authModal");
+    const authClose = document.getElementById("authClose");
+    const googleLoginBtn = document.getElementById("googleLoginBtn");
+    const emailLoginForm = document.getElementById("emailLoginForm");
+    const emailInput = document.getElementById("emailInput");
+    const passwordInput = document.getElementById("passwordInput");
+
+    function getToken() {
+      return localStorage.getItem(TOKEN_KEY) || "";
     }
-  }
+    function setToken(t) {
+      localStorage.setItem(TOKEN_KEY, t);
+    }
 
-  async function loadFeed() {
-    const data = await api("/api/posts", { method: "GET" });
-    renderPosts(data.posts || []);
-  }
+    async function api(path, opts = {}) {
+      const headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+      const token = getToken();
+      if (token) headers["Authorization"] = "Bearer " + token;
 
+      const res = await fetch(API_BASE + path, { ...opts, headers });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) throw new Error((data && data.error) ? data.error : ("http_" + res.status));
+      return data;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[c]));
+    }
 
     function openMenu() {
-    accountMenu.classList.add("open");
-    accountBtn.setAttribute("aria-expanded", "true");
-    accountMenu.setAttribute("aria-hidden", "false");
-  }
-  function closeMenu() {
-    accountMenu.classList.remove("open");
-    accountBtn.setAttribute("aria-expanded", "false");
-    accountMenu.setAttribute("aria-hidden", "true");
-  }
+      accountMenu.classList.add("open");
+      accountBtn.setAttribute("aria-expanded", "true");
+      accountMenu.setAttribute("aria-hidden", "false");
+    }
+    function closeMenu() {
+      accountMenu.classList.remove("open");
+      accountBtn.setAttribute("aria-expanded", "false");
+      accountMenu.setAttribute("aria-hidden", "true");
+    }
 
-  function openModal() {
-    authModal.classList.add("open");
-    authModal.setAttribute("aria-hidden", "false");
-    closeMenu();
-    setTimeout(() => emailInput?.focus(), 0);
-  }
-  function closeModal() {
-    authModal.classList.remove("open");
-    authModal.setAttribute("aria-hidden", "true");
-  }
+    function openModal() {
+      authModal.classList.add("open");
+      authModal.setAttribute("aria-hidden", "false");
+      closeMenu();
+      setTimeout(() => emailInput?.focus(), 0);
+    }
+    function closeModal() {
+      authModal.classList.remove("open");
+      authModal.setAttribute("aria-hidden", "true");
+    }
 
-  accountBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (accountMenu.classList.contains("open")) closeMenu();
-    else openMenu();
-  });
+    async function refreshMe() {
+      const token = getToken();
 
-  document.addEventListener("click", () => closeMenu());
+      if (!token) {
+        feedHint.textContent = "Login, then publish your first post.";
+        accountMenuSub.textContent = "Not logged in";
+        menuPrimaryAction.textContent = "Login";
+        menuPrimaryAction.classList.remove("danger");
+        return;
+      }
 
-  menuPrimaryAction.addEventListener("click", async () => {
-    if (getToken()) {
-      // logout
-      localStorage.removeItem(TOKEN_KEY);
+      try {
+        const me = await api("/api/me", { method: "GET" });
+        feedHint.textContent = "Logged in as: " + me.user.email;
+        accountMenuSub.textContent = me.user.email;
+        menuPrimaryAction.textContent = "Logout";
+        menuPrimaryAction.classList.add("danger");
+      } catch {
+        localStorage.removeItem(TOKEN_KEY);
+        accountMenuSub.textContent = "Not logged in";
+        menuPrimaryAction.textContent = "Login";
+        menuPrimaryAction.classList.remove("danger");
+        feedHint.textContent = "Login, then publish your first post.";
+      }
+    }
+
+    function renderPosts(posts) {
+      feed.innerHTML = "";
+      if (!posts.length) {
+        feed.innerHTML = "<div style='color:#666;'>No posts yet.</div>";
+        return;
+      }
+
+      for (const p of posts) {
+        const card = document.createElement("div");
+        card.style.background = "rgba(255,255,255,0.65)";
+        card.style.border = "1px solid rgba(0,0,0,0.08)";
+        card.style.borderRadius = "18px";
+        card.style.padding = "14px 16px";
+
+        card.innerHTML = `
+          <div style="display:flex;justify-content:space-between;gap:10px;color:#666;font-size:0.9rem;">
+            <span>${escapeHtml(p.author_email || "anon")}</span>
+            <span>${new Date(p.created_at).toLocaleString()}</span>
+          </div>
+          <div style="margin-top:8px;font-size:1.05rem;line-height:1.5;color:#111;">
+            ${escapeHtml(p.content)}
+          </div>
+        `;
+        feed.appendChild(card);
+      }
+    }
+
+    async function loadFeed() {
+      const data = await api("/api/posts", { method: "GET" });
+      renderPosts(data.posts || []);
+    }
+
+    // Account dropdown interactions
+    accountBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (accountMenu.classList.contains("open")) closeMenu();
+      else openMenu();
+    });
+
+    accountMenu.addEventListener("click", (e) => {
+      e.stopPropagation(); // click dentro al menu non deve chiuderlo
+    });
+
+    document.addEventListener("click", () => closeMenu());
+
+    menuPrimaryAction.addEventListener("click", async () => {
+      if (getToken()) {
+        localStorage.removeItem(TOKEN_KEY);
+        await refreshMe();
+        await loadFeed();
+        closeMenu();
+        return;
+      }
+      openModal();
+    });
+
+    // Modal close
+    authClose.addEventListener("click", closeModal);
+    authModal.addEventListener("click", (e) => {
+      if (e.target === authModal) closeModal(); // click backdrop
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeMenu();
+        closeModal();
+      }
+    });
+
+    // Google login from modal
+    googleLoginBtn.addEventListener("click", () => {
+      const returnTo = window.location.origin + "/";
+      window.location.href = API_BASE + "/api/auth/google/start?returnTo=" + encodeURIComponent(returnTo);
+    });
+
+    // Email/password login (placeholder: usa solo email per ora)
+    emailLoginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const email = (emailInput.value || "").trim();
+      if (!email) return;
+
+      // passwordInput.value ignorata per ora
+      const data = await api("/api/login", {
+        method: "POST",
+        body: JSON.stringify({ email })
+      });
+
+      setToken(data.token);
+      closeModal();
       await refreshMe();
       await loadFeed();
-      closeMenu();
-      return;
-    }
-    // login
-    openModal();
-  });
+    });
 
-  // Modal close interactions
-  authClose.addEventListener("click", closeModal);
-  authModal.addEventListener("click", (e) => {
-    if (e.target === authModal) closeModal(); // click backdrop
-  });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") {
-      closeMenu();
-      closeModal();
-    }
-  });
+    // Se torni dal backend con #token=...
+    (function pickTokenFromHash() {
+      const m = (window.location.hash || "").match(/token=([^&]+)/);
+      if (!m) return;
+      const t = decodeURIComponent(m[1]);
+      localStorage.setItem(TOKEN_KEY, t);
+      history.replaceState(null, "", window.location.pathname); // pulisce l'hash
+    })();
 
-  // Google login from modal
-  googleLoginBtn.addEventListener("click", () => {
-    window.location.href = API_BASE + "/api/auth/google/start?returnTo=" + encodeURIComponent(window.location.origin + "/");
-  });
+    // Publish
+    publishBtn.addEventListener("click", async () => {
+      if (!getToken()) {
+        alert("Please login first.");
+        return;
+      }
+      const content = (postContent.value || "").trim();
+      if (!content) {
+        alert("Write something first.");
+        return;
+      }
 
-  // Email/password login (placeholder: usa solo email per ora)
-  emailLoginForm.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = (emailInput.value || "").trim();
-    if (!email) return;
+      await api("/api/posts", {
+        method: "POST",
+        body: JSON.stringify({ content })
+      });
 
-    // passwordInput.value è ignorata per ora: la collegheremo dopo.
-    const data = await api("/api/login", { method: "POST", body: JSON.stringify({ email }) });
-    setToken(data.token);
+      postContent.value = "";
+      await loadFeed();
+    });
 
-    closeModal();
-    await refreshMe();
-    await loadFeed();
-  });
-
-  // se torni con #token=...
-  (function pickTokenFromHash(){
-    const m = (window.location.hash || "").match(/token=([^&]+)/);
-    if (!m) return;
-    const t = decodeURIComponent(m[1]);
-    localStorage.setItem(TOKEN_KEY, t);
-    history.replaceState(null, "", window.location.pathname); // pulisce l'hash
-  })();
-
-  publishBtn.addEventListener("click", async () => {
-    const token = getToken();
-    if (!token) {
-      alert("Please login first.");
-      return;
-    }
-    const content = (postContent.value || "").trim();
-    if (!content) {
-      alert("Write something first.");
-      return;
-    }
-    await api("/api/posts", { method: "POST", body: JSON.stringify({ content }) });
-    postContent.value = "";
-    await loadFeed();
-  });
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c]));
-  }
-
-  // init
-  (async () => {
-    await refreshMe();
-    await loadFeed();
-  })();
-</script>
-
+    // init
+    (async () => {
+      await refreshMe();
+      await loadFeed();
+    })();
+  </script>
 </body>
 </html>
