@@ -519,7 +519,7 @@
 
   googleBtn.addEventListener("click", () => {
     const returnTo = window.location.origin + window.location.pathname;
-    window.location.href = API_BASE + "/api/auth/google/start?returnTo=" + encodeURIComponent(returnTo);
+    window.location.href = API_BASE + "/api/auth/google/start?returnTo=" + encodeURIComponent(window.location.origin + "/");
   });
 
   // se torni con #token=...
