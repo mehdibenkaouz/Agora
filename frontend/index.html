@@ -480,6 +480,107 @@
       .composer-card, .comments-card { min-height: auto; }
       .media-zone p { max-width: 100%; }
     }
+
+
+    /* --- Create Post: media dropzone + preview --- */
+    .dropzone{
+      border-radius: 20px;
+      border: 1px dashed rgba(0,0,0,0.14);
+      background:
+        linear-gradient(180deg, rgba(255,255,255,0.50), rgba(255,255,255,0.75)),
+        repeating-linear-gradient(
+          -45deg,
+          rgba(0,0,0,0.015),
+          rgba(0,0,0,0.015) 12px,
+          transparent 12px,
+          transparent 24px
+        );
+      padding: 14px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .dropzone.is-dragover{
+      border-color: rgba(87,25,41,0.35);
+      box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
+    }
+
+    .dropzone-top{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .dropzone-title{
+      font-weight: 800;
+    }
+
+    .dropzone-hint{
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .file-btn{
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(248,247,243,0.92);
+      border-radius: 999px;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      min-height: 40px;
+    }
+
+    .preview-grid{
+      display:grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .preview-item{
+      position: relative;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(255,255,255,0.6);
+      aspect-ratio: 1 / 1;
+    }
+
+    .preview-item img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display:block;
+    }
+
+    .preview-remove{
+      position:absolute;
+      top: 8px;
+      right: 8px;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.12);
+      background: rgba(252,251,248,0.92);
+      cursor: pointer;
+      display:grid;
+      place-items:center;
+    }
+
+    .preview-remove svg{
+      width: 16px;
+      height: 16px;
+      stroke:#111;
+      stroke-width:2.4;
+      fill:none;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+
+    @media (max-width: 480px){
+      .preview-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
   </style>
 </head>
 
@@ -627,6 +728,18 @@
       <div class="modal-body">
         <form id="createPostForm" class="form">
           <label class="field">
+            <div id="mediaDropzone" class="dropzone" tabindex="0" aria-label="Add images by upload, drag and drop or paste">
+              <div class="dropzone-top">
+                <div>
+                  <div class="dropzone-title">Images</div>
+                  <div class="dropzone-hint">Drop here, paste (Ctrl+V), or upload.</div>
+                </div>
+                <button type="button" id="pickImagesBtn" class="file-btn">Upload</button>
+              </div>
+
+              <input id="imageFileInput" type="file" accept="image/*" multiple hidden />
+              <div id="imagePreview" class="preview-grid" aria-live="polite"></div>
+            </div>
             <span>Content</span>
             <textarea id="createPostContent"
               class="post-textarea"
@@ -655,6 +768,11 @@
     const createPostClose = document.getElementById("createPostClose");
     const createPostForm = document.getElementById("createPostForm");
     const createPostContent = document.getElementById("createPostContent");
+
+    const mediaDropzone = document.getElementById("mediaDropzone");
+    const pickImagesBtn = document.getElementById("pickImagesBtn");
+    const imageFileInput = document.getElementById("imageFileInput");
+    const imagePreview = document.getElementById("imagePreview");
 
     const feed = document.getElementById("feed");
     const feedHint = document.getElementById("feedHint");
@@ -829,11 +947,115 @@
     function closeCreatePostModal() {
       createPostModal.classList.remove("open");
       createPostModal.setAttribute("aria-hidden", "true");
+      clearImages();
+    }
+
+    // --- Images state (frontend only for now) ---
+    const selectedImages = []; // { id, file, url }
+
+    function isImageFile(file) {
+      return file && file.type && file.type.startsWith("image/");
+    }
+
+    function addImageFile(file) {
+      if (!isImageFile(file)) return;
+
+      // (optional) limit: 6 images
+      if (selectedImages.length >= 6) {
+        alert("Max 6 images per post (for now).");
+        return;
+      }
+
+      const url = URL.createObjectURL(file);
+      const id = crypto.randomUUID ? crypto.randomUUID() : (Date.now() + "_" + Math.random());
+      selectedImages.push({ id, file, url });
+      renderImagePreview();
+    }
+
+    function addMany(files) {
+      for (const f of (files || [])) addImageFile(f);
+    }
+
+    function removeImage(id) {
+      const idx = selectedImages.findIndex(x => x.id === id);
+      if (idx >= 0) {
+        URL.revokeObjectURL(selectedImages[idx].url);
+        selectedImages.splice(idx, 1);
+        renderImagePreview();
+      }
+    }
+
+    function clearImages() {
+      for (const x of selectedImages) URL.revokeObjectURL(x.url);
+      selectedImages.length = 0;
+      renderImagePreview();
+    }
+
+    function renderImagePreview() {
+      if (!imagePreview) return;
+      imagePreview.innerHTML = "";
+
+      for (const img of selectedImages) {
+        const item = document.createElement("div");
+        item.className = "preview-item";
+        item.innerHTML = `
+          <img src="${img.url}" alt="Selected image" />
+          <button type="button" class="preview-remove" aria-label="Remove image">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12"></path>
+              <path d="M18 6L6 18"></path>
+            </svg>
+          </button>
+        `;
+        item.querySelector(".preview-remove").addEventListener("click", () => removeImage(img.id));
+        imagePreview.appendChild(item);
+      }
     }
 
     createPostBtn.addEventListener("click", () => {
       openCreatePostModal();
     });
+    // Upload button -> file picker
+    pickImagesBtn.addEventListener("click", () => imageFileInput.click());
+
+    imageFileInput.addEventListener("change", () => {
+      addMany(imageFileInput.files);
+      imageFileInput.value = ""; // reset
+    });
+
+    // Drag & drop
+    mediaDropzone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      mediaDropzone.classList.add("is-dragover");
+    });
+    mediaDropzone.addEventListener("dragleave", () => {
+      mediaDropzone.classList.remove("is-dragover");
+    });
+    mediaDropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      mediaDropzone.classList.remove("is-dragover");
+      const files = e.dataTransfer?.files;
+      addMany(files);
+    });
+
+    // Paste (Ctrl+V)
+    function handlePaste(e) {
+      const items = e.clipboardData?.items || [];
+      let found = false;
+      for (const it of items) {
+        const f = it.getAsFile?.();
+        if (f && isImageFile(f)) {
+          addImageFile(f);
+          found = true;
+        }
+      }
+      if (found) e.preventDefault();
+    }
+
+    // Paste works when modal is open + focused
+    createPostModal.addEventListener("paste", handlePaste);
+    mediaDropzone.addEventListener("paste", handlePaste);
+    createPostContent.addEventListener("paste", handlePaste);
 
     createPostClose.addEventListener("click", closeCreatePostModal);
     createPostModal.addEventListener("click", (e) => {
@@ -866,6 +1088,7 @@
 
       createPostContent.value = "";
       closeCreatePostModal();
+      clearImages();
       await loadFeed();
     });
 
