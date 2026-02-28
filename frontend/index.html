@@ -528,8 +528,7 @@
           </svg>
         </button>
 
-        <button class="action-btn" aria-label="Create post">
-          <svg viewBox="0 0 24 24">
+        <button class="action-btn" id="createPostBtn" aria-label="Create post">          <svg viewBox="0 0 24 24">
             <path d="M12 5v14" />
             <path d="M5 12h14" />
           </svg>
@@ -544,24 +543,7 @@
       </aside>
 
       <div class="main-column">
-        <section class="composer-card">
-          <div class="hashtags">
-            <strong>#tags</strong> will appear here at the top of each post
-          </div>
 
-          <div class="media-zone">
-            <p>Here we place possible images</p>
-          </div>
-
-          <div class="text-zone">
-            <textarea id="postContent" class="post-textarea" placeholder="Write your post..."></textarea>
-          </div>
-
-          <div class="composer-actions">
-            <span class="soft-note">Static layout for now. Real posts will appear after login and backend connection.</span>
-            <button class="primary-btn" id="publishBtn">Publish</button>
-          </div>
-        </section>
 
         <section class="empty-feed">
           <h2>Feed</h2>
@@ -625,12 +607,55 @@
     </div>
   </div>
 
+
+  <!-- Modal Create Post (overlay) -->
+  <div id="createPostModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="createPostTitle">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title" id="createPostTitle">Create post</div>
+          <div class="modal-sub">Write something worth reading.</div>
+        </div>
+        <button id="createPostClose" class="icon-x" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12" />
+            <path d="M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <form id="createPostForm" class="form">
+          <label class="field">
+            <span>Content</span>
+            <textarea id="createPostContent"
+              class="post-textarea"
+              style="height: 180px; border: 1px solid rgba(0,0,0,0.10); background: rgba(248,247,243,0.92); border-radius: 16px;"
+              placeholder="Write your post..."
+              required></textarea>
+          </label>
+
+          <button id="createPostPublishBtn" class="primary-btn" type="submit" style="width:100%;">
+            Publish
+          </button>
+
+          <div class="form-note">Posting requires login.</div>
+        </form>
+      </div>
+    </div>
+  </div>
   <script>
     const API_BASE = "https://agora-api.convergegame.workers.dev";
     const TOKEN_KEY = "agora_token";
 
-    const publishBtn = document.getElementById("publishBtn");
-    const postContent = document.getElementById("postContent");
+    const createPostBtn = document.getElementById("createPostBtn");
+
+    // Create post modal
+    const createPostModal = document.getElementById("createPostModal");
+    const createPostClose = document.getElementById("createPostClose");
+    const createPostForm = document.getElementById("createPostForm");
+    const createPostContent = document.getElementById("createPostContent");
+
     const feed = document.getElementById("feed");
     const feedHint = document.getElementById("feedHint");
 
@@ -794,6 +819,56 @@
       }
     });
 
+    function openCreatePostModal() {
+      createPostModal.classList.add("open");
+      createPostModal.setAttribute("aria-hidden", "false");
+      closeMenu();
+      closeModal(); // chiude login modal se aperto
+      setTimeout(() => createPostContent?.focus(), 0);
+    }
+    function closeCreatePostModal() {
+      createPostModal.classList.remove("open");
+      createPostModal.setAttribute("aria-hidden", "true");
+    }
+
+    createPostBtn.addEventListener("click", () => {
+      openCreatePostModal();
+    });
+
+    createPostClose.addEventListener("click", closeCreatePostModal);
+    createPostModal.addEventListener("click", (e) => {
+      if (e.target === createPostModal) closeCreatePostModal();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        closeCreatePostModal();
+      }
+    });
+
+    // Submit create post
+    createPostForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      if (!getToken()) {
+        alert("Please login first.");
+        openModal(); // apre modal login
+        return;
+      }
+
+      const content = (createPostContent.value || "").trim();
+      if (!content) return;
+
+      await api("/api/posts", {
+        method: "POST",
+        body: JSON.stringify({ content })
+      });
+
+      createPostContent.value = "";
+      closeCreatePostModal();
+      await loadFeed();
+    });
+
     // Google login from modal
     googleLoginBtn.addEventListener("click", () => {
       const returnTo = window.location.origin + "/";
@@ -827,26 +902,7 @@
       history.replaceState(null, "", window.location.pathname); // pulisce l'hash
     })();
 
-    // Publish
-    publishBtn.addEventListener("click", async () => {
-      if (!getToken()) {
-        alert("Please login first.");
-        return;
-      }
-      const content = (postContent.value || "").trim();
-      if (!content) {
-        alert("Write something first.");
-        return;
-      }
 
-      await api("/api/posts", {
-        method: "POST",
-        body: JSON.stringify({ content })
-      });
-
-      postContent.value = "";
-      await loadFeed();
-    });
 
     // init
     (async () => {
