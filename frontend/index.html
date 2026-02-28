@@ -21,6 +21,8 @@
       --topbar-h: 72px;
       --maxw: 1360px;
       --brand: #571929;
+      --editor-zoom: 1; /* <— zoom-out editor: prova 0.88 / 0.85 / 0.95 */
+
     }
 
     * { box-sizing: border-box; }
@@ -583,6 +585,64 @@
     }
 
     /* --- Rich text editor (contenteditable) --- */
+    /* --- Toolbar Word-like --- */
+    .rt-toolbar{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      flex-wrap:wrap;
+      padding: 10px 10px;
+      border: 1px solid rgba(0,0,0,0.10);
+      border-radius: 14px;
+      background: rgba(252,251,248,0.92);
+      margin-bottom: 10px;
+    }
+
+    .rt-btn{
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(248,247,243,0.92);
+      border-radius: 12px;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-weight: 800;
+      min-height: 38px;
+    }
+
+    .rt-btn:hover{
+      background: rgba(248,247,243,1);
+      transform: translateY(-1px);
+    }
+
+    .rt-btn.is-active{
+      border-color: rgba(87,25,41,0.35);
+      box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
+    }
+
+    .rt-sep{
+      width:1px;
+      height:26px;
+      background: rgba(0,0,0,0.10);
+      margin: 0 4px;
+    }
+
+    .rt-size{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      color: rgba(0,0,0,0.70);
+      font-weight: 800;
+      padding: 0 4px;
+    }
+    .rt-size span{ font-size: .9rem; }
+    .rt-size select{
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(248,247,243,0.92);
+      border-radius: 12px;
+      padding: 8px 10px;
+      font: inherit;
+      min-height: 38px;
+    }
+
     .rt-editor{
       min-height: 180px;
       max-height: 38vh;     /* non cresce infinito */
@@ -593,10 +653,11 @@
       padding: 14px 14px;
       outline: none;
       font-size: 1.15rem;
-      line-height: 1.55;
+      line-height: 1.35;
       white-space: pre-wrap;
       word-break: break-word;
-      
+      zoom: var(--editor-zoom);       /* Chrome: zoom-out dell’editor */
+      position: relative;
     }
     .rt-editor:focus{
       border-color: rgba(87,25,41,0.35);
@@ -616,12 +677,22 @@
       margin: 10px 0;
       cursor: grab;
     }
+
+    /* evita “collasso” layout con immagini flottanti */
+    .rt-editor::after{
+      content:"";
+      display:block;
+      clear: both;
+    }
     /* --- Image node (true editor feel) --- */
     .img-node{
       position: relative;
-      display: block;
-      margin: 10px 0;
+      display: inline-block;     /* non blocco pieno */
+      float: left;               /* wrap testo a destra */
+      margin: 2px 3px 5px 0;   /* spazio elegante tra img e testo */
       user-select: none;
+      max-width: 100%;
+      line-height: 0;
     }
 
     .img-node img{
@@ -687,6 +758,10 @@
     }
     .img-node.is-resizing img{
       cursor: nwse-resize;
+    }
+    .rt-editor p,
+    .rt-editor div{
+      margin: 0;
     }
   </style>
 </head>
@@ -850,6 +925,40 @@
 
           <div class="field">
             <span>Content</span>
+            <div id="rtToolbar" class="rt-toolbar" aria-label="Editor toolbar">
+              <button type="button" class="rt-btn" id="rtUndo" title="Undo (Ctrl+Z)">↶</button>
+              <button type="button" class="rt-btn" id="rtRedo" title="Redo (Ctrl+Y)">↷</button>
+              <span class="rt-sep"></span>
+
+              <button type="button" class="rt-btn" id="rtBold" title="Bold (Ctrl+B)"><b>B</b></button>
+              <button type="button" class="rt-btn" id="rtItalic" title="Italic (Ctrl+I)"><i>I</i></button>
+              <button type="button" class="rt-btn" id="rtUnderline" title="Underline (Ctrl+U)"><u>U</u></button>
+              <button type="button" class="rt-btn" id="rtStrike" title="Strikethrough"><s>S</s></button>
+
+              <span class="rt-sep"></span>
+
+              <label class="rt-size" title="Font size">
+                <span>Size</span>
+                <select id="rtFontSize">
+                  <option value="14">14</option>
+                  <option value="16">16</option>
+                  <option value="18" selected>18</option>
+                  <option value="20">20</option>
+                  <option value="24">24</option>
+                  <option value="28">28</option>
+                  <option value="32">32</option>
+                </select>
+              </label>
+
+              <span class="rt-sep"></span>
+
+              <button type="button" class="rt-btn" id="rtBullets" title="Bulleted list">• List</button>
+              <button type="button" class="rt-btn" id="rtNumbered" title="Numbered list">1. List</button>
+
+              <span class="rt-sep"></span>
+
+              <button type="button" class="rt-btn" id="rtClear" title="Clear formatting">Tx</button>
+            </div>
             <!-- qui lo cambiamo nello STEP 3 -->
               <div id="createPostContent"
                 class="rt-editor"
@@ -880,6 +989,479 @@
     const createPostForm = document.getElementById("createPostForm");
     const createPostContent = document.getElementById("createPostContent");
 
+    // --- Rich text toolbar elements ---
+    const rtBold = document.getElementById("rtBold");
+    const rtItalic = document.getElementById("rtItalic");
+    const rtUnderline = document.getElementById("rtUnderline");
+    const rtStrike = document.getElementById("rtStrike");
+    const rtUndo = document.getElementById("rtUndo");
+    const rtRedo = document.getElementById("rtRedo");
+    const rtClear = document.getElementById("rtClear");
+    const rtBullets = document.getElementById("rtBullets");
+    const rtNumbered = document.getElementById("rtNumbered");
+    const rtFontSize = document.getElementById("rtFontSize");
+
+    // --- Save/restore selection inside editor (needed for toolbar buttons) ---
+    let lastEditorRange = null;
+
+    function saveEditorSelection() {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const r = sel.getRangeAt(0);
+
+      const startOk = (r.startContainer === createPostContent) || createPostContent.contains(r.startContainer);
+      const endOk   = (r.endContainer   === createPostContent) || createPostContent.contains(r.endContainer);
+
+      if (startOk && endOk) {
+        lastEditorRange = r.cloneRange();
+      }
+    }
+
+    function restoreEditorSelection() {
+      if (!lastEditorRange) return false;
+      const sel = window.getSelection();
+      if (!sel) return false;
+      sel.removeAllRanges();
+      sel.addRange(lastEditorRange);
+      return true;
+    }
+
+    function selectionInsideEditor() {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return false;
+      const r = sel.getRangeAt(0);
+      const ca = r.commonAncestorContainer;
+      return ca && (ca === createPostContent || createPostContent.contains(ca));
+    }
+
+    function execCmd(cmd, value = null) {
+      if (selectionInsideEditor()) saveEditorSelection();
+
+      // ✅ prima focus
+      createPostContent.focus({ preventScroll: true });
+
+      // ✅ poi restore; se non c’è, metti caret a fine editor
+      if (!restoreEditorSelection()) {
+        const r = document.createRange();
+        r.selectNodeContents(createPostContent);
+        r.collapse(false);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(r);
+        saveEditorSelection();
+      }
+
+      document.execCommand(cmd, false, value);
+      saveEditorSelection();
+      updateToolbarState();
+    }
+    function unwrapBoldInFragment(root) {
+      // root è un DocumentFragment
+      const bolds = [];
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+      let n = walker.nextNode();
+      while (n) {
+        const tag = n.tagName ? n.tagName.toLowerCase() : "";
+        if (tag === "b" || tag === "strong") bolds.push(n);
+        n = walker.nextNode();
+      }
+
+      // reverse per non invalidare l’albero mentre lo modifichi
+      for (let i = bolds.length - 1; i >= 0; i--) {
+        const el = bolds[i];
+        const parent = el.parentNode;
+        if (!parent) continue;
+        while (el.firstChild) parent.insertBefore(el.firstChild, el);
+        parent.removeChild(el);
+      }
+    }
+
+    function isFullyBold(range) {
+      // Se entrambe le estremità stanno dentro un <b>/<strong> E la selezione non “esce” da quel bold,
+      // trattiamo come fully-bold.
+      const sc = range.startContainer.nodeType === 3 ? range.startContainer.parentElement : range.startContainer;
+      const ec = range.endContainer.nodeType === 3 ? range.endContainer.parentElement : range.endContainer;
+      const sb = sc && sc.closest ? sc.closest("b,strong") : null;
+      const eb = ec && ec.closest ? ec.closest("b,strong") : null;
+      return !!(sb && eb && sb === eb); // stesso contenitore bold
+    }
+  
+
+    function closestTag(el, selector) {
+      return el && el.closest ? el.closest(selector) : null;
+    }
+
+    function sameHostForRange(range, selector) {
+      const scEl = (range.startContainer.nodeType === 3) ? range.startContainer.parentElement : range.startContainer;
+      const ecEl = (range.endContainer.nodeType === 3) ? range.endContainer.parentElement : range.endContainer;
+      const a = closestTag(scEl, selector);
+      const b = closestTag(ecEl, selector);
+      return (a && b && a === b) ? a : null;
+    }
+
+    function unwrapElement(el) {
+      const p = el.parentNode;
+      if (!p) return;
+      while (el.firstChild) p.insertBefore(el.firstChild, el);
+      p.removeChild(el);
+    }
+
+    function unwrapUnboldInFragment(root) {
+      const xs = [];
+      const w = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+      let n = w.nextNode();
+      while (n) {
+        if (n.nodeType === 1 && n.tagName === "SPAN" && n.dataset && n.dataset.rtUnbold === "1") xs.push(n);
+        n = w.nextNode();
+      }
+      for (let i = xs.length - 1; i >= 0; i--) unwrapElement(xs[i]);
+    }
+
+    function rangeCoversNodeContents(range, node) {
+      const r = document.createRange();
+      r.selectNodeContents(node);
+      return (
+        range.compareBoundaryPoints(Range.START_TO_START, r) <= 0 &&
+        range.compareBoundaryPoints(Range.END_TO_END, r) >= 0
+      );
+    }
+
+
+    function normalizeUnboldSpans(root) {
+      const spans = Array.from(root.querySelectorAll('span[data-rt-unbold="1"]'));
+
+      // 1) unwrap spans vuoti
+      for (const sp of spans) {
+        if (!sp.textContent || sp.textContent === "\u200B") {
+          unwrapElement(sp);
+        }
+      }
+
+      // 2) merge spans adiacenti (stesso marker)
+      const spans2 = Array.from(root.querySelectorAll('span[data-rt-unbold="1"]'));
+      for (const sp of spans2) {
+        const next = sp.nextSibling;
+        if (next && next.nodeType === 1 && next.tagName === "SPAN" && next.dataset && next.dataset.rtUnbold === "1") {
+          while (next.firstChild) sp.appendChild(next.firstChild);
+          next.remove();
+        }
+      }
+
+      // 3) se uno span unbold NON è dentro un <b>/<strong>, è inutile: unwrap
+      const spans3 = Array.from(root.querySelectorAll('span[data-rt-unbold="1"]'));
+      for (const sp of spans3) {
+        const inBold = sp.closest && sp.closest("b,strong");
+        if (!inBold) unwrapElement(sp);
+      }
+    }
+
+    function toggleBoldOnSelectionRange(range) {
+      const unboldHost = sameHostForRange(range, 'span[data-rt-unbold="1"]');
+
+      // ✅ unwrap SOLO se l’utente ha selezionato TUTTO lo span unbold
+      if (unboldHost && rangeCoversNodeContents(range, unboldHost)) {
+        const sel = window.getSelection();
+        const first = unboldHost.firstChild;
+        const last = unboldHost.lastChild;
+
+        unwrapElement(unboldHost);
+
+        // ripristina una selezione sensata (best effort)
+        if (sel && first && last) {
+          const r2 = document.createRange();
+          r2.setStartBefore(first);
+          r2.setEndAfter(last);
+          sel.removeAllRanges();
+          sel.addRange(r2);
+        }
+        return;
+      }
+
+      // 2) Se la selezione è dentro lo stesso <b>/<strong>, "togli bold" neutralizzando (non proviamo a smontare il <b>)
+      const boldHost = sameHostForRange(range, "b,strong");
+
+      // ✅ Se stai togliendo bold e hai selezionato TUTTO il <b>, smonta il <b> direttamente
+      if (boldHost && !unboldHost && rangeCoversNodeContents(range, boldHost)) {
+        const sel = window.getSelection();
+        const first = boldHost.firstChild;
+        const last = boldHost.lastChild;
+
+        unwrapElement(boldHost);
+
+        if (sel && first && last) {
+          const r2 = document.createRange();
+          r2.setStartBefore(first);
+          r2.setEndAfter(last);
+          sel.removeAllRanges();
+          sel.addRange(r2);
+        }
+        return;
+      }
+      const frag = range.extractContents();
+
+      // evita che nel frammento restino unbold-span vecchi
+      unwrapUnboldInFragment(frag);
+
+      let inserted = null;
+
+      if (boldHost) {
+        // ✅ neutralizza: niente nesting, niente shrink
+        const span = document.createElement("span");
+        span.dataset.rtUnbold = "1";
+        span.style.fontWeight = "normal";
+        span.style.fontStyle = "inherit";
+        span.style.textDecoration = "inherit";
+        span.style.fontSize = "inherit";
+        span.appendChild(frag);
+        range.insertNode(span);
+        inserted = span;
+      } else {
+        // ✅ applica bold: prima normalizza eventuali <b> nel fragment per evitare nesting
+        unwrapBoldInFragment(frag);
+
+        const b = document.createElement("b");
+        b.appendChild(frag);
+        range.insertNode(b);
+        inserted = b;
+      }
+
+      // Ripristina selezione SOLO sul contenuto appena inserito
+      const sel = window.getSelection();
+      if (!sel) return;
+      const r2 = document.createRange();
+      r2.selectNodeContents(inserted);
+      sel.removeAllRanges();
+      sel.addRange(r2);
+      normalizeUnboldSpans(createPostContent);
+    }
+
+    function toggleBoldSticky() {
+      const sel0 = window.getSelection();
+      if (!sel0 || sel0.rangeCount === 0) return;
+
+      const r0 = sel0.getRangeAt(0);
+      const wasCollapsed = !!r0.collapsed;
+
+      // ✅ Caso 1: TESTO SELEZIONATO -> toggle manuale (NO execCommand)
+      if (!wasCollapsed && selectionInsideEditor()) {
+        // salva selezione live
+        saveEditorSelection();
+        // restore sicuro
+        restoreEditorSelection();
+        createPostContent.focus({ preventScroll: true });
+
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0) return;
+
+        const r = sel.getRangeAt(0);
+        if (!r.collapsed) {
+          toggleBoldOnSelectionRange(r);
+          saveEditorSelection();
+          updateToolbarState();
+          return;
+        }
+      }
+
+      // ✅ Caso 2: CARET (nessuna selezione) -> tieni la tua logica attuale “sticky”
+      execCmd("bold");
+
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const r = sel.getRangeAt(0);
+
+      const boldOn = document.queryCommandState("bold");
+
+      if (wasCollapsed && r.collapsed && boldOn) {
+        const node = (r.startContainer.nodeType === 3) ? r.startContainer.parentNode : r.startContainer;
+        const inBold = node && node.closest && node.closest("b,strong");
+        if (!inBold) {
+          const b = document.createElement("b");
+          b.appendChild(document.createTextNode("\u200B"));
+          r.insertNode(b);
+
+          const nr = document.createRange();
+          nr.setStart(b.firstChild, 1);
+          nr.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(nr);
+        }
+      }
+
+      if (wasCollapsed && r.collapsed && !boldOn) {
+        const sc = r.startContainer;
+        const el = (sc && sc.nodeType === 3) ? sc.parentNode : sc;
+        const bEl = el && el.closest ? el.closest("b,strong") : null;
+        if (bEl && bEl.textContent === "\u200B") {
+          const after = document.createTextNode("");
+          bEl.after(after);
+          bEl.remove();
+
+          const nr = document.createRange();
+          nr.setStart(after, 0);
+          nr.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(nr);
+        }
+      }
+
+      saveEditorSelection();
+      updateToolbarState();
+    }
+    function applyFontSizePx(px) {
+      createPostContent.focus();
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+
+      const range = sel.getRangeAt(0);
+
+      // Se non hai selezione: crea uno "stile corrente" inserendo uno span con ZWS
+      if (range.collapsed) {
+        const span = document.createElement("span");
+        span.style.fontSize = px + "px";
+        span.appendChild(document.createTextNode("\u200B")); // zero width space
+
+        range.insertNode(span);
+
+        const r = document.createRange();
+        r.setStart(span.firstChild, 1);
+        r.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(r);
+
+        updateToolbarState();
+        return;
+      }
+
+      // Se hai selezione: wrappa la selezione
+      const span = document.createElement("span");
+      span.style.fontSize = px + "px";
+
+      try {
+        range.surroundContents(span);
+      } catch {
+        // fallback per selezioni complesse
+        const frag = range.extractContents();
+        span.appendChild(frag);
+        range.insertNode(span);
+      }
+
+      const r = document.createRange();
+      r.selectNodeContents(span);
+      r.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(r);
+
+      updateToolbarState();
+    }
+    function updateToolbarState() {
+      const inside = selectionInsideEditor();
+
+      // Se selezione NON è dentro l'editor: spegni tutto (evita stati "stuck")
+      if (!inside) {
+        [rtBold, rtItalic, rtUnderline, rtStrike, rtBullets, rtNumbered].forEach(b => b?.classList.remove("is-active"));
+        return;
+      }
+
+      rtBold?.classList.toggle("is-active", document.queryCommandState("bold"));
+      rtItalic?.classList.toggle("is-active", document.queryCommandState("italic"));
+      rtUnderline?.classList.toggle("is-active", document.queryCommandState("underline"));
+      rtStrike?.classList.toggle("is-active", document.queryCommandState("strikeThrough"));
+      rtBullets?.classList.toggle("is-active", document.queryCommandState("insertUnorderedList"));
+      rtNumbered?.classList.toggle("is-active", document.queryCommandState("insertOrderedList"));
+    }
+
+
+
+    const DEBUG_RTBOLD = true;
+    function dbg(where) {
+      if (!DEBUG_RTBOLD) return;
+
+      const sel = window.getSelection();
+      const inside = selectionInsideEditor();
+      const hasRange = !!(sel && sel.rangeCount);
+      const range = hasRange ? sel.getRangeAt(0) : null;
+
+      let sc = null;
+      let ec = null;
+      if (range) {
+        sc = range.startContainer;
+        ec = range.endContainer;
+      }
+
+      console.log(`[RTDBG:${where}]`,
+        {
+          insideEditor: inside,
+          hasRange,
+          boldState: inside ? document.queryCommandState("bold") : "(n/a)",
+          startNode: sc ? (sc.nodeType === 3 ? "#text" : sc.nodeName) : null,
+          startInEditor: sc ? createPostContent.contains(sc) : null,
+        }
+
+      );
+    }
+    function toolbarPress(e, fn) {
+      dbg("toolbarPress:before");
+
+      e.preventDefault();
+      e.stopPropagation();
+
+      // salva selezione live se c’è
+      if (selectionInsideEditor()) saveEditorSelection();
+
+      // ✅ prima focus (così non collassa dopo)
+      createPostContent.focus({ preventScroll: true });
+
+      // ✅ poi restore (riporta esattamente la selezione live)
+      restoreEditorSelection();
+
+      fn();
+
+      dbg("toolbarPress:after");
+      saveEditorSelection();
+      updateToolbarState();
+    }
+
+    const bindPress = (el, fn) => {
+      if (!el) return;
+      el.addEventListener("pointerdown", (e) => toolbarPress(e, fn), { passive: false });
+      // fallback vecchi iOS (se mai servisse)
+      el.addEventListener("touchstart", (e) => toolbarPress(e, fn), { passive: false });
+    };
+
+    bindPress(rtUndo, () => document.execCommand("undo"));
+    bindPress(rtRedo, () => document.execCommand("redo"));
+    bindPress(rtBold, () => toggleBoldSticky());
+    bindPress(rtItalic, () => execCmd("italic"));
+    bindPress(rtUnderline, () => execCmd("underline"));
+    bindPress(rtStrike, () => execCmd("strikeThrough"));
+    bindPress(rtBullets, () => execCmd("insertUnorderedList"));
+    bindPress(rtNumbered, () => execCmd("insertOrderedList"));
+    bindPress(rtClear, () => { execCmd("removeFormat"); execCmd("unlink"); });
+
+    rtFontSize?.addEventListener("change", () => {
+      const px = parseInt(rtFontSize.value, 10);
+      if (Number.isFinite(px)) applyFontSizePx(px);
+    });
+
+    // Aggiorna UI quando muovi il cursore/selezioni testo
+    createPostContent.addEventListener("keyup", () => { saveEditorSelection(); updateToolbarState(); });
+    createPostContent.addEventListener("mouseup", () => { saveEditorSelection(); updateToolbarState(); });
+    createPostContent.addEventListener("focus", () => { dbg("editor:focus"); saveEditorSelection(); updateToolbarState(); });
+
+    document.addEventListener("selectionchange", () => {
+      dbg("selectionchange");
+      if (selectionInsideEditor()) saveEditorSelection();
+      updateToolbarState();
+    });
+    // Paste testo: incolla come plain text (evita font/alignment strani)
+    createPostContent.addEventListener("paste", (e) => {
+      // Le immagini vengono già gestite dal listener sul modal (handlePaste).
+      const text = e.clipboardData?.getData("text/plain");
+      if (typeof text === "string") {
+        e.preventDefault();
+        document.execCommand("insertText", false, text);
+      }
+    });
     const mediaDropzone = document.getElementById("mediaDropzone");
     const pickImagesBtn = document.getElementById("pickImagesBtn");
     const imageFileInput = document.getElementById("imageFileInput");
@@ -1058,12 +1640,20 @@
     function closeCreatePostModal() {
       createPostModal.classList.remove("open");
       createPostModal.setAttribute("aria-hidden", "true");
+      
+      createPostContent.innerHTML = "";
       clearImages();
+
     }
 
     // --- Images state (frontend only for now) ---
     const selectedImages = []; // { id, file, url }
 
+    function getEditorZoom() {
+      // Chrome supporta zoom come numero; fallback 1
+      const z = parseFloat(getComputedStyle(createPostContent).zoom || "1");
+      return Number.isFinite(z) && z > 0 ? z : 1;
+    }
     function getRangeFromPoint(x, y) {
       if (document.caretRangeFromPoint) return document.caretRangeFromPoint(x, y);
       if (document.caretPositionFromPoint) {
@@ -1101,17 +1691,18 @@
 
         node.classList.add("is-resizing");
 
+        const zoom = getEditorZoom();
         const startX = e.clientX;
-        const startW = img.getBoundingClientRect().width;
+        const startW = img.getBoundingClientRect().width / zoom;
 
         const editorRect = createPostContent.getBoundingClientRect();
-        const maxW = Math.max(180, editorRect.width - 24); // clamp
+        const maxW = Math.max(180, (editorRect.width - 24) / zoom);
         const minW = 140;
 
         resize.setPointerCapture(e.pointerId);
 
         function onMove(ev) {
-          const dx = ev.clientX - startX;
+          const dx = (ev.clientX - startX) / zoom;
           let w = startW + dx;
           w = Math.max(minW, Math.min(maxW, w));
           img.style.width = Math.round(w) + "px";
@@ -1160,7 +1751,7 @@
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) {
         createPostContent.appendChild(node);
-        createPostContent.appendChild(document.createElement("br"));
+        createPostContent.appendChild(document.createTextNode(" "));
         bindImageNode(node);
         return;
       }
@@ -1169,11 +1760,17 @@
       range.deleteContents();
       range.insertNode(node);
 
-      const br = document.createElement("br");
-      node.after(br);
+      // Rimuove eventuali <br> “di servizio” lasciati da versioni precedenti
+      while (node.nextSibling && node.nextSibling.nodeType === 1 && node.nextSibling.tagName === "BR") {
+        node.nextSibling.remove();
+      }
 
-      range.setStartAfter(br);
-      range.setEndAfter(br);
+      // Spacer: permette di scrivere subito accanto all’immagine (wrap stile Word)
+      const spacer = document.createTextNode(" ");
+      node.after(spacer);
+
+      range.setStartAfter(spacer);
+      range.setEndAfter(spacer);
       sel.removeAllRanges();
       sel.addRange(range);
 
@@ -1203,15 +1800,71 @@
       for (const f of (files || [])) addImageFile(f);
     }
 
-    function removeImage(id) {
+    function removeImageFromStateOnly(id) {
       const idx = selectedImages.findIndex(x => x.id === id);
       if (idx >= 0) {
         URL.revokeObjectURL(selectedImages[idx].url);
         selectedImages.splice(idx, 1);
-        const node = createPostContent.querySelector(`.img-node[data-img-id="${id}"]`);
-        if (node) node.remove();
         renderImagePreview();
       }
+    }
+
+    // --- Sync: se un img-node viene eliminato dal content, elimina anche dal preview/state ---
+    // Importante: quando fai drag&drop, il nodo viene "spostato" (remove+add). Quindi:
+    // 1) collezioniamo gli id rimossi
+    // 2) aspettiamo 1 tick
+    // 3) se l'img NON è più nel content => era cancellazione vera, quindi rimuoviamo dallo state/preview
+
+    const removedImgIds = new Set();
+    let removedFlushTimer = null;
+
+    function collectRemovedImgIds(node) {
+      if (!node || node.nodeType !== 1) return;
+
+      if (node.classList.contains("img-node")) {
+        const id = node.dataset.imgId;
+        if (id) removedImgIds.add(id);
+      }
+
+      node.querySelectorAll?.(".img-node").forEach(n => {
+        const id = n.dataset.imgId;
+        if (id) removedImgIds.add(id);
+      });
+    }
+
+    function flushRemovedImgIds() {
+      removedFlushTimer = null;
+
+      for (const id of Array.from(removedImgIds)) {
+        removedImgIds.delete(id);
+
+        // Se dopo 1 tick è ancora nel content, era solo uno spostamento (drag) => NON toccare preview
+        const stillThere = createPostContent.querySelector(`.img-node[data-img-id="${id}"]`);
+        if (!stillThere) {
+          removeImageFromStateOnly(id); // aggiorna preview/state
+        }
+      }
+    }
+
+    const imgRemovalObserver = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const n of m.removedNodes) collectRemovedImgIds(n);
+      }
+
+      if (!removedFlushTimer) {
+        removedFlushTimer = setTimeout(flushRemovedImgIds, 0);
+      }
+    });
+
+    imgRemovalObserver.observe(createPostContent, { childList: true, subtree: true });
+
+    function removeImage(id) {
+      // 1) stato + preview
+      removeImageFromStateOnly(id);
+
+      // 2) rimuove dal content (se esiste ancora)
+      const node = createPostContent.querySelector(`.img-node[data-img-id="${id}"]`);
+      if (node) node.remove();
     }
 
     function clearImages() {
@@ -1294,8 +1947,20 @@
 
     createPostContent.addEventListener("click", () => {
       document.querySelectorAll(".img-node.is-selected").forEach(n => n.classList.remove("is-selected"));
+      saveEditorSelection();
+      updateToolbarState();
     });
 
+    createPostContent.addEventListener("keydown", (e) => {
+      if (e.key !== "Backspace" && e.key !== "Delete") return;
+
+      const selected = createPostContent.querySelector(".img-node.is-selected");
+      if (!selected) return;
+
+      e.preventDefault();
+      const id = selected.dataset.imgId;
+      if (id) removeImage(id);
+    });
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         closeCreatePostModal();
@@ -1323,13 +1988,16 @@
       r.insertNode(node);
 
       // mette un <br> dopo per riprendere a scrivere
-      const br = document.createElement("br");
-      node.after(br);
+      while (node.nextSibling && node.nextSibling.nodeType === 1 && node.nextSibling.tagName === "BR") {
+        node.nextSibling.remove();
+      }
+      const spacer = document.createTextNode(" ");
+      node.after(spacer);
 
       const sel = window.getSelection();
       sel.removeAllRanges();
-      r.setStartAfter(br);
-      r.setEndAfter(br);
+      r.setStartAfter(spacer);
+      r.setEndAfter(spacer);
       sel.addRange(r);
     });
     // Submit create post
