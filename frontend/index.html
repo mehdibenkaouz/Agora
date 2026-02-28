@@ -585,6 +585,8 @@
     /* --- Rich text editor (contenteditable) --- */
     .rt-editor{
       min-height: 180px;
+      max-height: 38vh;     /* non cresce infinito */
+      overflow: auto;       /* scroll interno */
       border: 1px solid rgba(0,0,0,0.10);
       background: rgba(248,247,243,0.92);
       border-radius: 16px;
@@ -594,6 +596,7 @@
       line-height: 1.55;
       white-space: pre-wrap;
       word-break: break-word;
+      
     }
     .rt-editor:focus{
       border-color: rgba(87,25,41,0.35);
@@ -612,6 +615,78 @@
       display: block;
       margin: 10px 0;
       cursor: grab;
+    }
+    /* --- Image node (true editor feel) --- */
+    .img-node{
+      position: relative;
+      display: block;
+      margin: 10px 0;
+      user-select: none;
+    }
+
+    .img-node img{
+      display: block;
+      max-width: 100%;
+      height: auto;
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,0.10);
+    }
+
+    .img-node:focus-within img,
+    .img-node.is-selected img{
+      border-color: rgba(87,25,41,0.35);
+      box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
+    }
+
+    .img-handle{
+      position: absolute;
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.12);
+      background: rgba(252,251,248,0.92);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.16);
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      transform: translateY(-2px);
+      transition: opacity .12s ease, transform .12s ease;
+    }
+
+    .img-node:hover .img-handle,
+    .img-node.is-selected .img-handle{
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .img-handle svg{
+      width: 16px;
+      height: 16px;
+      stroke:#111;
+      stroke-width:2.4;
+      fill:none;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+
+    .img-handle.move{
+      top: 8px;
+      left: 8px;
+      cursor: grab;
+    }
+
+    .img-handle.resize{
+      right: 8px;
+      bottom: 8px;
+      cursor: nwse-resize;
+    }
+
+    /* quando ridimensioni */
+    .img-node.is-resizing .img-handle{
+      opacity: 1;
+    }
+    .img-node.is-resizing img{
+      cursor: nwse-resize;
     }
   </style>
 </head>
@@ -989,34 +1064,120 @@
     // --- Images state (frontend only for now) ---
     const selectedImages = []; // { id, file, url }
 
-    function insertImageAtCursor(url) {
-      // Inserisce un <img> nel punto del cursore nell'editor contenteditable
+    function getRangeFromPoint(x, y) {
+      if (document.caretRangeFromPoint) return document.caretRangeFromPoint(x, y);
+      if (document.caretPositionFromPoint) {
+        const pos = document.caretPositionFromPoint(x, y);
+        const r = document.createRange();
+        r.setStart(pos.offsetNode, pos.offset);
+        r.collapse(true);
+        return r;
+      }
+      return null;
+    }
+
+    function bindImageNode(node) {
+      const img = node.querySelector("img");
+      const move = node.querySelector(".img-handle.move");
+      const resize = node.querySelector(".img-handle.resize");
+
+      // selezione visuale
+      node.addEventListener("click", (e) => {
+        document.querySelectorAll(".img-node.is-selected").forEach(n => n.classList.remove("is-selected"));
+        node.classList.add("is-selected");
+        e.stopPropagation();
+      });
+
+      // DRAG (solo dal handle move)
+      move.addEventListener("dragstart", (e) => {
+        e.dataTransfer.setData("text/agora-img-id", node.dataset.imgId);
+        e.dataTransfer.effectAllowed = "move";
+      });
+
+      // RESIZE (drag handle bottom-right)
+      resize.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        node.classList.add("is-resizing");
+
+        const startX = e.clientX;
+        const startW = img.getBoundingClientRect().width;
+
+        const editorRect = createPostContent.getBoundingClientRect();
+        const maxW = Math.max(180, editorRect.width - 24); // clamp
+        const minW = 140;
+
+        resize.setPointerCapture(e.pointerId);
+
+        function onMove(ev) {
+          const dx = ev.clientX - startX;
+          let w = startW + dx;
+          w = Math.max(minW, Math.min(maxW, w));
+          img.style.width = Math.round(w) + "px";
+          img.style.height = "auto";
+        }
+
+        function onUp(ev) {
+          resize.releasePointerCapture(ev.pointerId);
+          node.classList.remove("is-resizing");
+          resize.removeEventListener("pointermove", onMove);
+          resize.removeEventListener("pointerup", onUp);
+          resize.removeEventListener("pointercancel", onUp);
+        }
+
+        resize.addEventListener("pointermove", onMove);
+        resize.addEventListener("pointerup", onUp);
+        resize.addEventListener("pointercancel", onUp);
+      });
+    }
+
+    function insertImageAtCursor(url, id) {
       createPostContent.focus();
 
-      const img = document.createElement("img");
-      img.src = url;
-      img.className = "inline-img";
-      img.draggable = true;
+      const node = document.createElement("span");
+      node.className = "img-node";
+      node.contentEditable = "false";
+      node.dataset.imgId = id;
+
+      node.innerHTML = `
+        <img src="${url}" alt="Image" />
+        <span class="img-handle move" draggable="true" title="Move">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 6h6"></path>
+            <path d="M9 12h6"></path>
+            <path d="M9 18h6"></path>
+          </svg>
+        </span>
+        <span class="img-handle resize" title="Resize">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M10 14l4-4"></path>
+            <path d="M14 10h4v4"></path>
+          </svg>
+        </span>
+      `;
 
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) {
-        createPostContent.appendChild(img);
+        createPostContent.appendChild(node);
         createPostContent.appendChild(document.createElement("br"));
+        bindImageNode(node);
         return;
       }
 
       const range = sel.getRangeAt(0);
       range.deleteContents();
-      range.insertNode(img);
+      range.insertNode(node);
 
-      // aggiunge un a-capo dopo l’immagine e sposta il cursore
       const br = document.createElement("br");
-      img.after(br);
+      node.after(br);
 
       range.setStartAfter(br);
       range.setEndAfter(br);
       sel.removeAllRanges();
       sel.addRange(range);
+
+      bindImageNode(node);
     }
     function isImageFile(file) {
       return file && file.type && file.type.startsWith("image/");
@@ -1035,7 +1196,7 @@
       const id = crypto.randomUUID ? crypto.randomUUID() : (Date.now() + "_" + Math.random());
       selectedImages.push({ id, file, url });
       renderImagePreview();
-      insertImageAtCursor(url);
+      insertImageAtCursor(url, id);
     }
 
     function addMany(files) {
@@ -1047,6 +1208,8 @@
       if (idx >= 0) {
         URL.revokeObjectURL(selectedImages[idx].url);
         selectedImages.splice(idx, 1);
+        const node = createPostContent.querySelector(`.img-node[data-img-id="${id}"]`);
+        if (node) node.remove();
         renderImagePreview();
       }
     }
@@ -1129,12 +1292,46 @@
       if (e.target === createPostModal) closeCreatePostModal();
     });
 
+    createPostContent.addEventListener("click", () => {
+      document.querySelectorAll(".img-node.is-selected").forEach(n => n.classList.remove("is-selected"));
+    });
+
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") {
         closeCreatePostModal();
       }
     });
 
+    // Drag-drop reinsert for image nodes (from move handle)
+    createPostContent.addEventListener("dragover", (e) => {
+      if (e.dataTransfer?.types?.includes("text/agora-img-id")) e.preventDefault();
+    });
+
+    createPostContent.addEventListener("drop", (e) => {
+      const id = e.dataTransfer?.getData("text/agora-img-id");
+      if (!id) return;
+
+      e.preventDefault();
+
+      const node = createPostContent.querySelector(`.img-node[data-img-id="${id}"]`);
+      if (!node) return;
+
+      const r = getRangeFromPoint(e.clientX, e.clientY);
+      if (!r) return;
+
+      // sposta nodo nel punto di drop
+      r.insertNode(node);
+
+      // mette un <br> dopo per riprendere a scrivere
+      const br = document.createElement("br");
+      node.after(br);
+
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      r.setStartAfter(br);
+      r.setEndAfter(br);
+      sel.addRange(r);
+    });
     // Submit create post
     createPostForm.addEventListener("submit", async (e) => {
       e.preventDefault();
