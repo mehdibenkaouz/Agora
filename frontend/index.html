@@ -581,6 +581,38 @@
     @media (max-width: 480px){
       .preview-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
+
+    /* --- Rich text editor (contenteditable) --- */
+    .rt-editor{
+      min-height: 180px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(248,247,243,0.92);
+      border-radius: 16px;
+      padding: 14px 14px;
+      outline: none;
+      font-size: 1.15rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .rt-editor:focus{
+      border-color: rgba(87,25,41,0.35);
+      box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
+    }
+    .rt-editor:empty:before{
+      content: attr(data-placeholder);
+      color: rgba(0,0,0,0.38);
+    }
+
+    .rt-editor img.inline-img{
+      max-width: 100%;
+      height: auto;
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,0.10);
+      display: block;
+      margin: 10px 0;
+      cursor: grab;
+    }
   </style>
 </head>
 
@@ -727,26 +759,30 @@
 
       <div class="modal-body">
         <form id="createPostForm" class="form">
-          <label class="field">
-            <div id="mediaDropzone" class="dropzone" tabindex="0" aria-label="Add images by upload, drag and drop or paste">
-              <div class="dropzone-top">
-                <div>
-                  <div class="dropzone-title">Images</div>
-                  <div class="dropzone-hint">Drop here, paste (Ctrl+V), or upload.</div>
-                </div>
-                <button type="button" id="pickImagesBtn" class="file-btn">Upload</button>
-              </div>
 
-              <input id="imageFileInput" type="file" accept="image/*" multiple hidden />
-              <div id="imagePreview" class="preview-grid" aria-live="polite"></div>
+          <div id="mediaDropzone" class="dropzone" tabindex="0" aria-label="Add images by upload, drag and drop or paste">
+            <div class="dropzone-top">
+              <div>
+                <div class="dropzone-title">Images</div>
+                <div class="dropzone-hint">Drop here, paste (Ctrl+V), or upload.</div>
+              </div>
+              <button type="button" id="pickImagesBtn" class="file-btn">Upload</button>
             </div>
+
+            <input id="imageFileInput" type="file" accept="image/*" multiple hidden />
+            <div id="imagePreview" class="preview-grid" aria-live="polite"></div>
+          </div>
+
+          <div class="field">
             <span>Content</span>
-            <textarea id="createPostContent"
-              class="post-textarea"
-              style="height: 180px; border: 1px solid rgba(0,0,0,0.10); background: rgba(248,247,243,0.92); border-radius: 16px;"
-              placeholder="Write your post..."
-              required></textarea>
-          </label>
+            <!-- qui lo cambiamo nello STEP 3 -->
+              <div id="createPostContent"
+                class="rt-editor"
+                contenteditable="true"
+                spellcheck="true"
+                data-placeholder="Write your post..."
+                aria-label="Post content editor"></div>
+          </div>
 
           <button id="createPostPublishBtn" class="primary-btn" type="submit" style="width:100%;">
             Publish
@@ -953,6 +989,35 @@
     // --- Images state (frontend only for now) ---
     const selectedImages = []; // { id, file, url }
 
+    function insertImageAtCursor(url) {
+      // Inserisce un <img> nel punto del cursore nell'editor contenteditable
+      createPostContent.focus();
+
+      const img = document.createElement("img");
+      img.src = url;
+      img.className = "inline-img";
+      img.draggable = true;
+
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) {
+        createPostContent.appendChild(img);
+        createPostContent.appendChild(document.createElement("br"));
+        return;
+      }
+
+      const range = sel.getRangeAt(0);
+      range.deleteContents();
+      range.insertNode(img);
+
+      // aggiunge un a-capo dopo l’immagine e sposta il cursore
+      const br = document.createElement("br");
+      img.after(br);
+
+      range.setStartAfter(br);
+      range.setEndAfter(br);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
     function isImageFile(file) {
       return file && file.type && file.type.startsWith("image/");
     }
@@ -970,6 +1035,7 @@
       const id = crypto.randomUUID ? crypto.randomUUID() : (Date.now() + "_" + Math.random());
       selectedImages.push({ id, file, url });
       renderImagePreview();
+      insertImageAtCursor(url);
     }
 
     function addMany(files) {
@@ -1049,13 +1115,14 @@
           found = true;
         }
       }
-      if (found) e.preventDefault();
+      if (found) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
     }
 
-    // Paste works when modal is open + focused
+    // Paste: gestiamo SOLO sul modal (un solo listener)
     createPostModal.addEventListener("paste", handlePaste);
-    mediaDropzone.addEventListener("paste", handlePaste);
-    createPostContent.addEventListener("paste", handlePaste);
 
     createPostClose.addEventListener("click", closeCreatePostModal);
     createPostModal.addEventListener("click", (e) => {
@@ -1078,15 +1145,16 @@
         return;
       }
 
-      const content = (createPostContent.value || "").trim();
-      if (!content) return;
+      const contentText = (createPostContent.innerText || "").trim();
+      if (!contentText && selectedImages.length === 0) return;
 
+      // Per ora inviamo SOLO testo al backend (step 2 sarà immagini reali)
       await api("/api/posts", {
         method: "POST",
-        body: JSON.stringify({ content })
+        body: JSON.stringify({ content: contentText })
       });
 
-      createPostContent.value = "";
+      createPostContent.innerHTML = "";
       closeCreatePostModal();
       clearImages();
       await loadFeed();
