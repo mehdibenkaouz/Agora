@@ -954,15 +954,24 @@
       align-items:center;
       gap: 10px;
     }
-    .thread-compose input{
-      flex: 1;
-      min-height: 44px;
+
+    .thread-compose textarea{
+      width: 100%;
+      min-height: 60px;
+      max-height: 140px;
+      resize: none;
       border-radius: 16px;
       border: 1px solid rgba(0,0,0,0.10);
       background: rgba(248,247,243,0.92);
       padding: 10px 12px;
       outline: none;
       font: inherit;
+      line-height: 1.35;
+    }
+
+    .thread-compose textarea:focus{
+      border-color: rgba(87,25,41,0.35);
+      box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
     }
     .thread-compose input:focus{
       border-color: rgba(87,25,41,0.35);
@@ -1013,9 +1022,6 @@
       gap: 10px;
     }
 
-    .thread-compose input{
-      width: 100%;
-    }
 
     .thread-send{
       min-width: 88px;
@@ -1147,7 +1153,11 @@
             </div>
 
             <div class="thread-compose">
-              <input id="threadInput" type="text" placeholder="Login to comment..." disabled />
+              <textarea id="threadInput"
+                        rows="2"
+                        maxlength="300"
+                        placeholder="Login to comment..."
+                        disabled></textarea>
               <button id="threadSendBtn" class="thread-send" type="button" disabled>Send</button>
             </div>
 
