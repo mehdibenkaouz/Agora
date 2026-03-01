@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AGORA — Home</title>
+  <title>AGORÀ</title>
+
+  <link rel="icon" type="image/png" sizes="32x32" href="item/LogoAgora.png">
+  <link rel="apple-touch-icon" href="item/LogoAgora.png">
 
   <style>
     :root {
@@ -461,9 +464,17 @@
 
     /* Responsive */
     @media (max-width: 1080px) {
-      .layout { grid-template-columns: 76px minmax(0, 1fr); }
-      .right-column { grid-column: 2; }
-      .comments-card { min-height: 280px; }
+      .layout { 
+        grid-template-columns: 76px minmax(0, 1fr) minmax(240px, 320px);
+        gap: 16px;
+      }
+
+      /* stringiamo un po’ per stare bene a metà schermo */
+      .action-btn{ width: 60px; height: 60px; }
+      .comments-card{
+        border-radius: 32px;
+        padding: 14px 14px 16px;
+      }
     }
 
     @media (max-width: 760px) {
@@ -484,6 +495,12 @@
     }
 
 
+    @media (max-width: 980px) {
+      /* stringe ancora un filo la colonna commenti senza andare sotto */
+      .layout{
+        grid-template-columns: 76px minmax(0, 1fr) minmax(220px, 280px);
+      }
+    }
     /* --- Create Post: media dropzone + preview --- */
     .dropzone{
       border-radius: 20px;
@@ -1063,14 +1080,34 @@
     }
 
 
+    .brand {
+      display: flex;
+      align-items: center;
+    }
+
+    .brand-logo{
+      height: 42px;
+      width: auto;
+      object-fit: contain;
+      display: block;
+    }
+  
+    .topbar-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
   </style>
 </head>
 
 <body>
   <header class="topbar">
     <div class="topbar-inner">
-      <div class="brand">logo</div>
-
+      <div class="brand">
+        <a href="index.html">
+          <img src="item/LogoAgora.png" alt="AGORA logo" class="brand-logo">
+        </a>
+      </div>
       <nav class="top-links">
         <a href="index.html">Home</a>
         <a href="principles.html">Principles</a>
