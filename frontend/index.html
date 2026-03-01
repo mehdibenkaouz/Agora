@@ -763,6 +763,235 @@
     .rt-editor div{
       margin: 0;
     }
+  
+
+    /* --- Feed (comment, up, save) --- */
+    .feed-list{ display:grid; gap:12px; }
+
+    .post-card{
+      background: rgba(255,255,255,0.65);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 22px;
+      padding: 14px 16px 12px;
+      box-shadow: 0 10px 22px rgba(0,0,0,0.10);
+      transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+    }
+    .post-card:hover{
+      transform: translateY(-1px);
+      box-shadow: 0 14px 28px rgba(0,0,0,0.14);
+    }
+    .post-card.is-active{
+      border-color: rgba(87,25,41,0.34);
+      box-shadow: 0 16px 34px rgba(87,25,41,0.18);
+    }
+
+    .post-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      color: rgba(0,0,0,0.58);
+      font-size: 0.9rem;
+    }
+    .post-author{ font-weight: 850; color: rgba(0,0,0,0.70); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .post-date{ white-space:nowrap; }
+
+    .post-body{
+      margin-top: 10px;
+      font-size: 1.05rem;
+      line-height: 1.55;
+      color: #111;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .post-actions{
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(0,0,0,0.08);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .actions-left, .actions-right{ display:flex; align-items:center; gap:10px; }
+
+    .icon-btn{
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(248,247,243,0.92);
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      transition: transform .12s ease, background .12s ease, box-shadow .12s ease, border-color .12s ease;
+      user-select:none;
+    }
+    .icon-btn:hover{
+      transform: translateY(-1px);
+      background: rgba(248,247,243,1);
+      box-shadow: 0 10px 22px rgba(0,0,0,0.14);
+    }
+    .icon-btn:disabled{
+      opacity: .55;
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+    .icon-btn svg{
+      width: 18px;
+      height: 18px;
+      stroke: #111;
+      stroke-width: 2.3;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .icon-btn.is-on{
+      border-color: rgba(87,25,41,0.40);
+      box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
+    }
+
+    .action-count{
+      min-width: 18px;
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: rgba(0,0,0,0.62);
+    }
+
+    /* --- Thread / comments panel (right column) --- */
+    .thread-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .thread-sub{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: .92rem;
+      line-height: 1.25;
+    }
+    .thread-clear{
+      width: 40px;
+      height: 40px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(248,247,243,0.92);
+      cursor: pointer;
+      display:grid;
+      place-items:center;
+    }
+    .thread-clear svg{
+      width: 18px;
+      height: 18px;
+      stroke:#111;
+      stroke-width:2.4;
+      fill:none;
+      stroke-linecap:round;
+      stroke-linejoin:round;
+    }
+
+    .thread-body{
+      display:flex;
+      flex-direction:column;
+      gap: 12px;
+      flex: 1;
+      min-height: 0;
+    }
+    .thread-comments{
+      flex: 1;
+      min-height: 260px;
+      border-radius: 24px;
+      border: 1px dashed rgba(0,0,0,0.08);
+      background: rgba(255,255,255,0.50);
+      padding: 14px;
+      overflow: auto;
+      display:flex;
+      flex-direction:column;
+      gap: 10px;
+    }
+    .thread-server-hint{
+      color: rgba(0,0,0,0.50);
+      font-size: .88rem;
+      padding-bottom: 2px;
+    }
+    .thread-empty{
+      color: rgba(0,0,0,0.55);
+      font-size: .95rem;
+      line-height: 1.35;
+      padding: 8px 2px;
+    }
+
+    .comment-item{
+      border: 1px solid rgba(0,0,0,0.08);
+      background: rgba(252,251,248,0.92);
+      border-radius: 18px;
+      padding: 10px 12px;
+    }
+    .comment-meta{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      color: rgba(0,0,0,0.55);
+      font-size: .85rem;
+      font-weight: 750;
+      margin-bottom: 6px;
+    }
+    .comment-text{
+      color: #111;
+      font-size: .98rem;
+      line-height: 1.35;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .thread-compose{
+      display:flex;
+      align-items:center;
+      gap: 10px;
+    }
+    .thread-compose input{
+      flex: 1;
+      min-height: 44px;
+      border-radius: 16px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(248,247,243,0.92);
+      padding: 10px 12px;
+      outline: none;
+      font: inherit;
+    }
+    .thread-compose input:focus{
+      border-color: rgba(87,25,41,0.35);
+      box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
+    }
+    .thread-send{
+      border: 0;
+      background: var(--brand);
+      color: #fff;
+      border-radius: 999px;
+      padding: 10px 14px;
+      font-size: 0.95rem;
+      font-weight: 750;
+      cursor: pointer;
+      min-height: 44px;
+      box-shadow: 0 8px 18px rgba(87, 25, 41, 0.24);
+    }
+    .thread-send:disabled{
+      opacity: .55;
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+    .thread-footnote{
+      color: rgba(0,0,0,0.52);
+      font-size: .85rem;
+      line-height: 1.25;
+      padding-left: 4px;
+    }
+
   </style>
 </head>
 
@@ -831,20 +1060,41 @@
         <section class="empty-feed">
           <h2>Feed</h2>
           <p id="feedHint">Login, then publish your first post.</p>
-          <div id="feed" style="margin-top:14px; display:grid; gap:12px;"></div>
+          <div id="feed" class="feed-list" style="margin-top:14px;"></div>
         </section>
       </div>
 
+      
       <aside class="right-column">
-        <section class="comments-card">
-          <h2>comments</h2>
-          <div class="comments-box">
-            <strong>Selected thread</strong>
-            Comments will appear here when a post is opened or focused.
-            For now this stays as a visual placeholder, exactly like in your sketch.
+        <section class="comments-card" id="threadPanel">
+          <div class="thread-head">
+            <div>
+              <h2 id="threadTitle">Thread</h2>
+              <div class="thread-sub" id="threadSub">Select a post to view comments.</div>
+            </div>
+            <button id="threadClearBtn" class="thread-clear" type="button" aria-label="Clear thread">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12"></path>
+                <path d="M18 6L6 18"></path>
+              </svg>
+            </button>
+          </div>
+
+          <div class="thread-body">
+            <div id="threadComments" class="thread-comments" aria-live="polite">
+              <div class="thread-empty">No post selected.</div>
+            </div>
+
+            <div class="thread-compose">
+              <input id="threadInput" type="text" placeholder="Login to comment..." disabled />
+              <button id="threadSendBtn" class="thread-send" type="button" disabled>Send</button>
+            </div>
+
+            <div id="threadFootnote" class="thread-footnote">Local-only UI for now (no backend sync yet).</div>
           </div>
         </section>
       </aside>
+
     </section>
   </main>
 
@@ -1470,6 +1720,18 @@
     const feed = document.getElementById("feed");
     const feedHint = document.getElementById("feedHint");
 
+
+    // Thread UI (comments panel)
+    const threadPanel = document.getElementById("threadPanel");
+    const threadTitle = document.getElementById("threadTitle");
+    const threadSub = document.getElementById("threadSub");
+    const threadComments = document.getElementById("threadComments");
+    const threadInput = document.getElementById("threadInput");
+    const threadSendBtn = document.getElementById("threadSendBtn");
+    const threadClearBtn = document.getElementById("threadClearBtn");
+    const threadFootnote = document.getElementById("threadFootnote");
+
+
     // Account UI
     const accountBtn = document.getElementById("accountBtn");
     const accountMenu = document.getElementById("accountMenu");
@@ -1513,6 +1775,154 @@
       }[c]));
     }
 
+    // --- Feed UI state (frontend-only for now) ---
+    const postUI = new Map();      // key -> { up, saved, upBase, commentBase, localComments:[] }
+    const postByKey = new Map();   // key -> post object from API
+    let activeThreadKey = null;
+
+    function makePostKey(p, idx) {
+      return String((p && (p.id || p.post_id || p.uuid)) || ((p?.created_at || "no_date") + "_" + idx));
+    }
+
+    function ensurePostUI(key, p) {
+      if (postUI.has(key)) return postUI.get(key);
+      const st = {
+        up: false,
+        saved: false,
+        upBase: Number((p && p.up_count) || 0) || 0,
+        commentBase: Number((p && p.comment_count) || 0) || 0,
+        localComments: []
+      };
+      postUI.set(key, st);
+      return st;
+    }
+
+    function getUpCount(st) {
+      return st.upBase + (st.up ? 1 : 0);
+    }
+
+    function getCommentCount(st) {
+      return st.commentBase + (st.localComments?.length || 0);
+    }
+
+    function keyToSelector(key) {
+      // CSS.escape è supportato dai browser moderni; fallback per sicurezza
+      if (window.CSS && typeof window.CSS.escape === "function") return window.CSS.escape(key);
+      return String(key).replace(/[^a-zA-Z0-9_\-]/g, "\\$&");
+    }
+
+    function setActiveCard(key) {
+      document.querySelectorAll(".post-card.is-active").forEach(el => el.classList.remove("is-active"));
+      if (!key) return;
+      const sel = keyToSelector(key);
+      const el = document.querySelector(`.post-card[data-post-key="${sel}"]`);
+      if (el) el.classList.add("is-active");
+    }
+
+    function updateThreadAuthState() {
+      const can = !!getToken();
+      const hasThread = !!activeThreadKey;
+      if (threadInput) {
+        threadInput.disabled = !(can && hasThread);
+        threadInput.placeholder = can ? (hasThread ? "Write a comment..." : "Select a post first...") : "Login to comment...";
+      }
+      if (threadSendBtn) threadSendBtn.disabled = !(can && hasThread);
+    }
+
+    function clearThread() {
+      activeThreadKey = null;
+      setActiveCard(null);
+
+      if (threadTitle) threadTitle.textContent = "Thread";
+      if (threadSub) threadSub.textContent = "Select a post to view comments.";
+      if (threadComments) threadComments.innerHTML = '<div class="thread-empty">No post selected.</div>';
+      if (threadFootnote) threadFootnote.textContent = "Local-only UI for now (no backend sync yet).";
+
+      updateThreadAuthState();
+    }
+
+    function renderThread(key) {
+      activeThreadKey = key || null;
+
+      if (!activeThreadKey || !postByKey.has(activeThreadKey) || !postUI.has(activeThreadKey)) {
+        clearThread();
+        return;
+      }
+
+      const p = postByKey.get(activeThreadKey);
+      const st = postUI.get(activeThreadKey);
+
+      if (threadTitle) threadTitle.textContent = "Comments";
+      if (threadSub) threadSub.textContent = `${p.author_email || "anon"} · ${new Date(p.created_at).toLocaleString()}`;
+
+      const serverHint = (st.commentBase > 0)
+        ? `<div class="thread-server-hint">(${st.commentBase} comments exist on server — will be loaded later)</div>`
+        : `<div class="thread-server-hint">(Server comments will be loaded later)</div>`;
+
+      let inner = serverHint;
+
+      const list = st.localComments || [];
+      if (!list.length) {
+        inner += `<div class="thread-empty">No local comments yet. Add the first one.</div>`;
+      } else {
+        for (const c of list) {
+          const who = escapeHtml(c.author || "you");
+          const when = new Date(c.at || Date.now()).toLocaleString();
+          inner += `
+            <div class="comment-item">
+              <div class="comment-meta">
+                <span>${who}</span>
+                <span>${escapeHtml(when)}</span>
+              </div>
+              <div class="comment-text">${escapeHtml(c.text || "")}</div>
+            </div>
+          `;
+        }
+      }
+
+      if (threadComments) threadComments.innerHTML = inner;
+      if (threadFootnote) threadFootnote.textContent = "Local-only UI for now (upvotes/saves/comments are not synced yet).";
+
+      updateThreadAuthState();
+    }
+
+    function bumpFeedCountsForKey(key) {
+      const st = postUI.get(key);
+      if (!st) return;
+
+      const sel = keyToSelector(key);
+      const card = document.querySelector(`.post-card[data-post-key="${sel}"]`);
+      if (!card) return;
+
+      const upEl = card.querySelector(".up-count");
+      const cEl = card.querySelector(".comment-count");
+      if (upEl) upEl.textContent = String(getUpCount(st));
+      if (cEl) cEl.textContent = String(getCommentCount(st));
+    }
+
+    function trySendThreadComment() {
+      if (!activeThreadKey) return;
+
+      if (!getToken()) {
+        openModal();
+        return;
+      }
+
+      const text = (threadInput?.value || "").trim();
+      if (!text) return;
+
+      const st = postUI.get(activeThreadKey);
+      if (!st) return;
+
+      st.localComments = st.localComments || [];
+      st.localComments.push({ author: "you", text, at: Date.now() });
+
+      if (threadInput) threadInput.value = "";
+      renderThread(activeThreadKey);
+      bumpFeedCountsForKey(activeThreadKey);
+    }
+
+
     function openMenu() {
       accountMenu.classList.add("open");
       accountBtn.setAttribute("aria-expanded", "true");
@@ -1543,6 +1953,7 @@
         accountMenuSub.textContent = "Not logged in";
         menuPrimaryAction.textContent = "Login";
         menuPrimaryAction.classList.remove("danger");
+        updateThreadAuthState();
         return;
       }
 
@@ -1552,6 +1963,7 @@
         accountMenuSub.textContent = me.user.email;
         menuPrimaryAction.textContent = "Logout";
         menuPrimaryAction.classList.add("danger");
+        updateThreadAuthState();
       } catch {
         localStorage.removeItem(TOKEN_KEY);
         accountMenuSub.textContent = "Not logged in";
@@ -1559,39 +1971,125 @@
         menuPrimaryAction.classList.remove("danger");
         feedHint.textContent = "Login, then publish your first post.";
       }
+      updateThreadAuthState();
     }
 
     function renderPosts(posts) {
       feed.innerHTML = "";
+      postByKey.clear();
+
+      const canInteract = !!getToken();
+
       if (!posts.length) {
         feed.innerHTML = "<div style='color:#666;'>No posts yet.</div>";
+        clearThread();
         return;
       }
 
-      for (const p of posts) {
-        const card = document.createElement("div");
-        card.style.background = "rgba(255,255,255,0.65)";
-        card.style.border = "1px solid rgba(0,0,0,0.08)";
-        card.style.borderRadius = "18px";
-        card.style.padding = "14px 16px";
+      posts.forEach((p, idx) => {
+        const key = makePostKey(p, idx);
+        postByKey.set(key, p);
+        const st = ensurePostUI(key, p);
+
+        const card = document.createElement("article");
+        card.className = "post-card";
+        card.dataset.postKey = key;
+
+        const contentHtml = escapeHtml(p.content || "").replace(/\n/g, "<br>");
 
         card.innerHTML = `
-          <div style="display:flex;justify-content:space-between;gap:10px;color:#666;font-size:0.9rem;">
-            <span>${escapeHtml(p.author_email || "anon")}</span>
-            <span>${new Date(p.created_at).toLocaleString()}</span>
+          <div class="post-head">
+            <div class="post-author">${escapeHtml(p.author_email || "anon")}</div>
+            <div class="post-date">${escapeHtml(new Date(p.created_at).toLocaleString())}</div>
           </div>
-          <div style="margin-top:8px;font-size:1.05rem;line-height:1.5;color:#111;">
-            ${escapeHtml(p.content)}
+
+          <div class="post-body">${contentHtml}</div>
+
+          <div class="post-actions">
+            <div class="actions-left">
+              <button class="icon-btn up-btn ${st.up ? "is-on" : ""}" ${canInteract ? "" : "disabled"} type="button" aria-label="Upvote">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 19V5"></path>
+                  <path d="M6 11l6-6 6 6"></path>
+                </svg>
+              </button>
+              <span class="action-count up-count">${getUpCount(st)}</span>
+
+              <button class="icon-btn comment-btn" type="button" aria-label="Open comments">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4z"></path>
+                </svg>
+              </button>
+              <span class="action-count comment-count">${getCommentCount(st)}</span>
+            </div>
+
+            <div class="actions-right">
+              <button class="icon-btn save-btn ${st.saved ? "is-on" : ""}" ${canInteract ? "" : "disabled"} type="button" aria-label="Save">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+                </svg>
+              </button>
+            </div>
           </div>
         `;
+
+        // Click anywhere on card => open thread (focus)
+        card.addEventListener("click", () => {
+          setActiveCard(key);
+          renderThread(key);
+        });
+
+        const upBtn = card.querySelector(".up-btn");
+        const saveBtn = card.querySelector(".save-btn");
+        const commentBtn = card.querySelector(".comment-btn");
+
+        upBtn?.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!getToken()) { openModal(); return; }
+          st.up = !st.up;
+          upBtn.classList.toggle("is-on", st.up);
+          bumpFeedCountsForKey(key);
+        });
+
+        saveBtn?.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!getToken()) { openModal(); return; }
+          st.saved = !st.saved;
+          saveBtn.classList.toggle("is-on", st.saved);
+        });
+
+        commentBtn?.addEventListener("click", (e) => {
+          e.stopPropagation();
+          setActiveCard(key);
+          renderThread(key);
+          if (getToken()) setTimeout(() => threadInput?.focus(), 0);
+        });
+
         feed.appendChild(card);
-      }
+      });
+
+      // If selected thread disappeared after refresh, reset
+      if (activeThreadKey && !postByKey.has(activeThreadKey)) clearThread();
     }
+
 
     async function loadFeed() {
       const data = await api("/api/posts", { method: "GET" });
       renderPosts(data.posts || []);
     }
+
+    // Thread interactions (frontend-only for now)
+    threadSendBtn?.addEventListener("click", trySendThreadComment);
+    threadInput?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        trySendThreadComment();
+      }
+    });
+    threadClearBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      clearThread();
+    });
 
     // Account dropdown interactions
     accountBtn.addEventListener("click", (e) => {
