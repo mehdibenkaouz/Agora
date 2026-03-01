@@ -2687,6 +2687,155 @@
       });
     }
 
+    function extractPlainTextFromHtml(html) {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html || "";
+
+      // sostituisci immagini con un placeholder testuale (solo per preview)
+      tmp.querySelectorAll("img").forEach(img => {
+        img.replaceWith(document.createTextNode(" [image] "));
+      });
+
+      return (tmp.textContent || "").replace(/\s+/g, " ").trim();
+    }
+
+    function sanitizeStyle(styleText) {
+      // allowlist minimale di proprietà CSS
+      const ALLOWED = new Set([
+        "font-weight",
+        "font-style",
+        "text-decoration",
+        "font-size",
+        "color",
+        "background-color",
+        "text-align"
+      ]);
+
+      const out = [];
+      const parts = String(styleText || "").split(";");
+      for (const p of parts) {
+        const idx = p.indexOf(":");
+        if (idx === -1) continue;
+        const prop = p.slice(0, idx).trim().toLowerCase();
+        let val = p.slice(idx + 1).trim();
+
+        if (!ALLOWED.has(prop)) continue;
+        // blocca roba tipo url(...) in style
+        if (/url\s*\(/i.test(val)) continue;
+
+        // normalizza un minimo
+        val = val.replace(/["']/g, "");
+        out.push(`${prop}:${val}`);
+      }
+      return out.join(";");
+    }
+
+    function cleanAttributes(el) {
+      const tag = el.tagName.toUpperCase();
+
+      // salva lo style solo se è “safe”
+      const style = sanitizeStyle(el.getAttribute("style"));
+
+      // rimuovi TUTTI gli attributi
+      [...el.attributes].forEach(a => el.removeAttribute(a.name));
+
+      // ripristina solo quelli permessi
+      if (style) el.setAttribute("style", style);
+
+      if (tag === "A") {
+        const href = el.getAttribute("href");
+        if (href) {
+          // basic safety: no javascript:
+          if (/^\s*javascript:/i.test(href)) {
+            el.removeAttribute("href");
+          } else {
+            el.setAttribute("href", href);
+            el.setAttribute("target", "_blank");
+            el.setAttribute("rel", "noopener noreferrer");
+          }
+        }
+      }
+
+      if (tag === "IMG") {
+        const src = el.getAttribute("src");
+        const alt = el.getAttribute("alt") || "Image";
+        if (src) el.setAttribute("src", src);
+        el.setAttribute("alt", alt);
+      }
+    }
+
+    function sanitizeHtmlAllowlist(root) {
+      const ALLOWED_TAGS = new Set([
+        "B", "STRONG", "I", "EM", "U", "S",
+        "BR", "P", "DIV", "UL", "OL", "LI",
+        "BLOCKQUOTE", "CODE", "PRE",
+        "SPAN",
+        "A",
+        "IMG"
+      ]);
+
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, null);
+      const toProcess = [];
+      while (walker.nextNode()) toProcess.push(walker.currentNode);
+
+      for (const el of toProcess) {
+        const tag = el.tagName.toUpperCase();
+
+        // rimuovi script/style sempre
+        if (tag === "SCRIPT" || tag === "STYLE") {
+          el.remove();
+          continue;
+        }
+
+        // se tag non permesso: unwrap (mantieni il contenuto)
+        if (!ALLOWED_TAGS.has(tag)) {
+          const parent = el.parentNode;
+          if (!parent) continue;
+          while (el.firstChild) parent.insertBefore(el.firstChild, el);
+          el.remove();
+          continue;
+        }
+
+        // ripulisci attributi
+        cleanAttributes(el);
+      }
+    }
+
+    function buildCleanPostHtmlFromEditor(editorEl) {
+      const clone = editorEl.cloneNode(true);
+
+      // 1) rimuovi UI dell’editor immagini
+      clone.querySelectorAll(".img-handle, svg").forEach(n => n.remove());
+
+      // 2) trasforma .img-node -> <img ...> “puro”
+      clone.querySelectorAll(".img-node").forEach(node => {
+        const img = node.querySelector("img");
+        if (!img) { node.remove(); return; }
+
+        const cleanImg = document.createElement("img");
+        cleanImg.setAttribute("src", img.getAttribute("src") || "");
+        cleanImg.setAttribute("alt", img.getAttribute("alt") || "Image");
+
+        // preserva width se l’utente ha ridimensionato
+        const w = img.style.width || "";
+        if (w) cleanImg.style.width = w;
+        cleanImg.style.height = "auto";
+
+        node.replaceWith(cleanImg);
+      });
+
+      // 3) rimuovi div vuoti inutili
+      clone.querySelectorAll("div").forEach(d => {
+        const hasImg = d.querySelector("img");
+        if (!hasImg && !d.textContent.trim()) d.remove();
+      });
+
+      // 4) allowlist finale (anti XSS + anti “spazzatura”)
+      sanitizeHtmlAllowlist(clone);
+
+      return clone.innerHTML.trim();
+    }
+
     function flushRemovedImgIds() {
       removedFlushTimer = null;
 
@@ -2884,6 +3033,7 @@
         await api("/api/posts", {
           method: "POST",
           body: JSON.stringify({
+            content: contentText,   
             content_html: contentHtml,
             content_text: contentText
           })
