@@ -1976,18 +1976,20 @@
 
       const plain = extractPlainTextFromHtml(safeFullHtml);
 
+      // se è corto, mostra tutto e basta
       if (plain.length <= FEED_PREVIEW_LIMIT) {
         return `<div class="post-body">${safeFullHtml}</div>`;
       }
 
+      // preview testuale (sicuro)
       const previewPlain = plain.slice(0, FEED_PREVIEW_LIMIT);
       const previewSafe = escapeHtml(previewPlain);
 
       return `
         <div class="post-body" data-post="${postId}">
-          <div class="post-preview">${previewSafe}…</div>
-          <button class="post-more" data-post="${postId}">More</button>
-          <div class="post-full" id="postFull_${postId}" style="display:none">${safeFullHtml}</div>
+          <span class="post-preview" data-post="${postId}">${previewSafe}…</span>
+          <button class="more-btn" type="button" data-more="${postId}" aria-expanded="false">… more</button>
+          <span class="post-full is-hidden" data-post="${postId}">${safeFullHtml}</span>
         </div>
       `;
     }
