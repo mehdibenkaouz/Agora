@@ -1911,18 +1911,15 @@
     }
 
     function getPostPlainText() {
-      // Normalizza CRLF e rimuove caratteri "fantasma" tipici dei contenteditable.
-      let t = (createPostContent.innerText || "").replace(/\r\n/g, "\n");
+      // innerText può dare risultati strani in alcuni casi; textContent è fallback stabile
+      let t = (createPostContent.innerText ?? "");
+      if (!t || t === "\n") t = (createPostContent.textContent ?? "");
 
-      // Rimuove ZWSP e altri invisibili comuni
-      t = t.replace(/\u200B/g, "");
+      // normalizza newline + rimuove invisibili tipici del tuo editor
+      t = t.replace(/\r\n/g, "\n");
+      t = t.replace(/[\u200B\u200C\u200D\uFEFF]/g, ""); // zero-width chars
 
-      // Caso speciale: editor "vuoto" spesso diventa "\n"
-      if (t === "\n") t = "";
-
-    // Non svuotare qui: ci serve SEMPRE il testo reale per conteggio/limiti.
-    // La logica "vuoto/non vuoto" la gestiamo fuori.
-    return t;
+      return t;
     }
 
     function setCaretByTextOffset(root, offset) {
@@ -1977,20 +1974,30 @@
       setCaretByTextOffset(createPostContent, Math.min(caretOffset, limit));
     }
     function updatePostCounterAndPublish() {
-      const text = getPostPlainText();
-      const len = text.length;
+      const raw = getPostPlainText();
+
+      // normalizza NBSP e invisibili
+      const normalized = raw
+        .replace(/\u00A0/g, " ")
+        .replace(/[\u200B\u200C\u200D\uFEFF]/g, "");
+
+      const len = normalized.length;
+
+      // testo “reale”: qualsiasi cosa che non sia whitespace
+      const hasRealText = /[^\s]/.test(normalized);
+
+      // coerente con la tua logica di submit (consenti publish anche solo con immagini)
+      const hasImages = (typeof selectedImages !== "undefined") && (selectedImages.length > 0);
+
+      const withinLimit = len <= POST_MAX_LENGTH;
 
       if (rtCounter) {
         rtCounter.textContent = `${len} / ${POST_MAX_LENGTH}`;
         rtCounter.classList.toggle("is-limit", len >= POST_MAX_LENGTH);
       }
 
-      const normalized = text.replace(/\u00A0/g, " "); // NBSP -> spazio normale
-      const hasRealText = normalized.trim().length > 0;
-      const withinLimit = len <= POST_MAX_LENGTH;
-
       if (createPostPublishBtn) {
-        createPostPublishBtn.disabled = !(hasRealText && withinLimit);
+        createPostPublishBtn.disabled = !((hasRealText || hasImages) && withinLimit);
       }
     }
     function enforcePostMaxLength() {
@@ -2782,15 +2789,25 @@
       if (!contentText && selectedImages.length === 0) return;
 
       // Per ora inviamo SOLO testo al backend (step 2 sarà immagini reali)
-      await api("/api/posts", {
-        method: "POST",
-        body: JSON.stringify({ content: contentText })
-      });
+      createPostPublishBtn.disabled = true; // evita doppi click
 
-      createPostContent.innerHTML = "";
-      closeCreatePostModal();
-      clearImages();
-      await loadFeed();
+      try {
+        await api("/api/posts", {
+          method: "POST",
+          body: JSON.stringify({ content: contentText })
+        });
+
+        createPostContent.innerHTML = "";
+        closeCreatePostModal();
+        clearImages();
+        await loadFeed();
+
+      } catch (err) {
+        console.error("Publish failed:", err);
+        alert("Publish failed: " + (err?.message || "unknown error"));
+      } finally {
+        updatePostCounterAndPublish(); // riporta lo stato corretto del bottone
+      }
     });
 
     // Blocca digitazione oltre 1000 (ma permette backspace/delete/navigation)
