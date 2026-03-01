@@ -1906,15 +1906,53 @@
     }
 
     async function api(path, opts = {}) {
-      const headers = Object.assign({ "Content-Type": "application/json" }, opts.headers || {});
+      const headers = Object.assign({}, opts.headers || {});
       const token = getToken();
       if (token) headers["Authorization"] = "Bearer " + token;
+
+      const body = opts.body;
+
+      // Se NON è FormData e NON hai già impostato Content-Type, usa JSON
+      const isFormData = (typeof FormData !== "undefined") && (body instanceof FormData);
+      if (!isFormData && !headers["Content-Type"]) {
+        headers["Content-Type"] = "application/json";
+      }
 
       const res = await fetch(API_BASE + path, { ...opts, headers });
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) throw new Error((data && data.error) ? data.error : ("http_" + res.status));
       return data;
+    }
+
+    async function uploadImageToR2(file) {
+      const fd = new FormData();
+      fd.append("file", file, file.name || "image.png");
+
+      // NON passare Content-Type: lo gestisce il browser
+      const out = await api("/api/media/upload", {
+        method: "POST",
+        body: fd
+      });
+
+      if (!out || !out.url) throw new Error("upload_failed");
+      return out; // { ok:true, key, url }
+    }
+
+    async function uploadAllSelectedImagesAndSwapSrc() {
+      // Carica solo quelle che non sono già state caricate
+      // Salviamo sull’oggetto: uploadedUrl / uploadedKey
+      for (const it of selectedImages) {
+        if (it.uploadedUrl) continue;
+
+        const up = await uploadImageToR2(it.file);
+        it.uploadedKey = up.key;
+        it.uploadedUrl = up.url;
+
+        // Sostituisci src nell'editor: .img-node[data-img-id="..."] img
+        const node = createPostContent.querySelector(`.img-node[data-img-id="${it.id}"] img`);
+        if (node) node.src = it.uploadedUrl;
+      }
     }
 
     function escapeHtml(s) {
@@ -2823,21 +2861,32 @@
 
       if (!getToken()) {
         alert("Please login first.");
-        openModal(); // apre modal login
+        openModal();
         return;
       }
 
       hardTruncateToLimit(POST_MAX_LENGTH);
-      const contentText = getPostPlainText().trim();
-      if (!contentText && selectedImages.length === 0) return;
 
-      // Per ora inviamo SOLO testo al backend (step 2 sarà immagini reali)
-      createPostPublishBtn.disabled = true; // evita doppi click
+      const contentText = getPostPlainText().trim();
+      const hasAnything = !!contentText || selectedImages.length > 0;
+      if (!hasAnything) return;
+
+      createPostPublishBtn.disabled = true;
 
       try {
+        // 1) upload immagini + swap src nel DOM editor (da blob: a /media/..)
+        await uploadAllSelectedImagesAndSwapSrc();
+
+        // 2) ora l'HTML contiene già img con URL pubblici + formattazioni
+        const contentHtml = createPostContent.innerHTML;
+
+        // 3) invio al backend
         await api("/api/posts", {
           method: "POST",
-          body: JSON.stringify({ content: contentText })
+          body: JSON.stringify({
+            content_html: contentHtml,
+            content_text: contentText
+          })
         });
 
         createPostContent.innerHTML = "";
@@ -2849,7 +2898,7 @@
         console.error("Publish failed:", err);
         alert("Publish failed: " + (err?.message || "unknown error"));
       } finally {
-        updatePostCounterAndPublish(); // riporta lo stato corretto del bottone
+        updatePostCounterAndPublish();
       }
     });
 
