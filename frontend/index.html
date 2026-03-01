@@ -2156,14 +2156,20 @@
       const data = await api("/api/posts", { method: "GET" });
       renderPosts(data.posts || []);
     }
-
+    
     // Thread interactions (frontend-only for now)
     threadSendBtn?.addEventListener("click", trySendThreadComment);
     threadInput?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
+      // Ctrl + Enter = invia
+      if (e.key === "Enter" && e.ctrlKey) {
         e.preventDefault();
         trySendThreadComment();
       }
+    });
+
+    threadInput?.addEventListener("input", () => {
+      threadInput.style.height = "auto";
+      threadInput.style.height = Math.min(threadInput.scrollHeight, 140) + "px";
     });
     threadClearBtn?.addEventListener("click", (e) => {
       e.stopPropagation();
