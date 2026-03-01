@@ -2699,7 +2699,6 @@
     }
 
     function sanitizeStyle(styleText) {
-      // allowlist minimale di proprietà CSS
       const ALLOWED = new Set([
         "font-weight",
         "font-style",
@@ -2707,28 +2706,42 @@
         "font-size",
         "color",
         "background-color",
-        "text-align"
+        "text-align",
+        "width",
+        "height",
+        "max-width"
       ]);
 
       const out = [];
       const parts = String(styleText || "").split(";");
+
       for (const p of parts) {
         const idx = p.indexOf(":");
         if (idx === -1) continue;
+
         const prop = p.slice(0, idx).trim().toLowerCase();
         let val = p.slice(idx + 1).trim();
 
         if (!ALLOWED.has(prop)) continue;
+
         // blocca roba tipo url(...) in style
         if (/url\s*\(/i.test(val)) continue;
+
+        // vincoli su misure
+        if (prop === "width" || prop === "height" || prop === "max-width") {
+          const v = val.toLowerCase().replace(/\s+/g, "");
+          // consenti: 123px, 50%, auto
+          if (!(v === "auto" || /^\d+px$/.test(v) || /^\d+%$/.test(v))) continue;
+          val = v;
+        }
 
         // normalizza un minimo
         val = val.replace(/["']/g, "");
         out.push(`${prop}:${val}`);
       }
+
       return out.join(";");
     }
-
     function cleanAttributes(el) {
       const tag = el.tagName.toUpperCase();
 
@@ -2824,9 +2837,17 @@
         cleanImg.setAttribute("alt", img.getAttribute("alt") || "Image");
 
         // preserva width se l’utente ha ridimensionato
-        const w = img.style.width || "";
+        // width può stare sull'img O sul wrapper .img-node
+        const wImg = (img.style && img.style.width) ? img.style.width : "";
+        const wWrap = (node.style && node.style.width) ? node.style.width : "";
+        const w = wImg || wWrap;
+
         if (w) cleanImg.style.width = w;
-        cleanImg.style.height = "auto";
+
+        // height: di default auto
+        const hImg = (img.style && img.style.height) ? img.style.height : "";
+        if (hImg) cleanImg.style.height = hImg;
+        else cleanImg.style.height = "auto";
 
         node.replaceWith(cleanImg);
       });
