@@ -1319,7 +1319,7 @@
 
               <button type="button" class="rt-btn" id="rtClear" title="Clear formatting">Tx</button>
             </div>
-            <!-- qui lo cambiamo nello STEP 3 -->
+            <!-- content che viene scritto-->
               <div id="createPostContent"
                 class="rt-editor"
                 contenteditable="true"
@@ -1348,6 +1348,7 @@
     const createPostClose = document.getElementById("createPostClose");
     const createPostForm = document.getElementById("createPostForm");
     const createPostContent = document.getElementById("createPostContent");
+    const POST_MAX_LENGTH = 1000;
 
     // --- Rich text toolbar elements ---
     const rtBold = document.getElementById("rtBold");
@@ -1808,6 +1809,10 @@
     createPostContent.addEventListener("mouseup", () => { saveEditorSelection(); updateToolbarState(); });
     createPostContent.addEventListener("focus", () => { dbg("editor:focus"); saveEditorSelection(); updateToolbarState(); });
 
+    createPostContent.addEventListener("input", enforcePostMaxLength);
+    createPostContent.addEventListener("paste", () => {
+      setTimeout(enforcePostMaxLength, 0);
+    });
     document.addEventListener("selectionchange", () => {
       dbg("selectionchange");
       if (selectionInsideEditor()) saveEditorSelection();
@@ -1891,6 +1896,47 @@
       }[c]));
     }
 
+    function enforcePostMaxLength() {
+      const text = createPostContent.innerText || "";
+
+      if (text.length <= POST_MAX_LENGTH) return;
+
+      // Salva posizione caret
+      const sel = window.getSelection();
+      let caretOffset = 0;
+
+      if (sel && sel.rangeCount > 0) {
+        const range = sel.getRangeAt(0);
+        const preRange = range.cloneRange();
+        preRange.selectNodeContents(createPostContent);
+        preRange.setEnd(range.endContainer, range.endOffset);
+        caretOffset = preRange.toString().length;
+      }
+
+      // Tronca testo
+      createPostContent.innerText = text.substring(0, POST_MAX_LENGTH);
+
+      // Ripristina caret in posizione valida
+      const newOffset = Math.min(caretOffset, POST_MAX_LENGTH);
+      const newRange = document.createRange();
+      const walker = document.createTreeWalker(createPostContent, NodeFilter.SHOW_TEXT);
+
+      let remaining = newOffset;
+      let node;
+
+      while ((node = walker.nextNode())) {
+        if (node.length >= remaining) {
+          newRange.setStart(node, remaining);
+          newRange.collapse(true);
+          break;
+        }
+        remaining -= node.length;
+      }
+
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(newRange);
+    }
     // --- Feed UI state (frontend-only for now) ---
     const postUI = new Map();      // key -> { up, saved, upBase, commentBase, localComments:[] }
     const postByKey = new Map();   // key -> post object from API
