@@ -992,6 +992,35 @@
       padding-left: 4px;
     }
 
+  
+    /* --- Feed cleanup (hide heading + login hint) --- */
+    .empty-feed h2{ display:none; }
+    #feedHint{ display:none; }
+
+    /* --- Sticky side rails (desktop) --- */
+    @media (min-width: 761px){
+      .left-rail{
+        position: sticky;
+        top: calc(var(--topbar-h) + 22px);
+        padding-top: 0;
+        height: fit-content;
+      }
+      .right-column{
+        position: sticky;
+        top: calc(var(--topbar-h) + 22px);
+        height: fit-content;
+      }
+      /* keep the thread panel fully usable within viewport */
+      .comments-card{
+        height: calc(100vh - var(--topbar-h) - 44px);
+        min-height: 0;
+      }
+      .thread-comments{
+        min-height: 0;
+      }
+    }
+
+
   </style>
 </head>
 
@@ -1949,7 +1978,7 @@
       const token = getToken();
 
       if (!token) {
-        feedHint.textContent = "Login, then publish your first post.";
+        feedHint.textContent = "";
         accountMenuSub.textContent = "Not logged in";
         menuPrimaryAction.textContent = "Login";
         menuPrimaryAction.classList.remove("danger");
@@ -1959,7 +1988,7 @@
 
       try {
         const me = await api("/api/me", { method: "GET" });
-        feedHint.textContent = "Logged in as: " + me.user.email;
+        feedHint.textContent = "";
         accountMenuSub.textContent = me.user.email;
         menuPrimaryAction.textContent = "Logout";
         menuPrimaryAction.classList.add("danger");
@@ -1969,7 +1998,7 @@
         accountMenuSub.textContent = "Not logged in";
         menuPrimaryAction.textContent = "Login";
         menuPrimaryAction.classList.remove("danger");
-        feedHint.textContent = "Login, then publish your first post.";
+        feedHint.textContent = "";
       }
       updateThreadAuthState();
     }
