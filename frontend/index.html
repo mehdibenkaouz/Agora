@@ -1110,6 +1110,20 @@
     .rt-counter.is-limit{
       color: var(--brand);
     }
+    .more-btn{
+      margin-top: 10px;
+      background: transparent;
+      border: 0;
+      padding: 0;
+      font: inherit;
+      font-weight: 850;
+      color: var(--brand);
+      cursor: pointer;
+      opacity: .92;
+    }
+    .more-btn:hover{ opacity: 1; text-decoration: underline; }
+
+    .post-full.is-hidden{ display:none; }
   </style>
 </head>
 
@@ -1361,6 +1375,7 @@
     const createPostForm = document.getElementById("createPostForm");
     const createPostContent = document.getElementById("createPostContent");
     const POST_MAX_LENGTH = 20000;
+    const FEED_PREVIEW_LIMIT = 1000;
     const rtCounter = document.getElementById("rtCounter");
     const createPostPublishBtn = document.getElementById("createPostPublishBtn");
 
@@ -1823,10 +1838,7 @@
     createPostContent.addEventListener("mouseup", () => { saveEditorSelection(); updateToolbarState(); });
     createPostContent.addEventListener("focus", () => { dbg("editor:focus"); saveEditorSelection(); updateToolbarState(); });
 
-    createPostContent.addEventListener("input", enforcePostMaxLength);
-    createPostContent.addEventListener("paste", () => {
-      setTimeout(enforcePostMaxLength, 0);
-    });
+
     document.addEventListener("selectionchange", () => {
       dbg("selectionchange");
       if (selectionInsideEditor()) saveEditorSelection();
@@ -1910,6 +1922,29 @@
       }[c]));
     }
 
+    function renderPostBodyWithMore(fullText, postId) {
+      const raw = String(fullText || "");
+      const safeFull = escapeHtml(raw);
+
+      if (raw.length <= FEED_PREVIEW_LIMIT) {
+        return `<div class="post-body">${safeFull.replace(/\n/g, "<br>")}</div>`;
+      }
+
+      const preview = raw.slice(0, FEED_PREVIEW_LIMIT);
+      const safePreview = escapeHtml(preview);
+
+      return `
+        <div class="post-body">
+          <span class="post-preview" data-post="${postId}">
+            ${safePreview.replace(/\n/g, "<br>")}
+          </span>
+          <span class="post-full is-hidden" data-post="${postId}">
+            ${safeFull.replace(/\n/g, "<br>")}
+          </span>
+          <button class="more-btn" type="button" data-more="${postId}" aria-expanded="false">… more</button>
+        </div>
+      `;
+    }
     function getPostPlainText() {
       // innerText può dare risultati strani in alcuni casi; textContent è fallback stabile
       let t = (createPostContent.innerText ?? "");
@@ -2263,15 +2298,14 @@
         card.className = "post-card";
         card.dataset.postKey = key;
 
-        const contentHtml = escapeHtml(p.content || "").replace(/\n/g, "<br>");
-
+        const contentHtml = renderPostBodyWithMore(p.content || "", key);
         card.innerHTML = `
           <div class="post-head">
             <div class="post-author">${escapeHtml(p.author_email || "anon")}</div>
             <div class="post-date">${escapeHtml(new Date(p.created_at).toLocaleString())}</div>
           </div>
 
-          <div class="post-body">${contentHtml}</div>
+          ${contentHtml}
 
           <div class="post-actions">
             <div class="actions-left">
@@ -2883,6 +2917,32 @@
 
 
 
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".more-btn");
+      if (!btn) return;
+
+      e.stopPropagation(); // evita che il click apra/chiuda thread per colpa del card click
+
+      const id = btn.getAttribute("data-more");
+      const preview = document.querySelector(`.post-preview[data-post="${id}"]`);
+      const full = document.querySelector(`.post-full[data-post="${id}"]`);
+
+      if (!preview || !full) return;
+
+      const isExpanded = btn.getAttribute("aria-expanded") === "true";
+
+      if (isExpanded) {
+        full.classList.add("is-hidden");
+        preview.classList.remove("is-hidden");
+        btn.textContent = "… more";
+        btn.setAttribute("aria-expanded", "false");
+      } else {
+        preview.classList.add("is-hidden");
+        full.classList.remove("is-hidden");
+        btn.textContent = "less";
+        btn.setAttribute("aria-expanded", "true");
+      }
+    });
     // init
     (async () => {
       await refreshMe();
