@@ -2732,34 +2732,42 @@
     function cleanAttributes(el) {
       const tag = el.tagName.toUpperCase();
 
-      // salva lo style solo se è “safe”
-      const style = sanitizeStyle(el.getAttribute("style"));
+      // salva PRIMA di rimuovere tutto
+      const origStyle = el.getAttribute("style") || "";
+      const savedStyle = sanitizeStyle(origStyle);
+
+      let savedHref = null;
+      if (tag === "A") savedHref = el.getAttribute("href");
+
+      let savedSrc = null;
+      let savedAlt = null;
+      if (tag === "IMG") {
+        savedSrc = el.getAttribute("src");
+        savedAlt = el.getAttribute("alt") || "Image";
+      }
 
       // rimuovi TUTTI gli attributi
       [...el.attributes].forEach(a => el.removeAttribute(a.name));
 
       // ripristina solo quelli permessi
-      if (style) el.setAttribute("style", style);
+      if (savedStyle) el.setAttribute("style", savedStyle);
 
       if (tag === "A") {
-        const href = el.getAttribute("href");
-        if (href) {
-          // basic safety: no javascript:
-          if (/^\s*javascript:/i.test(href)) {
-            el.removeAttribute("href");
-          } else {
-            el.setAttribute("href", href);
-            el.setAttribute("target", "_blank");
-            el.setAttribute("rel", "noopener noreferrer");
-          }
+        if (savedHref && !/^\s*javascript:/i.test(savedHref)) {
+          el.setAttribute("href", savedHref);
+          el.setAttribute("target", "_blank");
+          el.setAttribute("rel", "noopener noreferrer");
         }
       }
 
       if (tag === "IMG") {
-        const src = el.getAttribute("src");
-        const alt = el.getAttribute("alt") || "Image";
-        if (src) el.setAttribute("src", src);
-        el.setAttribute("alt", alt);
+        if (savedSrc && !/^\s*javascript:/i.test(savedSrc)) {
+          el.setAttribute("src", savedSrc);
+        }
+        el.setAttribute("alt", savedAlt || "Image");
+        // opzionale: evita che l'immagine rompa il layout
+        el.style.maxWidth = "100%";
+        if (!el.style.height) el.style.height = "auto";
       }
     }
 
