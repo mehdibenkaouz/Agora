@@ -1112,7 +1112,7 @@
     }
     .more-btn{
       display: inline;
-      margin-left: 6px;
+      margin-left: 2px;
       background: transparent;
       border: 0;
       padding: 0;
@@ -1932,12 +1932,16 @@
       }
 
       const preview = raw.slice(0, FEED_PREVIEW_LIMIT);
-      const safePreview = escapeHtml(preview);
+
+      // ✅ rimuove righe/spazi finali che creano “vuoto” prima del bottone
+      const previewClean = preview.replace(/[\s\u00A0]+$/g, "");
+
+      const safePreview = escapeHtml(previewClean);
 
       return `
         <div class="post-body">
           <span class="post-preview" data-post="${postId}">
-            ${safePreview.replace(/\n/g, "<br>")}
+            ${safePreview.replace(/\n/g, "<br>")}…
           </span>
           <span class="post-full is-hidden" data-post="${postId}">
             ${safeFull.replace(/\n/g, "<br>")}
