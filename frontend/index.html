@@ -1911,8 +1911,19 @@
     }
 
     function getPostPlainText() {
-      // innerText mantiene gli a-capo in modo “umano”
-      return (createPostContent.innerText || "").replace(/\r\n/g, "\n");
+      // Normalizza CRLF e rimuove caratteri "fantasma" tipici dei contenteditable.
+      let t = (createPostContent.innerText || "").replace(/\r\n/g, "\n");
+
+      // Rimuove ZWSP e altri invisibili comuni
+      t = t.replace(/\u200B/g, "");
+
+      // Caso speciale: editor "vuoto" spesso diventa "\n"
+      if (t === "\n") t = "";
+
+      // Se è solo whitespace (spazi/newline), consideralo vuoto per il contatore
+      if (!t.trim()) return "";
+
+      return t;
     }
 
     function setCaretByTextOffset(root, offset) {
@@ -2397,6 +2408,7 @@
       createPostModal.setAttribute("aria-hidden", "true");
       
       createPostContent.innerHTML = "";
+      updatePostCounterAndPublish();
       clearImages();
 
     }
@@ -2765,6 +2777,7 @@
         return;
       }
 
+      hardTruncateToLimit(POST_MAX_LENGTH);
       const contentText = (createPostContent.innerText || "").trim();
       if (!contentText && selectedImages.length === 0) return;
 
