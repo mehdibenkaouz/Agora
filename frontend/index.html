@@ -992,7 +992,43 @@
       padding-left: 4px;
     }
 
-  
+    /* --- Thread panel: hide/show completely --- */
+    .comments-card.is-hidden{
+      display: none !important;
+    }
+
+    /* Improve thread header spacing */
+    .thread-head{
+      align-items: center;
+    }
+    .thread-sub{
+      margin-top: 4px;
+    }
+
+    /* Fix composer layout (input + send perfectly inside) */
+    .thread-compose{
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    .thread-compose input{
+      width: 100%;
+    }
+
+    .thread-send{
+      min-width: 88px;
+      padding: 0 16px;
+      border-radius: 16px;      /* meno “pill” = più stabile in layout stretti */
+      box-shadow: 0 8px 18px rgba(87, 25, 41, 0.20);
+    }
+
+    /* Avoid visual overflow on small widths */
+    .comments-card{
+      overflow: hidden;
+    }
+      
     /* --- Feed cleanup (hide heading + login hint) --- */
     .empty-feed h2{ display:none; }
     #feedHint{ display:none; }
@@ -1094,8 +1130,8 @@
         <section class="comments-card" id="threadPanel">
           <div class="thread-head">
             <div>
-              <h2 id="threadTitle">Thread</h2>
-              <div class="thread-sub" id="threadSub">Select a post to view comments.</div>
+              <h2 id="threadTitle">Comments</h2>
+              <div class="thread-sub" id="threadSub"></div>
             </div>
             <button id="threadClearBtn" class="thread-clear" type="button" aria-label="Clear thread">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -1107,7 +1143,7 @@
 
           <div class="thread-body">
             <div id="threadComments" class="thread-comments" aria-live="polite">
-              <div class="thread-empty">No post selected.</div>
+              <div class="thread-empty"></div>
             </div>
 
             <div class="thread-compose">
@@ -1757,6 +1793,12 @@
     const threadFootnote = document.getElementById("threadFootnote");
 
 
+    function hideThreadPanel(){
+      threadPanel?.classList.add("is-hidden");
+    }
+    function showThreadPanel(){
+      threadPanel?.classList.remove("is-hidden");
+    }
     // Account UI
     const accountBtn = document.getElementById("accountBtn");
     const accountMenu = document.getElementById("accountMenu");
@@ -1854,19 +1896,21 @@
       if (threadSendBtn) threadSendBtn.disabled = !(can && hasThread);
     }
 
+
     function clearThread() {
       activeThreadKey = null;
       setActiveCard(null);
 
-      if (threadTitle) threadTitle.textContent = "Thread";
-      if (threadSub) threadSub.textContent = "Select a post to view comments.";
-      if (threadComments) threadComments.innerHTML = '<div class="thread-empty">No post selected.</div>';
+      if (threadTitle) threadTitle.textContent = "Comments";
+      if (threadSub) threadSub.textContent = "";
+      if (threadComments) threadComments.innerHTML = '<div class="thread-empty"></div>';
       if (threadFootnote) threadFootnote.textContent = "Local-only UI for now (no backend sync yet).";
 
       updateThreadAuthState();
     }
 
     function renderThread(key) {
+      showThreadPanel();
       activeThreadKey = key || null;
 
       if (!activeThreadKey || !postByKey.has(activeThreadKey) || !postUI.has(activeThreadKey)) {
@@ -2114,6 +2158,7 @@
     threadClearBtn?.addEventListener("click", (e) => {
       e.stopPropagation();
       clearThread();
+      hideThreadPanel();
     });
 
     // Account dropdown interactions
@@ -2588,6 +2633,7 @@
       await refreshMe();
       await loadFeed();
     })();
+    hideThreadPanel();
   </script>
 </body>
 </html>
