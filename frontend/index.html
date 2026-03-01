@@ -1338,7 +1338,7 @@
                 data-placeholder="Write your post..."
                 aria-label="Post content editor"></div>
           </div>
-          <div class="rt-counter" id="rtCounter">0 / 1000</div>
+          <div class="rt-counter" id="rtCounter">0 / 20000</div>
 
           <button id="createPostPublishBtn" class="primary-btn" type="submit" style="width:100%;">
             Publish
@@ -1360,7 +1360,7 @@
     const createPostClose = document.getElementById("createPostClose");
     const createPostForm = document.getElementById("createPostForm");
     const createPostContent = document.getElementById("createPostContent");
-    const POST_MAX_LENGTH = 1000;
+    const POST_MAX_LENGTH = 20000;
     const rtCounter = document.getElementById("rtCounter");
     const createPostPublishBtn = document.getElementById("createPostPublishBtn");
 
@@ -1977,7 +1977,6 @@
 
       setCaretByTextOffset(createPostContent, Math.min(caretOffset, limit));
     }
-
     function updatePostCounterAndPublish() {
       const text = getPostPlainText();
       const len = text.length;
@@ -1987,10 +1986,11 @@
         rtCounter.classList.toggle("is-limit", len >= POST_MAX_LENGTH);
       }
 
-      // Publish: attivo solo se c'è testo reale (non solo spazi/newline)
       const hasRealText = text.trim().length > 0;
+      const withinLimit = len <= POST_MAX_LENGTH;
+
       if (createPostPublishBtn) {
-        createPostPublishBtn.disabled = !hasRealText;
+        createPostPublishBtn.disabled = !(hasRealText && withinLimit);
       }
     }
     function enforcePostMaxLength() {
@@ -2778,7 +2778,7 @@
       }
 
       hardTruncateToLimit(POST_MAX_LENGTH);
-      const contentText = (createPostContent.innerText || "").trim();
+      const contentText = getPostPlainText().trim();
       if (!contentText && selectedImages.length === 0) return;
 
       // Per ora inviamo SOLO testo al backend (step 2 sarà immagini reali)
