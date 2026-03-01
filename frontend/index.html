@@ -1099,6 +1099,17 @@
       justify-content: space-between;
     }
 
+    .rt-counter{
+      margin-top: 8px;
+      padding-left: 4px;
+      font-size: .88rem;
+      color: rgba(0,0,0,0.55);
+      font-weight: 750;
+    }
+
+    .rt-counter.is-limit{
+      color: var(--brand);
+    }
   </style>
 </head>
 
@@ -1327,6 +1338,7 @@
                 data-placeholder="Write your post..."
                 aria-label="Post content editor"></div>
           </div>
+          <div class="rt-counter" id="rtCounter">0 / 1000</div>
 
           <button id="createPostPublishBtn" class="primary-btn" type="submit" style="width:100%;">
             Publish
@@ -1349,6 +1361,8 @@
     const createPostForm = document.getElementById("createPostForm");
     const createPostContent = document.getElementById("createPostContent");
     const POST_MAX_LENGTH = 1000;
+    const rtCounter = document.getElementById("rtCounter");
+    const createPostPublishBtn = document.getElementById("createPostPublishBtn");
 
     // --- Rich text toolbar elements ---
     const rtBold = document.getElementById("rtBold");
@@ -1896,6 +1910,78 @@
       }[c]));
     }
 
+    function getPostPlainText() {
+      // innerText mantiene gli a-capo in modo “umano”
+      return (createPostContent.innerText || "").replace(/\r\n/g, "\n");
+    }
+
+    function setCaretByTextOffset(root, offset) {
+      // piazza il caret contando i caratteri TESTUALI
+      const sel = window.getSelection();
+      if (!sel) return;
+
+      const range = document.createRange();
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+
+      let remaining = offset;
+      let node;
+
+      while ((node = walker.nextNode())) {
+        const len = node.nodeValue?.length || 0;
+        if (len >= remaining) {
+          range.setStart(node, remaining);
+          range.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(range);
+          return;
+        }
+        remaining -= len;
+      }
+
+      // fallback: fine editor
+      range.selectNodeContents(root);
+      range.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    function hardTruncateToLimit(limit) {
+      const text = getPostPlainText();
+      if (text.length <= limit) return;
+
+      // salva offset caret
+      let caretOffset = 0;
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const r = sel.getRangeAt(0);
+        const pre = r.cloneRange();
+        pre.selectNodeContents(createPostContent);
+        pre.setEnd(r.endContainer, r.endOffset);
+        caretOffset = pre.toString().length;
+      }
+
+      // ⚠️ Per hard-limit “perfetto” senza rompere tutto: convertiamo a plain text.
+      // (Mantiene newline; perde formattazione oltre il limite, ma è stabile.)
+      createPostContent.innerText = text.slice(0, limit);
+
+      setCaretByTextOffset(createPostContent, Math.min(caretOffset, limit));
+    }
+
+    function updatePostCounterAndPublish() {
+      const text = getPostPlainText();
+      const len = text.length;
+
+      if (rtCounter) {
+        rtCounter.textContent = `${len} / ${POST_MAX_LENGTH}`;
+        rtCounter.classList.toggle("is-limit", len >= POST_MAX_LENGTH);
+      }
+
+      // Publish: attivo solo se c'è testo reale (non solo spazi/newline)
+      const hasRealText = text.trim().length > 0;
+      if (createPostPublishBtn) {
+        createPostPublishBtn.disabled = !hasRealText;
+      }
+    }
     function enforcePostMaxLength() {
       const text = createPostContent.innerText || "";
 
@@ -2694,6 +2780,44 @@
       await loadFeed();
     });
 
+    // Blocca digitazione oltre 1000 (ma permette backspace/delete/navigation)
+    createPostContent.addEventListener("beforeinput", (e) => {
+      if (e.inputType && (e.inputType.startsWith("delete") || e.inputType === "historyUndo" || e.inputType === "historyRedo")) {
+        return;
+      }
+
+      const text = getPostPlainText();
+      const len = text.length;
+
+      // Se già al limite, blocca qualsiasi inserimento (tranne sostituzioni selezione)
+      const sel = window.getSelection();
+      const hasSelection = sel && sel.rangeCount > 0 && !sel.getRangeAt(0).collapsed;
+
+      if (len >= POST_MAX_LENGTH && !hasSelection) {
+        e.preventDefault();
+      }
+    });
+
+    // Su input normale: se supera per qualunque motivo, tronca
+    createPostContent.addEventListener("input", () => {
+      hardTruncateToLimit(POST_MAX_LENGTH);
+      updatePostCounterAndPublish();
+    });
+
+    // Su paste: lascia incollare, poi tronca
+    createPostContent.addEventListener("paste", () => {
+      setTimeout(() => {
+        hardTruncateToLimit(POST_MAX_LENGTH);
+        updatePostCounterAndPublish();
+      }, 0);
+    });
+
+    // Aggiorna contatore anche su focus/selection changes
+    createPostContent.addEventListener("keyup", updatePostCounterAndPublish);
+    createPostContent.addEventListener("mouseup", updatePostCounterAndPublish);
+    createPostContent.addEventListener("focus", updatePostCounterAndPublish);
+
+
     // Google login from modal
     googleLoginBtn.addEventListener("click", () => {
       const returnTo = window.location.origin + "/";
@@ -2735,6 +2859,7 @@
       await loadFeed();
     })();
     hideThreadPanel();
+    updatePostCounterAndPublish();
   </script>
 </body>
 </html>
