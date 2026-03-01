@@ -1920,10 +1920,9 @@
       // Caso speciale: editor "vuoto" spesso diventa "\n"
       if (t === "\n") t = "";
 
-      // Se è solo whitespace (spazi/newline), consideralo vuoto per il contatore
-      if (!t.trim()) return "";
-
-      return t;
+    // Non svuotare qui: ci serve SEMPRE il testo reale per conteggio/limiti.
+    // La logica "vuoto/non vuoto" la gestiamo fuori.
+    return t;
     }
 
     function setCaretByTextOffset(root, offset) {
@@ -1986,7 +1985,8 @@
         rtCounter.classList.toggle("is-limit", len >= POST_MAX_LENGTH);
       }
 
-      const hasRealText = text.trim().length > 0;
+      const normalized = text.replace(/\u00A0/g, " "); // NBSP -> spazio normale
+      const hasRealText = normalized.trim().length > 0;
       const withinLimit = len <= POST_MAX_LENGTH;
 
       if (createPostPublishBtn) {
