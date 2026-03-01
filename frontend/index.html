@@ -1965,30 +1965,29 @@
       }[c]));
     }
 
-    function renderPostBodyWithMore(fullText, postId) {
-      const raw = String(fullText || "");
-      const safeFull = escapeHtml(raw);
+    function renderPostBodyWithMore(fullHtml, postId) {
+      const rawHtml = String(fullHtml || "");
 
-      if (raw.length <= FEED_PREVIEW_LIMIT) {
-        return `<div class="post-body">${safeFull.replace(/\n/g, "<br>")}</div>`;
+      // sicurezza: ri-sanifica anche in render (non fidarti mai del DB)
+      const tmp = document.createElement("div");
+      tmp.innerHTML = rawHtml;
+      sanitizeHtmlAllowlist(tmp);
+      const safeFullHtml = tmp.innerHTML;
+
+      const plain = extractPlainTextFromHtml(safeFullHtml);
+
+      if (plain.length <= FEED_PREVIEW_LIMIT) {
+        return `<div class="post-body">${safeFullHtml}</div>`;
       }
 
-      const preview = raw.slice(0, FEED_PREVIEW_LIMIT);
-
-      // ✅ rimuove righe/spazi finali che creano “vuoto” prima del bottone
-      const previewClean = preview.replace(/[\s\u00A0]+$/g, "");
-
-      const safePreview = escapeHtml(previewClean);
+      const previewPlain = plain.slice(0, FEED_PREVIEW_LIMIT);
+      const previewSafe = escapeHtml(previewPlain);
 
       return `
-        <div class="post-body">
-          <span class="post-preview" data-post="${postId}">
-            ${safePreview.replace(/\n/g, "<br>")}…
-          </span>
-          <span class="post-full is-hidden" data-post="${postId}">
-            ${safeFull.replace(/\n/g, "<br>")}
-          </span>
-          <button class="more-btn" type="button" data-more="${postId}" aria-expanded="false">… more</button>
+        <div class="post-body" data-post="${postId}">
+          <div class="post-preview">${previewSafe}…</div>
+          <button class="post-more" data-post="${postId}">More</button>
+          <div class="post-full" id="postFull_${postId}" style="display:none">${safeFullHtml}</div>
         </div>
       `;
     }
