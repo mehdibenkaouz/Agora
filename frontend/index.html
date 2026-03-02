@@ -2477,7 +2477,7 @@
         const myEmail = (accountMenuSub?.textContent || "").trim().toLowerCase();
         const isMine = canInteract && myEmail.includes("@") && myEmail === String(p.author_email || "").trim().toLowerCase();
 
-        const postMenuHtml = isMine ? `
+        const postMenuHtml = canInteract ? `
           <div class="post-menu-wrap">
             <button class="post-menu-btn" type="button" aria-label="Post options" aria-haspopup="menu" aria-expanded="false">⋮</button>
             <div class="post-menu" role="menu" aria-hidden="true">
