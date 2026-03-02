@@ -288,7 +288,7 @@
     .primary-btn {
       border: 0;
       background: var(--brand);
-      color: #fff;
+      color: #ffffff;
       border-radius: 999px;
       padding: 12px 18px;
       font-size: 0.95rem;
@@ -298,6 +298,10 @@
       min-height: 44px;
     }
 
+    :root[data-theme="dark"] .primary-btn{
+      color: #000000;
+      box-shadow: 0 8px 18px rgba(0, 0, 0, 0.45);
+    }
     .empty-feed {
       padding: 22px;
       border-radius: var(--radius-lg);
