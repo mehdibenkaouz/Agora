@@ -179,6 +179,16 @@
       stroke-linejoin: round;
     }
 
+    :root[data-theme="dark"] .action-btn svg {
+      width: 34px;
+      height: 34px;
+      stroke: #ffffff;
+      stroke-width: 2.6;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
     .main-column {
       display: flex;
       flex-direction: column;
@@ -1012,7 +1022,12 @@
       font-weight: 800;
       color: rgba(0,0,0,0.62);
     }
-
+    :root[data-theme="dark"] .action-count{
+      min-width: 18px;
+      font-size: 0.92rem;
+      font-weight: 800;
+      color: rgb(255, 255, 255);
+    }
     /* --- Thread / comments panel (right column) --- */
     .thread-head{
       display:flex;
