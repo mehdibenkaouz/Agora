@@ -823,6 +823,47 @@
     .post-author{ font-weight: 850; color: rgba(0,0,0,0.70); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
     .post-date{ white-space:nowrap; }
 
+    .post-head-right{ display:flex; align-items:center; gap:8px; }
+
+    .post-menu-wrap{ position:relative; }
+    .post-menu-btn{
+      width:34px; height:34px;
+      border-radius:999px;
+      border:1px solid rgba(0,0,0,0.10);
+      background: rgba(248,247,243,0.92);
+      display:grid; place-items:center;
+      cursor:pointer;
+      font-size: 20px;
+      line-height: 1;
+    }
+    .post-menu{
+      position:absolute;
+      right:0;
+      top:38px;
+      min-width:140px;
+      background: rgba(255,255,255,0.96);
+      border:1px solid rgba(0,0,0,0.10);
+      border-radius:16px;
+      padding:6px;
+      box-shadow: 0 14px 28px rgba(0,0,0,0.14);
+      display:none;
+      z-index:50;
+    }
+    .post-menu.open{ display:block; }
+
+    .post-menu-item{
+      width:100%;
+      text-align:left;
+      padding:10px 10px;
+      border-radius:12px;
+      background:transparent;
+      border:none;
+      cursor:pointer;
+      font-weight:800;
+    }
+    .post-menu-item:hover{ background: rgba(0,0,0,0.06); }
+    .post-menu-item.danger{ color: rgba(160,0,0,0.95); }
+
     .post-body{
       margin-top: 10px;
       font-size: 1.05rem;
@@ -2334,6 +2375,17 @@
       }
       updateThreadAuthState();
     }
+    function closeAllPostMenus(exceptCard) {
+      document.querySelectorAll(".post-menu.open").forEach(m => {
+        if (exceptCard && exceptCard.contains(m)) return;
+        m.classList.remove("open");
+        m.setAttribute("aria-hidden", "true");
+      });
+      document.querySelectorAll('.post-menu-btn[aria-expanded="true"]').forEach(b => {
+        if (exceptCard && exceptCard.contains(b)) return;
+        b.setAttribute("aria-expanded", "false");
+      });
+    }
 
     function renderPosts(posts) {
       feed.innerHTML = "";
@@ -2355,13 +2407,28 @@
         const card = document.createElement("article");
         card.className = "post-card";
         card.dataset.postKey = key;
+        
+        card.dataset.postId = p.id;
+        const myEmail = (accountMenuSub?.textContent || "").trim().toLowerCase();
+        const isMine = canInteract && myEmail.includes("@") && myEmail === String(p.author_email || "").trim().toLowerCase();
 
+        const postMenuHtml = isMine ? `
+          <div class="post-menu-wrap">
+            <button class="post-menu-btn" type="button" aria-label="Post options" aria-haspopup="menu" aria-expanded="false">⋮</button>
+            <div class="post-menu" role="menu" aria-hidden="true">
+              <button class="post-menu-item danger post-menu-delete" type="button" role="menuitem">Delete</button>
+            </div>
+          </div>
+        ` : "";
         const contentHtml = renderPostBodyWithMore(p.content || "", key);
         card.innerHTML = `
-          <div class="post-head">
-            <div class="post-author">${escapeHtml(p.author_email || "anon")}</div>
-            <div class="post-date">${escapeHtml(new Date(p.created_at).toLocaleString())}</div>
-          </div>
+            <div class="post-head">
+              <div class="post-author">${escapeHtml(p.author_email || "anon")}</div>
+              <div class="post-head-right">
+                <div class="post-date">${escapeHtml(new Date(p.created_at).toLocaleString())}</div>
+                ${postMenuHtml}
+              </div>
+            </div>
 
           ${contentHtml}
 
@@ -2403,6 +2470,37 @@
         const saveBtn = card.querySelector(".save-btn");
         const commentBtn = card.querySelector(".comment-btn");
 
+        const menuBtn = card.querySelector(".post-menu-btn");
+        const menu = card.querySelector(".post-menu");
+        const delPostBtn = card.querySelector(".post-menu-delete");
+
+        menuBtn?.addEventListener("click", (e) => {
+          e.stopPropagation();
+          closeAllPostMenus(card);
+
+          const open = !(menu?.classList.contains("open"));
+          if (menu) {
+            menu.classList.toggle("open", open);
+            menu.setAttribute("aria-hidden", open ? "false" : "true");
+          }
+          menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+
+        delPostBtn?.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          closeAllPostMenus();
+
+          if (!confirm("Delete this post?")) return;
+
+          try {
+            await api("/api/posts/" + encodeURIComponent(p.id), { method: "DELETE" });
+            if (activeThreadKey === key) { clearThread(); hideThreadPanel(); }
+            await loadFeed();
+          } catch (err) {
+            console.warn("delete_post_failed:", err);
+            alert("Delete failed: " + (err?.message || err));
+          }
+        });
         upBtn?.addEventListener("click", (e) => {
           e.stopPropagation();
           if (!getToken()) { openModal(); return; }
@@ -2469,7 +2567,7 @@
       e.stopPropagation(); // click dentro al menu non deve chiuderlo
     });
 
-    document.addEventListener("click", () => closeMenu());
+    document.addEventListener("click", () => { closeMenu(); closeAllPostMenus(); });
 
     menuPrimaryAction.addEventListener("click", async () => {
       if (getToken()) {
@@ -2492,6 +2590,7 @@
       if (e.key === "Escape") {
         closeMenu();
         closeModal();
+        closeAllPostMenus();
       }
     });
 
