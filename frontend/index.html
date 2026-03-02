@@ -820,10 +820,10 @@
       color: rgba(0,0,0,0.58);
       font-size: 0.9rem;
     }
-    .post-author{ font-weight: 850; color: rgba(0,0,0,0.70); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .post-author{ font-weight: 850; color: rgba(0,0,0,0.70); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width: 0; flex: 1;}
     .post-date{ white-space:nowrap; }
 
-    .post-head-right{ display:flex; align-items:center; gap:8px; }
+    .post-head-right{ display:flex; align-items:center; gap:8px; flex-shrink: 0;}
 
     .post-menu-wrap{ position:relative; }
     .post-menu-btn{
@@ -836,6 +836,8 @@
       font-size: 20px;
       line-height: 1;
     }
+    .post-menu-btn svg{ width:18px; height:18px; fill:#111; }
+
     .post-menu{
       position:absolute;
       right:0;
@@ -2477,9 +2479,15 @@
         const myEmail = (accountMenuSub?.textContent || "").trim().toLowerCase();
         const isMine = canInteract && myEmail.includes("@") && myEmail === String(p.author_email || "").trim().toLowerCase();
 
-        const postMenuHtml = canInteract ? `
+        const postMenuHtml = isMine ? `
           <div class="post-menu-wrap">
-            <button class="post-menu-btn" type="button" aria-label="Post options" aria-haspopup="menu" aria-expanded="false">⋮</button>
+            <button class="post-menu-btn" type="button" aria-label="Post options" aria-haspopup="menu" aria-expanded="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="5" r="1.8"></circle>
+                <circle cx="12" cy="12" r="1.8"></circle>
+                <circle cx="12" cy="19" r="1.8"></circle>
+              </svg>
+            </button>
             <div class="post-menu" role="menu" aria-hidden="true">
               <button class="post-menu-item danger post-menu-delete" type="button" role="menuitem">Delete</button>
             </div>
