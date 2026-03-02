@@ -1377,6 +1377,15 @@
     }
     /* :root[data-theme="dark"] svg[style*="fill:"] { fill: currentColor !important; }
     :root[data-theme="dark"] svg[style*="stroke:"] { stroke: currentColor !important; } */
+    
+    
+    .logo{
+      height: 70px;
+      width: 70px;
+      object-fit: contain;
+      display: block;
+      margin-top: 5px;
+    }
   </style>
 </head>
 
@@ -1385,7 +1394,12 @@
     <div class="topbar-inner">
       <div class="brand">
         <a href="index.html">
-          <img src="item/Logoagora.png" alt="AGORA logo" class="brand-logo">
+          <img id="mainLogo"
+              src="item/Logoagora.png"
+              data-light="item/Logoagora.png"
+              data-dark="item/Logoagoradark.png"
+              class="logo"
+              alt="Agora">
         </a>
       </div>
       <nav class="top-links">
@@ -1623,11 +1637,22 @@
     const THEME_KEY = "agora_theme";
 
     function applyTheme(theme){
-      // theme: "dark" | "light"
-      if (theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
-      else document.documentElement.removeAttribute("data-theme");
-    }
+      const root = document.documentElement;
+      const logo = document.getElementById("mainLogo");
 
+      if (!logo) return;
+
+      const lightSrc = logo.dataset.light;
+      const darkSrc  = logo.dataset.dark;
+
+      if (theme === "dark"){
+        root.setAttribute("data-theme", "dark");
+        logo.src = darkSrc;
+      } else {
+        root.removeAttribute("data-theme");
+        logo.src = lightSrc;
+      }
+    }
     function getPreferredTheme(){
       const saved = localStorage.getItem(THEME_KEY);
       if (saved === "dark" || saved === "light") return saved;
@@ -3627,6 +3652,8 @@
     })();
     hideThreadPanel();
     updatePostCounterAndPublish();
+
+    
   </script>
 
   <div id="confirmModal" class="confirm-modal" aria-hidden="true">
