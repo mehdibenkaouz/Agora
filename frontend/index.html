@@ -427,12 +427,42 @@
 
     .modal{
       width: min(540px, 100%);
-      background: rgba(252,251,248,0.98);
-      border: 1px solid rgba(0,0,0,0.10);
+      background: #12151d;
+      border: 1px solid rgba(255, 255, 255, 0.768);
       border-radius: 28px;
-      box-shadow: 0 26px 60px rgba(0,0,0,0.35);
+      box-shadow: 0 26px 60px rgba(0, 0, 0, 0.614);
       overflow: hidden;
     }
+
+    .modal-head{
+      border-bottom: 1px solid var(--line);
+    }
+
+    .icon-x{
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.06); /* sta bene anche in light; se vuoi più “light”, metti var(--panel-2) */
+    }
+    .icon-x svg{ stroke: var(--text); }
+
+    .oauth-btn{
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+    }
+
+    .divider::before{ background: var(--line); }
+    .divider span{
+      background: var(--panel);
+      color: var(--muted);
+    }
+
+    .field input{
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+    }
+    .field input::placeholder{ color: var(--muted); }
+
     .modal-head{
       padding: 18px 18px 14px;
       display: flex;
