@@ -2479,7 +2479,7 @@
         const myEmail = (accountMenuSub?.textContent || "").trim().toLowerCase();
         const isMine = canInteract && myEmail.includes("@") && myEmail === String(p.author_email || "").trim().toLowerCase();
 
-        const postMenuHtml = isMine ? `
+        const postMenuHtml = `
           <div class="post-menu-wrap">
             <button class="post-menu-btn" type="button" aria-label="Post options" aria-haspopup="menu" aria-expanded="false">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -2489,10 +2489,14 @@
               </svg>
             </button>
             <div class="post-menu" role="menu" aria-hidden="true">
-              <button class="post-menu-item danger post-menu-delete" type="button" role="menuitem">Delete</button>
+              ${isMine ? `
+                <button class="post-menu-item danger post-menu-delete" type="button" role="menuitem">Delete</button>
+              ` : `
+                <button class="post-menu-item" type="button" disabled style="opacity:.55; cursor:not-allowed;">No actions</button>
+              `}
             </div>
           </div>
-        ` : "";
+        `;
         const contentHtml = renderPostBodyWithMore(p.content || "", key);
         card.innerHTML = `
             <div class="post-head">
