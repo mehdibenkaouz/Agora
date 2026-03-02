@@ -1262,6 +1262,71 @@
     .more-btn:hover{ opacity: 1; text-decoration: underline; }
 
     .post-full.is-hidden{ display:none; }
+
+    /* ===== Dark mode fixes: icons + text + menu ===== */
+
+    /* 1) Topbar icon buttons (+, search, bell) */
+    :root[data-theme="dark"] .top-actions .icon-btn{
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.12);
+    }
+    :root[data-theme="dark"] .top-actions .icon-btn svg{
+      stroke: rgba(255,255,255,0.88) !important;
+      fill: none !important;
+    }
+
+    /* Se qualche icona usa "fill" invece di stroke (dipende dall'SVG) */
+    :root[data-theme="dark"] .top-actions .icon-btn svg [fill]:not([fill="none"]){
+      fill: rgba(255,255,255,0.88) !important;
+    }
+    :root[data-theme="dark"] .top-actions .icon-btn svg [stroke]{
+      stroke: rgba(255,255,255,0.88) !important;
+    }
+
+    /* 2) Username/email in topbar + sublabel */
+    :root[data-theme="dark"] .account-name,
+    :root[data-theme="dark"] .account-sub{
+      color: rgba(255,255,255,0.88) !important;
+    }
+
+    /* 3) 3 dots menu (delete) */
+    :root[data-theme="dark"] .post-menu-btn svg{
+      stroke: rgba(255,255,255,0.88) !important;
+    }
+    :root[data-theme="dark"] .post-menu-btn svg [fill]:not([fill="none"]){
+      fill: rgba(255,255,255,0.88) !important;
+    }
+    :root[data-theme="dark"] .post-menu-btn svg [stroke]{
+      stroke: rgba(255,255,255,0.88) !important;
+    }
+
+    /* 4) Post meta (date/time) */
+    :root[data-theme="dark"] .post-time,
+    :root[data-theme="dark"] .post-meta,
+    :root[data-theme="dark"] .post-date{
+      color: rgba(255,255,255,0.62) !important;
+    }
+
+    /* 5) Account dropdown menu background + items */
+    :root[data-theme="dark"] .account-menu{
+      background: rgba(18, 21, 29, 0.92) !important;
+      border-color: rgba(255,255,255,0.12) !important;
+      box-shadow: 0 18px 44px rgba(0,0,0,0.60) !important;
+    }
+    :root[data-theme="dark"] .account-menu .menu-item{
+      color: rgba(255,255,255,0.88) !important;
+    }
+    :root[data-theme="dark"] .account-menu .menu-item:hover{
+      background: rgba(255,255,255,0.08) !important;
+    }
+
+    /* (extra) se hai un separatore */
+    :root[data-theme="dark"] .account-menu .menu-sep{
+      border-top-color: rgba(255,255,255,0.10) !important;
+    }
+
+    :root[data-theme="dark"] svg[style*="fill:"] { fill: currentColor !important; }
+    :root[data-theme="dark"] svg[style*="stroke:"] { stroke: currentColor !important; }
   </style>
 </head>
 
