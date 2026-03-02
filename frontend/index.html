@@ -1451,6 +1451,52 @@
       transform: translateY(-2px);
       box-shadow: 0 16px 40px rgba(0,0,0,0.15);
     }
+
+    .my-post{
+      border: 1px solid rgba(87,25,41,0.35);
+      background: linear-gradient(
+        180deg,
+        rgba(87,25,41,0.06),
+        transparent
+      );
+    }
+    :root[data-theme="dark"] .my-post{
+      border: 1px solid rgba(87,25,41,0.5);
+      background: linear-gradient(
+        180deg,
+        rgba(87,25,41,0.12),
+        transparent
+      );
+    }
+    .icon-btn{
+      position: relative;
+    }
+
+    .icon-btn .notif-dot{
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #ff3b30;
+    }
+
+    .rt-editor{
+      transition: box-shadow 150ms ease;
+    }
+
+    .rt-editor:focus-within{
+      box-shadow: 0 0 0 2px rgba(87,25,41,0.35);
+    }
+
+    :root[data-theme="dark"] .rt-editor:focus-within{
+      box-shadow: 0 0 0 2px rgba(87,25,41,0.55);
+    }
+    .left-rail{
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
   </style>
 </head>
 
@@ -1506,6 +1552,7 @@
             <path d="M18 16H6l1.4-1.7a2 2 0 0 0 .46-1.27V10a4.14 4.14 0 0 1 8.28 0v3.03a2 2 0 0 0 .46 1.27L18 16Z" />
             <path d="M10.8 18a1.2 1.2 0 0 0 2.4 0" />
           </svg>
+          <span class="notif-dot"></span>
         </button>
 
         <button class="action-btn" id="createPostBtn" aria-label="Create post">          <svg viewBox="0 0 24 24">
@@ -2789,6 +2836,7 @@
             </div>
           </div>
         ` : "";
+        if (isMine) card.classList.add("my-post");
         const contentHtml = renderPostBodyWithMore(p.content || "", key);
         card.innerHTML = `
             <div class="post-head">
