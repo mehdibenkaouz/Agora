@@ -769,6 +769,16 @@
       cursor: nwse-resize;
     }
 
+    .img-handle{ 
+      z-index: 5; /* assicura che i pulsanti stiano sopra l’immagine */
+    }
+
+    .img-handle.delete{
+      top: 8px;
+      right: 8px;
+      cursor: pointer;
+    }
+
     /* quando ridimensioni */
     .img-node.is-resizing .img-handle{
       opacity: 1;
