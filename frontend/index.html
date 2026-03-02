@@ -2526,7 +2526,8 @@
       const img = node.querySelector("img");
       const move = node.querySelector(".img-handle.move");
       const resize = node.querySelector(".img-handle.resize");
-
+      const del = node.querySelector(".img-handle.delete");
+      
       // selezione visuale
       node.addEventListener("click", (e) => {
         document.querySelectorAll(".img-node.is-selected").forEach(n => n.classList.remove("is-selected"));
@@ -2538,6 +2539,34 @@
       move.addEventListener("dragstart", (e) => {
         e.dataTransfer.setData("text/agora-img-id", node.dataset.imgId);
         e.dataTransfer.effectAllowed = "move";
+      });
+
+
+      // DELETE (remove from editor + optional delete from R2)
+      del?.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const key = node.dataset.r2Key || "";
+        // 1) rimuovi subito dal DOM (UX veloce)
+        node.remove();
+
+        // 2) se hai la key, cancella anche su R2
+        if (!key) return;
+
+        try {
+          const token = localStorage.getItem("token") || ""; // usa il tuo storage reale se diverso
+          await fetch(`${API_BASE}/api/media/delete`, {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { "Authorization": `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({ key })
+          });
+        } catch (err) {
+          console.warn("media delete failed:", err);
+        }
       });
 
       // RESIZE (drag handle bottom-right)
@@ -2576,16 +2605,18 @@
         resize.addEventListener("pointermove", onMove);
         resize.addEventListener("pointerup", onUp);
         resize.addEventListener("pointercancel", onUp);
+        
       });
     }
 
-    function insertImageAtCursor(url, id) {
+    function insertImageAtCursor(url, id, key) {
       createPostContent.focus();
 
       const node = document.createElement("span");
       node.className = "img-node";
       node.contentEditable = "false";
       node.dataset.imgId = id;
+      if (key) node.dataset.r2Key = key;
 
       node.innerHTML = `
         <img src="${url}" alt="Image" />
@@ -2600,6 +2631,15 @@
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M10 14l4-4"></path>
             <path d="M14 10h4v4"></path>
+          </svg>
+        </span>
+        <span class="img-handle delete" title="Delete">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 7h12"></path>
+            <path d="M9 7V5h6v2"></path>
+            <path d="M9 10v9"></path>
+            <path d="M12 10v9"></path>
+            <path d="M15 10v9"></path>
           </svg>
         </span>
       `;
