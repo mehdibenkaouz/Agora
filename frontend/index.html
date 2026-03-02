@@ -424,16 +424,19 @@
       z-index: 1000;
     }
     .modal-backdrop.open{ display: flex; }
-
     .modal{
       width: min(540px, 100%);
-      background: #12151d;
-      border: 1px solid rgba(255, 255, 255, 0.768);
+      background: var(--panel);
+      border: 1px solid var(--line);
       border-radius: 28px;
-      box-shadow: 0 26px 60px rgba(0, 0, 0, 0.614);
+      box-shadow: var(--shadow);
       overflow: hidden;
     }
-
+    :root[data-theme="dark"] .modal{
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
     .modal-head{
       border-bottom: 1px solid var(--line);
     }
@@ -592,25 +595,22 @@
     }
     /* --- Create Post: media dropzone + preview --- */
     .dropzone{
-      border-radius: 20px;
-      border: 1px dashed rgba(0,0,0,0.14);
-      background:
-        linear-gradient(180deg, rgba(255,255,255,0.50), rgba(255,255,255,0.75)),
-        repeating-linear-gradient(
-          -45deg,
-          rgba(0,0,0,0.015),
-          rgba(0,0,0,0.015) 12px,
-          transparent 12px,
-          transparent 24px
-        );
+      border-radius: 18px;
+      border: 1px dashed var(--line);
+      background: var(--panel-2);
       padding: 14px;
       display: grid;
       gap: 10px;
     }
+    :root[data-theme="dark"] .dropzone{
+      border: 1px dashed var(--line);
+      background: var(--panel-2);
+    }
+
 
     .dropzone.is-dragover{
       border-color: rgba(87,25,41,0.35);
-      box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
+      box-shadow: 0 0 0 px rgba(87,25,41,0.10);
     }
 
     .dropzone-top{
@@ -778,7 +778,7 @@
       max-width: 100%;
       height: auto;
       border-radius: 14px;
-      border: 1px solid rgba(0,0,0,0.10);
+      border: 1px solid rgb(170, 170, 170);
       display: block;
       margin: 10px 0;
       cursor: grab;
