@@ -1455,6 +1455,12 @@
     const API_BASE = "https://agora-api.convergegame.workers.dev";
     const TOKEN_KEY = "agora_token";
 
+    // --- Auth state (do NOT rely on UI text) ---
+    let CURRENT_USER_EMAIL = ""; // lowercase, empty if not logged in
+
+    function getCurrentUserEmail() {
+      return (CURRENT_USER_EMAIL || "").trim().toLowerCase();
+    }
     const createPostBtn = document.getElementById("createPostBtn");
 
     // Create post modal
@@ -2383,6 +2389,7 @@
       const token = getToken();
 
       if (!token) {
+        CURRENT_USER_EMAIL = "";
         feedHint.textContent = "";
         accountMenuSub.textContent = "Not logged in";
         menuPrimaryAction.textContent = "Login";
@@ -2393,6 +2400,8 @@
 
       try {
         const me = await api("/api/me", { method: "GET" });
+        CURRENT_USER_EMAIL = String(me?.user?.email || "").trim().toLowerCase();
+
         feedHint.textContent = "";
         accountMenuSub.textContent = me.user.email;
         menuPrimaryAction.textContent = "Logout";
@@ -2400,6 +2409,7 @@
         updateThreadAuthState();
       } catch {
         localStorage.removeItem(TOKEN_KEY);
+        CURRENT_USER_EMAIL = "";
         accountMenuSub.textContent = "Not logged in";
         menuPrimaryAction.textContent = "Login";
         menuPrimaryAction.classList.remove("danger");
@@ -2476,10 +2486,13 @@
         card.dataset.postKey = key;
         
         card.dataset.postId = p.id;
-        const myEmail = (accountMenuSub?.textContent || "").trim().toLowerCase();
-        const isMine = canInteract && myEmail.includes("@") && myEmail === String(p.author_email || "").trim().toLowerCase();
+        const myEmail = getCurrentUserEmail();
+        const isMine =
+          canInteract &&
+          myEmail.includes("@") &&
+          myEmail === String(p.author_email || "").trim().toLowerCase();
 
-        const postMenuHtml = `
+        const postMenuHtml = (isMine) ? `
           <div class="post-menu-wrap">
             <button class="post-menu-btn" type="button" aria-label="Post options" aria-haspopup="menu" aria-expanded="false">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -2489,14 +2502,10 @@
               </svg>
             </button>
             <div class="post-menu" role="menu" aria-hidden="true">
-              ${isMine ? `
-                <button class="post-menu-item danger post-menu-delete" type="button" role="menuitem">Delete</button>
-              ` : `
-                <button class="post-menu-item" type="button" disabled style="opacity:.55; cursor:not-allowed;">No actions</button>
-              `}
+              <button class="post-menu-item danger post-menu-delete" type="button" role="menuitem">Delete</button>
             </div>
           </div>
-        `;
+        ` : "";
         const contentHtml = renderPostBodyWithMore(p.content || "", key);
         card.innerHTML = `
             <div class="post-head">
