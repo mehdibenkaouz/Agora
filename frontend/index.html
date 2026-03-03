@@ -540,7 +540,7 @@
 
     .form{ display: grid; gap: 12px; }
     .field{ display: grid; gap: 6px; }
-    .field span{ font-weight: 750; font-size: .92rem; }
+    .field > span{ font-weight: 750; font-size: .92rem; }
     .field input{
       width: 100%;
       min-height: 44px;
@@ -1521,6 +1521,9 @@
       color: var(--editor-ph) !important;
     }
 
+
+    .rt-editor{ font-weight: 400; }
+    .rt-editor b, .rt-editor strong{ font-weight: 700; } /* evita “bolder” */
   </style>
 </head>
 
