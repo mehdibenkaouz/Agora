@@ -941,7 +941,7 @@
       50% { opacity: 0.35; }
     }
     .book-stage::before {
-      animation: goldShimmer 5s ease-in-out infinite;
+      animation: goldShimmer 20s ease-in-out infinite;
     }
 
   
@@ -977,16 +977,16 @@
     @keyframes flipOutNext {
       0%   { transform: rotateY(0deg);   filter: brightness(1);    }
       40%  { filter: brightness(0.82);   }
-      100% { transform: rotateY(90deg);  filter: brightness(0.55); }
+      100% { transform: rotateY(-90deg);  filter: brightness(0.55); }
     }
     @keyframes flipInNext {
-      0%   { transform: rotateY(-90deg); filter: brightness(0.55); }
+      0%   { transform: rotateY(90deg); filter: brightness(0.55); }
       60%  { filter: brightness(0.82);   }
       100% { transform: rotateY(0deg);   filter: brightness(1);    }
     }
     @keyframes leftCompanionNext {
       0%   { transform: rotateY(0deg);   }
-      35%  { transform: rotateY(-3deg);  }
+      35%  { transform: rotateY(3deg);  }
       100% { transform: rotateY(0deg);   }
     }
 
@@ -994,16 +994,16 @@
     @keyframes flipOutPrev {
       0%   { transform: rotateY(0deg);   filter: brightness(1);    }
       40%  { filter: brightness(0.82);   }
-      100% { transform: rotateY(-90deg); filter: brightness(0.55); }
+      100% { transform: rotateY(90deg); filter: brightness(0.55); }
     }
     @keyframes flipInPrev {
-      0%   { transform: rotateY(90deg);  filter: brightness(0.55); }
+      0%   { transform: rotateY(-90deg);  filter: brightness(0.55); }
       60%  { filter: brightness(0.82);   }
       100% { transform: rotateY(0deg);   filter: brightness(1);    }
     }
     @keyframes rightCompanionPrev {
       0%   { transform: rotateY(0deg);   }
-      35%  { transform: rotateY(3deg);   }
+      35%  { transform: rotateY(-3deg);   }
       100% { transform: rotateY(0deg);   }
     }
 
