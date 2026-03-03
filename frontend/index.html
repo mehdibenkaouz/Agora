@@ -53,7 +53,11 @@
     :root[data-theme="dark"] .icon-btn,
     :root[data-theme="dark"] .post-menu-btn,
     :root[data-theme="dark"] .thread-clear,
-    :root[data-theme="dark"] .file-btn,
+    :root[data-theme="dark"] .file-btn{
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.08); /* opzionale: rende coerente il bottone in dark */
+    }
     :root[data-theme="dark"] .rt-btn,
     :root[data-theme="dark"] .rt-size select,
     :root[data-theme="dark"] .field input,
@@ -642,6 +646,7 @@
       font-weight: 700;
       min-height: 40px;
     }
+
 
     .preview-grid{
       display:grid;
