@@ -1484,6 +1484,29 @@
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
     }
+    /* ===== Editor contrast (Create post) ===== */
+    :root{
+      --editor-bg: rgba(248,247,243,0.92);
+      --editor-fg: #111;
+      --editor-ph: rgba(0,0,0,0.38);
+    }
+
+    :root[data-theme="dark"]{
+      --editor-bg: #000; /* nero come vuoi tu */
+      --editor-fg: rgba(255,255,255,0.88);
+      --editor-ph: rgba(255,255,255,0.38);
+    }
+
+    .rt-editor{
+      background: var(--editor-bg) !important;
+      color: var(--editor-fg) !important;
+      caret-color: var(--editor-fg);
+    }
+
+    /* placeholder in dark (prima era nero fisso) */
+    .rt-editor:empty:before{
+      color: var(--editor-ph) !important;
+    }
   </style>
 </head>
 
