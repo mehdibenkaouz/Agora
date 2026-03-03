@@ -552,8 +552,8 @@
       font: inherit;
     }
     .field input:focus{
-      border-color: rgba(87,25,41,0.35);
-      box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
+      border-color: rgba(var(--brand-rgb), 0.35);
+      box-shadow: 0 0 0 4px rgba(var(--brand-rgb), 0.10);
     }
     .form-note{ color: var(--muted); font-size: .88rem; line-height: 1.35; }
 
@@ -612,8 +612,8 @@
 
 
     .dropzone.is-dragover{
-      border-color: rgba(87,25,41,0.35);
-      box-shadow: 0 0 0 px rgba(87,25,41,0.10);
+      border-color: rgba(var(--brand-rgb), 0.35);
+      box-shadow: 0 0 0 4px rgba(var(--brand-rgb), 0.10);
     }
 
     .dropzone-top{
@@ -723,10 +723,9 @@
     }
 
     .rt-btn.is-active{
-      border-color: rgba(87,25,41,0.35);
-      box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
+      border-color: rgba(var(--brand-rgb), 0.35);
+      box-shadow: 0 0 0 4px rgba(var(--brand-rgb), 0.10);
     }
-
     .rt-sep{
       width:1px;
       height:26px;
@@ -771,6 +770,10 @@
     .rt-editor:focus{
       border-color: rgba(87,25,41,0.35);
       box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
+    }
+    :root[data-theme="dark"] .rt-editor:focus{
+      border-color: rgba(168,235,246,0.55);
+      box-shadow: 0 0 0 4px rgba(168,235,246,0.18);
     }
     .rt-editor:empty:before{
       content: attr(data-placeholder);
@@ -1474,11 +1477,11 @@
     }
 
     .rt-editor:focus-within{
-      box-shadow: 0 0 0 2px rgba(87,25,41,0.35);
+      box-shadow: 0 0 0 2px rgba(var(--brand-rgb), 0.35);
     }
 
     :root[data-theme="dark"] .rt-editor:focus-within{
-      box-shadow: 0 0 0 2px rgba(87,25,41,0.55);
+      box-shadow: 0 0 0 2px rgba(168,235,246,0.55); /* azzurro */
     }
     .left-rail{
       backdrop-filter: blur(12px);
@@ -1495,7 +1498,9 @@
       --editor-bg: #000; /* nero come vuoi tu */
       --editor-fg: rgba(255,255,255,0.88);
       --editor-ph: rgba(255,255,255,0.38);
+      
     }
+    
 
     .rt-editor{
       background: var(--editor-bg) !important;
@@ -1503,10 +1508,19 @@
       caret-color: var(--editor-fg);
     }
 
+    :root[data-theme="dark"]  .rt-editor{
+      background: var(--editor-bg) !important;
+      color: var(--editor-fg) !important;
+      caret-color: var(--editor-fg);
+    }
+    
+    
+
     /* placeholder in dark (prima era nero fisso) */
     .rt-editor:empty:before{
       color: var(--editor-ph) !important;
     }
+
   </style>
 </head>
 
@@ -1743,7 +1757,7 @@
                 data-placeholder="Write your post..."
                 aria-label="Post content editor"></div>
           </div>
-          <div class="rt-counter" id="rtCounter">0 / 20000</div>
+          <div class="modal-sub" id="rtCounter">0 / 20000</div>
 
           <button id="createPostPublishBtn" class="primary-btn" type="submit" style="width:100%;">
             Publish
@@ -1829,6 +1843,13 @@
     // --- Save/restore selection inside editor (needed for toolbar buttons) ---
     let lastEditorRange = null;
 
+
+    let lastTypingState = { bold:false };
+
+    function captureTypingState(){
+      if (!selectionInsideEditor()) return;
+      lastTypingState.bold = document.queryCommandState("bold");
+    }
     function saveEditorSelection() {
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) return;
@@ -1847,8 +1868,14 @@
       const sel = window.getSelection();
       if (!sel) return false;
       sel.removeAllRanges();
-      sel.addRange(lastEditorRange);
-      return true;
+      try {
+        sel.addRange(lastEditorRange);
+        return true;
+      } catch (e) {
+        // range ormai invalido (DOM cambiato)
+        lastEditorRange = null;
+        return false;
+      }
     }
 
     function selectionInsideEditor() {
@@ -1899,6 +1926,112 @@
         while (el.firstChild) parent.insertBefore(el.firstChild, el);
         parent.removeChild(el);
       }
+    }
+
+
+    function placeCaretAtStartOfNode(node) {
+      const sel = window.getSelection();
+      if (!sel) return;
+
+      const r = document.createRange();
+
+      if (node && node.nodeType === 3) {
+        r.setStart(node, 0);
+        r.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        return;
+      }
+
+      if (node && node.nodeType === 1) {
+        const w = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+        const t = w.nextNode();
+        if (t) {
+          r.setStart(t, 0);
+          r.collapse(true);
+          sel.removeAllRanges();
+          sel.addRange(r);
+          return;
+        }
+        // se non c'è testo, creane uno
+        const tn = document.createTextNode("");
+        node.insertBefore(tn, node.firstChild);
+        r.setStart(tn, 0);
+        r.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        return;
+      }
+
+      // fallback: fine editor
+      r.selectNodeContents(createPostContent);
+      r.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+
+    function exitBoldAtCaretIfNeeded() {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return false;
+
+      const r0 = sel.getRangeAt(0);
+      if (!r0.collapsed) return false;
+
+      const sc = r0.startContainer;
+      const el = (sc && sc.nodeType === 3) ? sc.parentNode : sc;
+      const bEl = el && el.closest ? el.closest("b,strong") : null;
+      if (!bEl) return false;
+
+      const cleaned = (bEl.textContent || "").replace(/[\u200B\u200C\u200D\uFEFF\s]/g, "");
+      const hasReal = cleaned.length > 0;
+      const hasMedia = !!(bEl.querySelector && bEl.querySelector("img,.img-node"));
+
+      // Caso 1: <b> "fantasma" (solo invisibili) => rimuovi e metti caret fuori
+      if (!hasReal && !hasMedia) {
+        const after = document.createTextNode("");
+        bEl.after(after);
+        bEl.remove();
+
+        const r = document.createRange();
+        r.setStart(after, 0);
+        r.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        return true;
+      }
+
+      // Caso 2: <b> reale => SPLIT dal caret alla fine del <b>
+      const tail = document.createRange();
+      tail.setStart(r0.startContainer, r0.startOffset);
+      tail.setEnd(bEl, bEl.childNodes.length);
+
+      const frag = tail.extractContents();
+
+      // se il <b> rimane vuoto dopo l'estrazione, elimina
+      const cleaned2 = (bEl.textContent || "").replace(/[\u200B\u200C\u200D\uFEFF\s]/g, "");
+      const hasMedia2 = !!(bEl.querySelector && bEl.querySelector("img,.img-node"));
+      if (!cleaned2 && !hasMedia2) bEl.remove();
+
+      // se non c'è nulla nel tail: crea solo un punto fuori dal bold
+      if (!frag || !frag.firstChild) {
+        const after = document.createTextNode("");
+        bEl.after(after);
+        const r = document.createRange();
+        r.setStart(after, 0);
+        r.collapse(true);
+        sel.removeAllRanges();
+        sel.addRange(r);
+        return true;
+      }
+
+      // evita eventuale nesting <b> nel frammento
+      unwrapBoldInFragment(frag);
+
+      const firstInserted = frag.firstChild; // riferimento che resta valido dopo insertion
+      bEl.after(frag);
+      placeCaretAtStartOfNode(firstInserted);
+
+      return true;
     }
 
     function isFullyBold(range) {
@@ -1978,6 +2111,26 @@
         const inBold = sp.closest && sp.closest("b,strong");
         if (!inBold) unwrapElement(sp);
       }
+    }
+
+    function cleanupEditorArtifacts(root) {
+      // 1) rimuovi qualsiasi font-weight inline NON voluto (eccetto gli unbold)
+      root.querySelectorAll("span").forEach(sp => {
+        if (sp.dataset && sp.dataset.rtUnbold === "1") return;
+
+        const fw = (sp.style && sp.style.fontWeight) ? String(sp.style.fontWeight).trim().toLowerCase() : "";
+        if (!fw) return;
+
+        // NON toccare normal/400: servono per “neutralizzare” il bold ereditato
+        if (fw === "normal" || fw === "400" || fw === "inherit") return;
+
+        sp.style.fontWeight = "";
+      });
+
+      // 2) elimina nesting di <b>/<strong> (che può causare “bolder”)
+      root.querySelectorAll("b b, b strong, strong b, strong strong").forEach(inner => {
+        unwrapElement(inner);
+      });
     }
 
     function toggleBoldOnSelectionRange(range) {
@@ -2109,6 +2262,7 @@
           nr.collapse(true);
           sel.removeAllRanges();
           sel.addRange(nr);
+          cleanupEditorArtifacts(createPostContent);
         }
       }
 
@@ -2116,66 +2270,118 @@
         const sc = r.startContainer;
         const el = (sc && sc.nodeType === 3) ? sc.parentNode : sc;
         const bEl = el && el.closest ? el.closest("b,strong") : null;
-        if (bEl && bEl.textContent === "\u200B") {
-          const after = document.createTextNode("");
-          bEl.after(after);
-          bEl.remove();
 
-          const nr = document.createRange();
-          nr.setStart(after, 0);
-          nr.collapse(true);
-          sel.removeAllRanges();
-          sel.addRange(nr);
+        if (bEl) {
+          // se dentro al <b> c’è solo roba invisibile (ZWS/spazi/span vuoti), unwrap e basta
+          const cleaned = (bEl.textContent || "").replace(/[\u200B\u200C\u200D\uFEFF\s]/g, "");
+          const hasReal = cleaned.length > 0;
+
+          if (!hasReal && !(bEl.querySelector && bEl.querySelector("img,.img-node"))) {
+            // tieni un riferimento a un nodo testuale se esiste
+            const t = bEl.querySelector("span")?.firstChild || bEl.firstChild;
+
+            unwrapElement(bEl);
+
+            const sel2 = window.getSelection();
+            if (sel2) {
+              const r2 = document.createRange();
+              if (t && t.nodeType === 3) {
+                r2.setStart(t, Math.min((t.nodeValue || "").length, 1));
+              } else {
+                r2.selectNodeContents(createPostContent);
+                r2.collapse(false);
+              }
+              r2.collapse(true);
+              sel2.removeAllRanges();
+              sel2.addRange(r2);
+            }
+          }
         }
+
+        cleanupEditorArtifacts(createPostContent);
       }
+      exitBoldAtCaretIfNeeded();
+      normalizeUnboldSpans(createPostContent);
+      cleanupEditorArtifacts(createPostContent);
 
       saveEditorSelection();
       updateToolbarState();
     }
+
     function applyFontSizePx(px) {
-      createPostContent.focus();
+      if (selectionInsideEditor()) saveEditorSelection();
+
+      createPostContent.focus({ preventScroll: true });
+
+      if (!restoreEditorSelection()) {
+        const r = document.createRange();
+        r.selectNodeContents(createPostContent);
+        r.collapse(false);
+        const s = window.getSelection();
+        s.removeAllRanges();
+        s.addRange(r);
+        saveEditorSelection();
+      }
+
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) return;
 
       const range = sel.getRangeAt(0);
 
-      // Se non hai selezione: crea uno "stile corrente" inserendo uno span con ZWS
+      // ✅ CARET: inserisci SOLO font-size, NON copiare font-weight / italic / underline
+      // così non “accendi” mai il grassetto inline.
       if (range.collapsed) {
+
+        // ✅ Se il bold NON deve essere attivo, esci dal <b> prima di inserire la size
+        if (!lastTypingState.bold) {
+          exitBoldAtCaretIfNeeded();
+
+          // in alcuni browser il command-state resta ON anche fuori dal <b>
+          if (document.queryCommandState("bold")) {
+            document.execCommand("bold");     // toggle OFF
+            exitBoldAtCaretIfNeeded();        // pulizia eventuale marker generato
+          }
+        }
+
         const span = document.createElement("span");
         span.style.fontSize = px + "px";
-        span.appendChild(document.createTextNode("\u200B")); // zero width space
-
+        span.appendChild(document.createTextNode("\u200B"));
         range.insertNode(span);
 
-        const r = document.createRange();
-        r.setStart(span.firstChild, 1);
-        r.collapse(true);
+        const r2 = document.createRange();
+        r2.setStart(span.firstChild, 1);
+        r2.collapse(true);
         sel.removeAllRanges();
-        sel.addRange(r);
+        sel.addRange(r2);
 
+        cleanupEditorArtifacts(createPostContent);
+        normalizeUnboldSpans(createPostContent);
+        saveEditorSelection();
         updateToolbarState();
         return;
       }
 
-      // Se hai selezione: wrappa la selezione
+      // ✅ SELEZIONE: wrappa SOLO la size
       const span = document.createElement("span");
       span.style.fontSize = px + "px";
 
       try {
         range.surroundContents(span);
       } catch {
-        // fallback per selezioni complesse
         const frag = range.extractContents();
         span.appendChild(frag);
         range.insertNode(span);
       }
 
-      const r = document.createRange();
-      r.selectNodeContents(span);
-      r.collapse(false);
+      const r2 = document.createRange();
+      r2.selectNodeContents(span);
+      r2.collapse(false);
       sel.removeAllRanges();
-      sel.addRange(r);
+      sel.addRange(r2);
 
+      cleanupEditorArtifacts(createPostContent);
+      normalizeUnboldSpans(createPostContent);
+      saveEditorSelection();
       updateToolbarState();
     }
     function updateToolbarState() {
@@ -2263,6 +2469,13 @@
     bindPress(rtNumbered, () => execCmd("insertOrderedList"));
     bindPress(rtClear, () => { execCmd("removeFormat"); execCmd("unlink"); });
 
+    rtFontSize?.addEventListener("pointerdown", () => {
+      if (selectionInsideEditor()) { captureTypingState(); saveEditorSelection(); }
+    }, { passive: true });
+
+    rtFontSize?.addEventListener("mousedown", () => {
+      if (selectionInsideEditor()) { captureTypingState(); saveEditorSelection(); }
+    });
     rtFontSize?.addEventListener("change", () => {
       const px = parseInt(rtFontSize.value, 10);
       if (Number.isFinite(px)) applyFontSizePx(px);
