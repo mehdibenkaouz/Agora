@@ -946,11 +946,24 @@
 
   
     /* ==========================================
-       PAGE-FLIP ANIMATION  (𝔄-validated)
+       PAGE-FLIP ANIMATION  (𝔄-corrected geometry)
+
+       Browser 3D coordinate system, viewer looking at screen:
+         +Z = toward viewer,  −Z = away from viewer
+         rotateY(+deg) = right side comes TOWARD viewer (correct "forward" flip)
+         rotateY(−deg) = right side goes AWAY from viewer (wrong direction)
+
+       NEXT: right page, pivot on left edge (gutter).
+         Out:  0 → +90°  (right edge swings toward viewer then past)
+         In:  −90° → 0   (arrives from behind, unfolds toward viewer)
+
+       PREV: left page, pivot on right edge (gutter).
+         Out:  0 → −90°  (left edge swings toward viewer then past)
+         In:  +90° → 0   (arrives from behind, unfolds toward viewer)
     ========================================== */
     .book-spread {
       perspective: 2200px;
-      perspective-origin: center 40%;
+      perspective-origin: center 42%;
     }
 
     .book-page {
@@ -960,40 +973,45 @@
       will-change: transform;
     }
 
-    /* ── NEXT: right page folds LEFT (origin = left edge = gutter) */
+    /* ── NEXT: right page pivots on LEFT edge, swings TOWARD viewer ── */
     @keyframes flipOutNext {
-      0%   { transform: rotateY(0deg);    box-shadow: inset 30px 0 50px rgba(0,0,0,0.12); }
-      60%  { box-shadow: inset 60px 0 80px rgba(0,0,0,0.28); }
-      100% { transform: rotateY(-90deg);  box-shadow: inset 80px 0 100px rgba(0,0,0,0.40); }
+      0%   { transform: rotateY(0deg);   filter: brightness(1);    }
+      40%  { filter: brightness(0.82);   }
+      100% { transform: rotateY(90deg);  filter: brightness(0.55); }
     }
     @keyframes flipInNext {
-      0%   { transform: rotateY(90deg);  box-shadow: inset 80px 0 100px rgba(0,0,0,0.40); }
-      40%  { box-shadow: inset 60px 0 80px rgba(0,0,0,0.28); }
-      100% { transform: rotateY(0deg);   box-shadow: inset 30px 0 50px rgba(0,0,0,0.12); }
+      0%   { transform: rotateY(-90deg); filter: brightness(0.55); }
+      60%  { filter: brightness(0.82);   }
+      100% { transform: rotateY(0deg);   filter: brightness(1);    }
     }
-    /* Companion: left page breathes back slightly */
-    @keyframes leftRetract {
-      0%   { transform: rotateY(0deg) translateX(0px); }
-      50%  { transform: rotateY(2deg) translateX(-6px); }
-      100% { transform: rotateY(0deg) translateX(0px); }
+    @keyframes leftCompanionNext {
+      0%   { transform: rotateY(0deg);   }
+      35%  { transform: rotateY(-3deg);  }
+      100% { transform: rotateY(0deg);   }
     }
 
-    /* ── PREV: left page folds RIGHT (origin = right edge = gutter) */
+    /* ── PREV: left page pivots on RIGHT edge, swings TOWARD viewer ── */
     @keyframes flipOutPrev {
-      0%   { transform: rotateY(0deg);   box-shadow: inset -30px 0 50px rgba(0,0,0,0.12); }
-      60%  { box-shadow: inset -60px 0 80px rgba(0,0,0,0.28); }
-      100% { transform: rotateY(90deg);  box-shadow: inset -80px 0 100px rgba(0,0,0,0.40); }
+      0%   { transform: rotateY(0deg);   filter: brightness(1);    }
+      40%  { filter: brightness(0.82);   }
+      100% { transform: rotateY(-90deg); filter: brightness(0.55); }
     }
     @keyframes flipInPrev {
-      0%   { transform: rotateY(-90deg); box-shadow: inset -80px 0 100px rgba(0,0,0,0.40); }
-      40%  { box-shadow: inset -60px 0 80px rgba(0,0,0,0.28); }
-      100% { transform: rotateY(0deg);   box-shadow: inset -30px 0 50px rgba(0,0,0,0.12); }
+      0%   { transform: rotateY(90deg);  filter: brightness(0.55); }
+      60%  { filter: brightness(0.82);   }
+      100% { transform: rotateY(0deg);   filter: brightness(1);    }
     }
-    /* Companion: right page breathes back slightly */
-    @keyframes rightRetract {
-      0%   { transform: rotateY(0deg) translateX(0px); }
-      50%  { transform: rotateY(-2deg) translateX(6px); }
-      100% { transform: rotateY(0deg) translateX(0px); }
+    @keyframes rightCompanionPrev {
+      0%   { transform: rotateY(0deg);   }
+      35%  { transform: rotateY(3deg);   }
+      100% { transform: rotateY(0deg);   }
+    }
+
+    /* ── Gutter darkens mid-flip ── */
+    @keyframes gutterPulse {
+      0%   { opacity: 1; }
+      50%  { opacity: 1.8; filter: brightness(0.45); }
+      100% { opacity: 1; filter: brightness(1); }
     }
 
     .book-page.right.flip-out-next {
@@ -1002,11 +1020,11 @@
     }
     .book-page.right.flip-in-next {
       transform-origin: left center;
-      animation: flipInNext 320ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      animation: flipInNext 320ms cubic-bezier(0.2, 0, 0.2, 1) forwards;
     }
     .book-page.left.companion-next {
       transform-origin: right center;
-      animation: leftRetract 640ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      animation: leftCompanionNext 640ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
     }
 
     .book-page.left.flip-out-prev {
@@ -1015,11 +1033,11 @@
     }
     .book-page.left.flip-in-prev {
       transform-origin: right center;
-      animation: flipInPrev 320ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      animation: flipInPrev 320ms cubic-bezier(0.2, 0, 0.2, 1) forwards;
     }
     .book-page.right.companion-prev {
       transform-origin: left center;
-      animation: rightRetract 640ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      animation: rightCompanionPrev 640ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
     }
 
     /* ── Gutter shadow pulses during flip */
