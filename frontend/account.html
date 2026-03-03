@@ -1827,6 +1827,8 @@
       padding: 14px;
       background: linear-gradient(90deg, rgba(0,0,0,0.18), rgba(0,0,0,0.06) 18%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.06) 82%, rgba(0,0,0,0.18));
       box-shadow: 0 22px 44px rgba(0,0,0,0.34);
+      position: relative;
+      z-index: 2;
     }
 
     .book-spread{
@@ -1993,7 +1995,12 @@
       z-index: 7;
       width: min(380px, calc(100% - 28px));
     }
-
+    .book-stage::after{
+      z-index: 1; /* era 0, ma essendo ::after può finire sopra */
+      opacity: .55; /* opzionale: se è troppo scuro */
+    }
+    .book-shell{ z-index: 2; }
+    .index-panel{ z-index: 3; }
     @media (max-width: 900px){
       .book-shell{ height: min(78vh, 760px); padding: 12px; }
       .book-spread{ flex-direction: column; }
