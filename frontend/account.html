@@ -944,7 +944,107 @@
       animation: goldShimmer 5s ease-in-out infinite;
     }
 
-  </style>
+  
+    /* ==========================================
+       PAGE-FLIP ANIMATION  (𝔄-validated)
+    ========================================== */
+    .book-spread {
+      perspective: 2200px;
+      perspective-origin: center 40%;
+    }
+
+    .book-page {
+      transform-style: preserve-3d;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      will-change: transform;
+    }
+
+    /* ── NEXT: right page folds LEFT (origin = left edge = gutter) */
+    @keyframes flipOutNext {
+      0%   { transform: rotateY(0deg);    box-shadow: inset 30px 0 50px rgba(0,0,0,0.12); }
+      60%  { box-shadow: inset 60px 0 80px rgba(0,0,0,0.28); }
+      100% { transform: rotateY(-90deg);  box-shadow: inset 80px 0 100px rgba(0,0,0,0.40); }
+    }
+    @keyframes flipInNext {
+      0%   { transform: rotateY(90deg);  box-shadow: inset 80px 0 100px rgba(0,0,0,0.40); }
+      40%  { box-shadow: inset 60px 0 80px rgba(0,0,0,0.28); }
+      100% { transform: rotateY(0deg);   box-shadow: inset 30px 0 50px rgba(0,0,0,0.12); }
+    }
+    /* Companion: left page breathes back slightly */
+    @keyframes leftRetract {
+      0%   { transform: rotateY(0deg) translateX(0px); }
+      50%  { transform: rotateY(2deg) translateX(-6px); }
+      100% { transform: rotateY(0deg) translateX(0px); }
+    }
+
+    /* ── PREV: left page folds RIGHT (origin = right edge = gutter) */
+    @keyframes flipOutPrev {
+      0%   { transform: rotateY(0deg);   box-shadow: inset -30px 0 50px rgba(0,0,0,0.12); }
+      60%  { box-shadow: inset -60px 0 80px rgba(0,0,0,0.28); }
+      100% { transform: rotateY(90deg);  box-shadow: inset -80px 0 100px rgba(0,0,0,0.40); }
+    }
+    @keyframes flipInPrev {
+      0%   { transform: rotateY(-90deg); box-shadow: inset -80px 0 100px rgba(0,0,0,0.40); }
+      40%  { box-shadow: inset -60px 0 80px rgba(0,0,0,0.28); }
+      100% { transform: rotateY(0deg);   box-shadow: inset -30px 0 50px rgba(0,0,0,0.12); }
+    }
+    /* Companion: right page breathes back slightly */
+    @keyframes rightRetract {
+      0%   { transform: rotateY(0deg) translateX(0px); }
+      50%  { transform: rotateY(-2deg) translateX(6px); }
+      100% { transform: rotateY(0deg) translateX(0px); }
+    }
+
+    .book-page.right.flip-out-next {
+      transform-origin: left center;
+      animation: flipOutNext 320ms cubic-bezier(0.4, 0, 0.6, 1) forwards;
+    }
+    .book-page.right.flip-in-next {
+      transform-origin: left center;
+      animation: flipInNext 320ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    .book-page.left.companion-next {
+      transform-origin: right center;
+      animation: leftRetract 640ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    .book-page.left.flip-out-prev {
+      transform-origin: right center;
+      animation: flipOutPrev 320ms cubic-bezier(0.4, 0, 0.6, 1) forwards;
+    }
+    .book-page.left.flip-in-prev {
+      transform-origin: right center;
+      animation: flipInPrev 320ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    .book-page.right.companion-prev {
+      transform-origin: left center;
+      animation: rightRetract 640ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+
+    /* ── Gutter shadow pulses during flip */
+    .book-gutter.is-flipping {
+      animation: gutterPulse 640ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    }
+    @keyframes gutterPulse {
+      0%   { background: linear-gradient(90deg,rgba(0,0,0,0.20) 0%,rgba(0,0,0,0.10) 15%,rgba(255,255,255,0.06) 50%,rgba(0,0,0,0.10) 85%,rgba(0,0,0,0.20) 100%); }
+      50%  { background: linear-gradient(90deg,rgba(0,0,0,0.45) 0%,rgba(0,0,0,0.30) 15%,rgba(255,255,255,0.02) 50%,rgba(0,0,0,0.30) 85%,rgba(0,0,0,0.45) 100%); }
+      100% { background: linear-gradient(90deg,rgba(0,0,0,0.20) 0%,rgba(0,0,0,0.10) 15%,rgba(255,255,255,0.06) 50%,rgba(0,0,0,0.10) 85%,rgba(0,0,0,0.20) 100%); }
+    }
+
+    /* Reduced-motion: skip all transforms */
+    @media (prefers-reduced-motion: reduce) {
+      .book-page.right.flip-out-next,
+      .book-page.right.flip-in-next,
+      .book-page.left.companion-next,
+      .book-page.left.flip-out-prev,
+      .book-page.left.flip-in-prev,
+      .book-page.right.companion-prev,
+      .book-gutter.is-flipping {
+        animation: none !important;
+      }
+    }
+</style>
 </head>
 <body>
 
@@ -1433,10 +1533,72 @@ function spreadCount(){ return Math.max(1, Math.ceil(POSTS.length / 2)); }
 
 function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
-function setSpread(i){
+/* ── 𝔄-validated page-flip engine ── */
+let _isFlipping = false;
+const _FLIP_MS  = 320; // half-turn duration (ms)
+
+function setSpread(i, _dir){
   const max = spreadCount() - 1;
-  spreadIndex = clamp(i, 0, max);
-  renderSpread();
+  const next = clamp(i, 0, max);
+
+  /* CO: identical spread → no-op */
+  if (next === spreadIndex && POSTS.length > 0) return;
+
+  /* Stab: block re-entry during animation */
+  if (_isFlipping) return;
+
+  const dir = _dir || (i > spreadIndex ? 'next' : 'prev');
+
+  /* Univ: skip animation if no real content or reduced-motion preference */
+  const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!POSTS.length || !CURRENT_USER || reducedMotion) {
+    spreadIndex = next;
+    renderSpread();
+    return;
+  }
+
+  _isFlipping = true;
+
+  const spread  = document.getElementById('bookSpread');
+  const pageL   = spread ? spread.querySelector('.book-page.left')  : null;
+  const pageR   = spread ? spread.querySelector('.book-page.right') : null;
+  const gutter  = spread ? spread.querySelector('.book-gutter')     : null;
+
+  const turning   = dir === 'next' ? pageR   : pageL;
+  const companion = dir === 'next' ? pageL   : pageR;
+  const outCls    = dir === 'next' ? 'flip-out-next' : 'flip-out-prev';
+  const inCls     = dir === 'next' ? 'flip-in-next'  : 'flip-in-prev';
+  const compCls   = dir === 'next' ? 'companion-next': 'companion-prev';
+
+  /* disable nav buttons during flip */
+  if (prevSpreadBtn) prevSpreadBtn.disabled = true;
+  if (nextSpreadBtn) nextSpreadBtn.disabled = true;
+
+  /* ── Phase 1: fold OUT */
+  if (turning)   turning.classList.add(outCls);
+  if (companion) companion.classList.add(compCls);
+  if (gutter)    gutter.classList.add('is-flipping');
+
+  setTimeout(() => {
+    /* content swap at the blind spot (page edge-on) */
+    if (turning)   turning.classList.remove(outCls);
+    if (companion) companion.classList.remove(compCls);
+
+    spreadIndex = next;
+    renderSpread(); /* writes new DOM content */
+
+    /* ── Phase 2: fold IN */
+    if (turning) turning.classList.add(inCls);
+
+    setTimeout(() => {
+      if (turning)  turning.classList.remove(inCls);
+      if (gutter)   gutter.classList.remove('is-flipping');
+      _isFlipping = false;
+      /* restore correct disabled state from renderSpread logic */
+      renderSpread();
+    }, _FLIP_MS);
+
+  }, _FLIP_MS);
 }
 
 function renderPage(side, post, pageNo){
@@ -1599,12 +1761,12 @@ document.addEventListener("keydown", (e)=>{
   const tag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : "";
   if (tag === "INPUT" || tag === "TEXTAREA") return;
 
-  if (e.key === "ArrowLeft"){ setSpread(spreadIndex - 1); }
-  if (e.key === "ArrowRight"){ setSpread(spreadIndex + 1); }
+  if (e.key === "ArrowLeft"){ setSpread(spreadIndex - 1, 'prev'); }
+  if (e.key === "ArrowRight"){ setSpread(spreadIndex + 1, 'next'); }
 });
 
-if (prevSpreadBtn) prevSpreadBtn.addEventListener("click", ()=> setSpread(spreadIndex - 1));
-if (nextSpreadBtn) nextSpreadBtn.addEventListener("click", ()=> setSpread(spreadIndex + 1));
+if (prevSpreadBtn) prevSpreadBtn.addEventListener("click", ()=> setSpread(spreadIndex - 1, 'prev'));
+if (nextSpreadBtn) nextSpreadBtn.addEventListener("click", ()=> setSpread(spreadIndex + 1, 'next'));
 if (refreshBtn) refreshBtn.addEventListener("click", ()=> loadPosts());
 
 // Swipe on touch
@@ -1623,8 +1785,8 @@ if (refreshBtn) refreshBtn.addEventListener("click", ()=> loadPosts());
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
     if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
-    if (dx > 0) setSpread(spreadIndex - 1);
-    else setSpread(spreadIndex + 1);
+    if (dx > 0) setSpread(spreadIndex - 1, 'prev');
+    else setSpread(spreadIndex + 1, 'next');
   });
   el.addEventListener("pointercancel", ()=>{ down=false; });
 })();
