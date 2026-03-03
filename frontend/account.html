@@ -1782,65 +1782,339 @@
       </div>
     </div>
   </header>
+  <style>
+    /* ====== Book spread viewer (2 pages) ====== */
+    .account-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 14px;
+      padding: 18px 18px 12px;
+    }
+    .account-head .h-title{ font-weight: 900; letter-spacing: .2px; font-size: 16px; }
+    .account-head .h-sub{ color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+    .account-head .h-actions{ display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
 
-<div id="authModal" class="modal-backdrop" aria-hidden="true">
+    /* make file-btn text readable in dark */
+    .file-btn{ color: var(--text); }
+    :root[data-theme="dark"] .file-btn{ color: #ffffff; }
+
+    .book-stage{
+      margin: 0 auto 24px;
+      border-radius: 28px;
+      overflow: hidden;
+      border: 1px solid rgba(0,0,0,0.08);
+      box-shadow: var(--soft-shadow);
+      background:
+        radial-gradient(1200px 600px at 50% 20%, rgba(255,255,255,0.22), rgba(255,255,255,0.0) 55%),
+        linear-gradient(135deg, #caa57c, #b98b63 40%, #d5b28a 70%, #b9855a);
+      position: relative;
+      padding: 26px 18px 18px;
+    }
+    :root[data-theme="dark"] .book-stage{
+      border-color: rgba(255,255,255,0.10);
+      background:
+        radial-gradient(1200px 600px at 50% 20%, rgba(255,255,255,0.06), rgba(255,255,255,0.0) 55%),
+        linear-gradient(135deg, #2b241e, #1c1713 40%, #2d241c 70%, #171310);
+    }
+
+    .book-shell{
+      width: min(1040px, 100%);
+      height: min(72vh, 700px);
+      margin: 0 auto;
+      position: relative;
+      border-radius: 18px;
+      padding: 14px;
+      background: linear-gradient(90deg, rgba(0,0,0,0.18), rgba(0,0,0,0.06) 18%, rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.06) 82%, rgba(0,0,0,0.18));
+      box-shadow: 0 22px 44px rgba(0,0,0,0.34);
+    }
+
+    .book-spread{
+      width: 100%;
+      height: 100%;
+      display:flex;
+      align-items: stretch;
+      border-radius: 14px;
+      overflow:hidden;
+      background: #fbfaf6;
+    }
+
+    .book-page{
+      flex: 1 1 0;
+      min-width: 0;
+      background: #fbfaf6;
+      position: relative;
+    }
+    /* inner shadows to suggest curvature */
+    .book-page.left{ box-shadow: inset -22px 0 28px rgba(0,0,0,0.07); }
+    .book-page.right{ box-shadow: inset 22px 0 28px rgba(0,0,0,0.07); }
+
+    .book-gutter{
+      width: 28px;
+      background:
+        linear-gradient(90deg, rgba(0,0,0,0.16), rgba(0,0,0,0.02) 50%, rgba(0,0,0,0.16));
+    }
+
+    .page-inner{
+      height: 100%;
+      padding: 22px 22px 18px;
+      display:flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .page-top{
+      display:flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 12px;
+      color: rgba(0,0,0,0.58);
+    }
+    .page-label{ font-weight: 900; letter-spacing:.2px; }
+    .page-date{ opacity: .9; }
+
+    .page-content{
+      flex: 1;
+      overflow:auto;
+      padding-right: 8px;
+      font-size: 15px;
+      line-height: 1.55;
+      color: #111;
+    }
+    .page-content img{
+      max-width: 100%;
+      height: auto;
+      border-radius: 14px;
+      border: 1px solid rgba(0,0,0,0.08);
+      display:block;
+    }
+    .page-content .img-node{
+      display:inline-block;
+      max-width: 100%;
+    }
+    .page-content .img-node img{ display:block; }
+
+    .page-bottom{
+      display:flex;
+      align-items:center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: rgba(0,0,0,0.45);
+      margin-top: -4px;
+    }
+    .pnum{ font-weight: 900; }
+
+    .flip-btn{
+      position:absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 48px;
+      height: 48px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.12);
+      background: rgba(255,255,255,0.80);
+      backdrop-filter: blur(6px);
+      cursor: pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      box-shadow: 0 12px 26px rgba(0,0,0,0.20);
+      z-index: 5;
+    }
+    .flip-btn svg{
+      width: 22px;
+      height: 22px;
+      stroke: #111;
+      fill: none;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .flip-btn.prev{ left: 14px; }
+    .flip-btn.next{ right: 14px; }
+    .flip-btn:disabled{ opacity: .35; cursor: not-allowed; }
+
+    :root[data-theme="dark"] .flip-btn{
+      background: rgba(18, 21, 29, 0.78);
+      border-color: rgba(255,255,255,0.16);
+    }
+    :root[data-theme="dark"] .flip-btn svg{ stroke: rgba(255,255,255,0.90); }
+
+    .book-footer{
+      margin-top: 14px;
+      display:flex;
+      justify-content:center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .book-meta-chip{
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.78);
+      border: 1px solid rgba(0,0,0,0.12);
+      font-size: 12.5px;
+      color: rgba(0,0,0,0.70);
+    }
+    :root[data-theme="dark"] .book-meta-chip{
+      background: rgba(18, 21, 29, 0.78);
+      border-color: rgba(255,255,255,0.16);
+      color: rgba(255,255,255,0.75);
+    }
+
+    .book-index-btn{
+      position:absolute;
+      top: 14px;
+      right: 14px;
+      z-index: 6;
+    }
+
+    .empty-state{
+      position:absolute;
+      inset: 0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction: column;
+      gap: 10px;
+      padding: 28px;
+      text-align:center;
+      color: rgba(0,0,0,0.72);
+    }
+    :root[data-theme="dark"] .empty-state{ color: rgba(255,255,255,0.74); }
+
+    .empty-state .empty-title{ font-weight: 900; font-size: 16px; letter-spacing:.2px; }
+    .empty-state .empty-sub{ color: var(--muted); font-size: 13px; max-width: 520px; }
+
+    /* Index panel positioning inside stage */
+    .book-stage .index-panel{
+      position:absolute;
+      top: 60px;
+      right: 14px;
+      z-index: 7;
+      width: min(380px, calc(100% - 28px));
+    }
+
+    @media (max-width: 900px){
+      .book-shell{ height: min(78vh, 760px); padding: 12px; }
+      .book-spread{ flex-direction: column; }
+      .book-gutter{ width: 100%; height: 18px; }
+      .flip-btn{ top: auto; transform: none; bottom: 18px; }
+      .flip-btn.prev{ left: 18px; }
+      .flip-btn.next{ right: 18px; }
+      .book-stage .index-panel{ top: 68px; }
+    }
+  </style>
+
+  <!-- Auth modal (fixed markup) -->
+  <div id="authModal" class="modal-backdrop" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
       <div class="modal-head">
         <div>
           <div class="modal-title" id="authTitle">Sign in</div>
           <div class="modal-sub">Access your AGORA identity.</div>
         </div>
+        <button id="authClose" class="icon-x" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12"></path>
+            <path d="M18 6L6 18"></path>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <button id="googleLoginBtn" class="oauth-btn">
+          <span class="oauth-dot" aria-hidden="true"></span>
+          Continue with Google
+        </button>
+
+        <div class="divider"><span>or</span></div>
+
+        <form id="emailLoginForm" class="form">
+          <label class="field">
+            <span>Email</span>
+            <input id="emailInput" type="email" placeholder="you@email.com" autocomplete="email" required />
+          </label>
+
+          <label class="field">
+            <span>Password</span>
+            <input id="passwordInput" type="password" placeholder="••••••••" autocomplete="current-password" />
+          </label>
+
+          <button class="primary-btn" type="submit" style="width:100%;">Login</button>
+          <div class="form-note">Email/password is placeholder for now. We’ll wire it properly later.</div>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <main class="page">
     <section class="layout">
-      <div class="center-col" style="width:100%; max-width: 980px; margin: 0 auto;">
+      <div class="center-col" style="width:100%; max-width: 1100px; margin: 0 auto;">
+
         <div class="panel" style="margin-top: 18px;">
-          <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; padding:18px 18px 12px;">
+          <div class="account-head">
             <div>
-              <div style="font-weight:800; letter-spacing:.2px; font-size:16px;">Your Library</div>
-              <div id="libSub" style="color:var(--muted); font-size:12.5px; margin-top:4px;">Books made from your posts.</div>
+              <div class="h-title">Your Book</div>
+              <div id="bookSub" class="h-sub">Two pages per spread. Use arrows or keyboard ← →.</div>
             </div>
-            <div style="display:flex; gap:10px; align-items:center;">
+            <div class="h-actions">
               <button id="refreshBtn" class="file-btn" type="button" title="Refresh">Refresh</button>
               <button id="openLoginBtn" class="primary-btn" type="button" style="display:none;">Login</button>
             </div>
           </div>
-
-          <div id="libraryGrid" class="book-grid" style="padding: 0 18px 18px;">
-            <!-- populated by JS -->
-          </div>
         </div>
 
-        <div id="viewer" class="book-viewer" aria-hidden="true">
-          <div class="book-toolbar">
-            <button id="backToLibraryBtn" class="icon-btn" type="button" title="Back">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M15 18l-6-6 6-6"></path>
-              </svg>
-            </button>
+        <div id="bookStage" class="book-stage" aria-label="Book viewer">
+          <button id="openIndexBtn" class="file-btn book-index-btn" type="button">Index</button>
 
-            <div class="book-title">
-              <div id="bookTitle" class="book-title-main">Book</div>
-              <div id="bookMeta" class="book-title-sub">Page 1 / 1</div>
-            </div>
+          <div class="book-shell" id="bookShell" tabindex="0" aria-label="Book pages">
+            <div class="book-spread" id="bookSpread">
+              <div class="book-page left" aria-label="Left page">
+                <div class="page-inner">
+                  <div class="page-top">
+                    <div id="leftLabel" class="page-label">—</div>
+                    <div id="leftDate" class="page-date"></div>
+                  </div>
+                  <div id="leftContent" class="page-content"></div>
+                  <div class="page-bottom">
+                    <span id="leftNum" class="pnum"></span>
+                    <span id="leftId" style="opacity:.75;"></span>
+                  </div>
+                </div>
+              </div>
 
-            <div class="book-actions">
-              <button id="openIndexBtn" class="file-btn" type="button">Index</button>
-              <div class="book-nav">
-                <button id="prevPageBtn" class="icon-btn" type="button" title="Previous">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
-                </button>
-                <button id="nextPageBtn" class="icon-btn" type="button" title="Next">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
-                </button>
+              <div class="book-gutter" aria-hidden="true"></div>
+
+              <div class="book-page right" aria-label="Right page">
+                <div class="page-inner">
+                  <div class="page-top">
+                    <div id="rightLabel" class="page-label">—</div>
+                    <div id="rightDate" class="page-date"></div>
+                  </div>
+                  <div id="rightContent" class="page-content"></div>
+                  <div class="page-bottom">
+                    <span id="rightNum" class="pnum"></span>
+                    <span id="rightId" style="opacity:.75;"></span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="book-pages-wrap" id="bookPagesWrap" tabindex="0" aria-label="Book pages">
-            <div class="book-pages" id="bookPages">
-              <!-- pages -->
-            </div>
+          <button id="prevSpreadBtn" class="flip-btn prev" type="button" aria-label="Previous pages" title="Previous (←)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+          </button>
+          <button id="nextSpreadBtn" class="flip-btn next" type="button" aria-label="Next pages" title="Next (→)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+          </button>
+
+          <div class="book-footer">
+            <div id="spreadMeta" class="book-meta-chip">—</div>
+          </div>
+
+          <div id="emptyState" class="empty-state" style="display:none;">
+            <div class="empty-title" id="emptyTitle">Loading…</div>
+            <div class="empty-sub" id="emptySub">If you’re not logged in, open the account menu → Login.</div>
           </div>
 
           <div id="indexPanel" class="index-panel" aria-hidden="true">
@@ -1861,8 +2135,8 @@
               <div id="indexList" class="index-list"></div>
             </div>
           </div>
-        </div>
 
+        </div>
       </div>
     </section>
   </main>
@@ -1975,6 +2249,7 @@ function openModal(){
   authModal.classList.add("open");
   authModal.setAttribute("aria-hidden","false");
   closeMenu();
+  setTimeout(()=> emailInput && emailInput.focus(), 0);
 }
 function closeModal(){
   authModal.classList.remove("open");
@@ -1984,11 +2259,6 @@ if (authClose) authClose.addEventListener("click", closeModal);
 if (authModal){
   authModal.addEventListener("click", (e)=>{ if (e.target === authModal) closeModal(); });
 }
-document.addEventListener("keydown", (e)=>{
-  if (e.key === "Escape"){
-    closeMenu(); closeModal(); closeIndex(); closeViewer();
-  }
-});
 
 if (googleLoginBtn){
   googleLoginBtn.addEventListener("click", ()=>{
@@ -1996,7 +2266,6 @@ if (googleLoginBtn){
     window.location.href = API_BASE + "/api/auth/google/start?returnTo=" + encodeURIComponent(returnTo);
   });
 }
-
 if (emailLoginForm){
   emailLoginForm.addEventListener("submit", async (e)=>{
     e.preventDefault();
@@ -2008,8 +2277,7 @@ if (emailLoginForm){
     });
     setToken(data.token);
     closeModal();
-    await refreshMe();
-    await loadLibrary();
+    await loadPosts();
   });
 }
 
@@ -2058,7 +2326,7 @@ if (menuPrimaryAction){
     if (getToken()){
       localStorage.removeItem(TOKEN_KEY);
       await refreshMe();
-      await loadLibrary();
+      await loadPosts();
       closeMenu();
       return;
     }
@@ -2115,72 +2383,117 @@ function formatDate(iso){
   }
 }
 
-/* ===== Library & Viewer ===== */
-const libraryGrid = document.getElementById("libraryGrid");
-const libSub = document.getElementById("libSub");
+/* ===== Book state ===== */
+let POSTS = [];
+let spreadIndex = 0; // each spread = 2 posts (left/right)
+
+const emptyState = document.getElementById("emptyState");
+const emptyTitle = document.getElementById("emptyTitle");
+const emptySub = document.getElementById("emptySub");
+
+const leftLabel = document.getElementById("leftLabel");
+const leftDate = document.getElementById("leftDate");
+const leftContent = document.getElementById("leftContent");
+const leftNum = document.getElementById("leftNum");
+const leftId = document.getElementById("leftId");
+
+const rightLabel = document.getElementById("rightLabel");
+const rightDate = document.getElementById("rightDate");
+const rightContent = document.getElementById("rightContent");
+const rightNum = document.getElementById("rightNum");
+const rightId = document.getElementById("rightId");
+
+const prevSpreadBtn = document.getElementById("prevSpreadBtn");
+const nextSpreadBtn = document.getElementById("nextSpreadBtn");
+const spreadMeta = document.getElementById("spreadMeta");
 const refreshBtn = document.getElementById("refreshBtn");
 
-const viewer = document.getElementById("viewer");
-const bookTitle = document.getElementById("bookTitle");
-const bookMeta = document.getElementById("bookMeta");
-const bookPagesWrap = document.getElementById("bookPagesWrap");
-const bookPages = document.getElementById("bookPages");
-const backToLibraryBtn = document.getElementById("backToLibraryBtn");
-const prevPageBtn = document.getElementById("prevPageBtn");
-const nextPageBtn = document.getElementById("nextPageBtn");
 const openIndexBtn = document.getElementById("openIndexBtn");
 const indexPanel = document.getElementById("indexPanel");
 const closeIndexBtn = document.getElementById("closeIndexBtn");
 const indexSearch = document.getElementById("indexSearch");
 const indexList = document.getElementById("indexList");
 
-let ALL_POSTS = [];
-let BOOKS = [];
-let ACTIVE_BOOK = null;
-let ACTIVE_INDEX = 0;
+function showEmpty(title, sub){
+  emptyState.style.display = "flex";
+  emptyTitle.textContent = title || "—";
+  emptySub.textContent = sub || "";
+}
+function hideEmpty(){
+  emptyState.style.display = "none";
+}
 
-if (refreshBtn) refreshBtn.addEventListener("click", loadLibrary);
+function spreadCount(){ return Math.max(1, Math.ceil(POSTS.length / 2)); }
 
-function buildBooks(posts){
-  const all = Array.from(posts || []);
-  // reading order: oldest -> newest
-  all.sort((a,b) => String(a.created_at).localeCompare(String(b.created_at)));
+function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
-  const books = [];
-  books.push({
-    key: "all",
-    title: "All posts",
-    subtitle: "Everything you wrote, in order.",
-    count: all.length,
-    posts: all
-  });
+function setSpread(i){
+  const max = spreadCount() - 1;
+  spreadIndex = clamp(i, 0, max);
+  renderSpread();
+}
 
-  // auto books by first hashtag (optional)
-  const tagMap = new Map();
-  for (const p of all){
-    const plain = extractPlainText(p.content || "");
-    const m = plain.match(/(^|\s)#([a-z0-9_\-]{3,})/i);
-    if (!m) continue;
-    const tag = m[2].toLowerCase();
-    if (!tagMap.has(tag)) tagMap.set(tag, []);
-    tagMap.get(tag).push(p);
+function renderPage(side, post, pageNo){
+  const isLeft = side === "left";
+  const labelEl = isLeft ? leftLabel : rightLabel;
+  const dateEl  = isLeft ? leftDate  : rightDate;
+  const contentEl = isLeft ? leftContent : rightContent;
+  const numEl = isLeft ? leftNum : rightNum;
+  const idEl  = isLeft ? leftId  : rightId;
+
+  if (!post){
+    labelEl.textContent = "—";
+    dateEl.textContent = "";
+    contentEl.innerHTML = "";
+    numEl.textContent = "";
+    idEl.textContent = "";
+    return;
   }
 
-  // only keep tags with >=2 posts to avoid noise
-  const tags = Array.from(tagMap.entries()).filter(([,arr]) => arr.length >= 2)
-    .sort((a,b) => b[1].length - a[1].length);
+  labelEl.textContent = "Post " + pageNo;
+  dateEl.textContent = formatDate(post.created_at);
+  contentEl.innerHTML = sanitizeForReader(post.content);
+  numEl.textContent = String(pageNo);
+  idEl.textContent = post.id ? ("#" + String(post.id).slice(0,8)) : "";
+}
 
-  for (const [tag, arr] of tags.slice(0, 8)){
-    books.push({
-      key: "tag:" + tag,
-      title: "#" + tag,
-      subtitle: "Auto-collected by hashtag.",
-      count: arr.length,
-      posts: arr
-    });
+function renderSpread(){
+  if (!CURRENT_USER){
+    showEmpty("Login required", "Open the account menu (top-right) → Login.");
+    renderPage("left", null, 0);
+    renderPage("right", null, 0);
+    if (prevSpreadBtn) prevSpreadBtn.disabled = true;
+    if (nextSpreadBtn) nextSpreadBtn.disabled = true;
+    spreadMeta.textContent = "—";
+    closeIndex();
+    return;
   }
 
-  return books;
+  if (!POSTS.length){
+    showEmpty("No posts yet", "Create your first post from Home, then come back here.");
+    renderPage("left", null, 0);
+    renderPage("right", null, 0);
+    if (prevSpreadBtn) prevSpreadBtn.disabled = true;
+    if (nextSpreadBtn) nextSpreadBtn.disabled = true;
+    spreadMeta.textContent = "0 posts";
+    closeIndex();
+    return;
+  }
+
+  hideEmpty();
+
+  const leftIdx = spreadIndex * 2;
+  const rightIdx = leftIdx + 1;
+  const leftPost = POSTS[leftIdx] || null;
+  const rightPost = POSTS[rightIdx] || null;
+
+  renderPage("left", leftPost, leftIdx + 1);
+  renderPage("right", rightPost, rightIdx + 1);
+
+  if (prevSpreadBtn) prevSpreadBtn.disabled = (spreadIndex <= 0);
+  if (nextSpreadBtn) nextSpreadBtn.disabled = (spreadIndex >= spreadCount() - 1);
+
+  spreadMeta.textContent = `Spread ${spreadIndex + 1} / ${spreadCount()} • Posts ${leftIdx + 1}-${Math.min(rightIdx + 1, POSTS.length)} / ${POSTS.length}`;
 }
 
 async function fetchMyPosts(){
@@ -2198,185 +2511,33 @@ async function fetchMyPosts(){
   return posts.filter(p => String(p.author_email||"").trim().toLowerCase() === meMail);
 }
 
-function renderLibrary(){
-  libraryGrid.innerHTML = "";
-  if (!CURRENT_USER){
-    libSub.textContent = "Login to view your library.";
-    return;
-  }
-  libSub.textContent = BOOKS.length > 1
-    ? "Books: All posts + auto hashtags (if present)."
-    : "One book: All posts.";
-
-  if (ALL_POSTS.length === 0){
-    const empty = document.createElement("div");
-    empty.style.padding = "10px 4px";
-    empty.style.color = "var(--muted)";
-    empty.textContent = "No posts yet.";
-    libraryGrid.appendChild(empty);
-    return;
-  }
-
-  for (const b of BOOKS){
-    const card = document.createElement("div");
-    card.className = "book-card";
-    card.innerHTML = `
-      <div class="book-cover"></div>
-      <div class="book-name"></div>
-      <div class="book-sub"></div>
-      <div class="book-chiprow">
-        <div class="book-chip">📄 <span>${b.count}</span></div>
-        <button class="book-open" type="button">Open</button>
-      </div>
-    `;
-    card.querySelector(".book-name").textContent = b.title;
-    card.querySelector(".book-sub").textContent = b.subtitle;
-
-    const openBtn = card.querySelector(".book-open");
-    const openIt = (e)=>{ if (e) e.stopPropagation(); openBook(b.key); };
-    openBtn.addEventListener("click", openIt);
-    card.addEventListener("click", openIt);
-
-    libraryGrid.appendChild(card);
-  }
+function normalizePosts(posts){
+  const arr = Array.isArray(posts) ? posts.slice() : [];
+  // Oldest → newest for a "reading" vibe
+  arr.sort((a,b)=> new Date(a.created_at) - new Date(b.created_at));
+  return arr;
 }
 
-function openViewer(){
-  viewer.classList.add("open");
-  viewer.setAttribute("aria-hidden","false");
-  document.body.style.overflow = "hidden";
-  closeMenu();
-  bookPagesWrap && bookPagesWrap.focus();
-}
-function closeViewer(){
-  viewer.classList.remove("open");
-  viewer.setAttribute("aria-hidden","true");
-  document.body.style.overflow = "";
-  closeIndex();
-}
-
-if (backToLibraryBtn) backToLibraryBtn.addEventListener("click", closeViewer);
-if (viewer){
-  viewer.addEventListener("click", (e)=>{ if (e.target === viewer) closeViewer(); });
-}
-
-function closeIndex(){
-  indexPanel.classList.remove("open");
-  indexPanel.setAttribute("aria-hidden","true");
-}
-function openIndex(){
-  indexPanel.classList.add("open");
-  indexPanel.setAttribute("aria-hidden","false");
-  indexSearch.value = "";
-  renderIndexList();
-  setTimeout(()=> indexSearch.focus(), 0);
-}
-if (openIndexBtn) openIndexBtn.addEventListener("click", openIndex);
-if (closeIndexBtn) closeIndexBtn.addEventListener("click", closeIndex);
-
-function setActivePage(idx){
-  if (!ACTIVE_BOOK) return;
-  const total = ACTIVE_BOOK.posts.length;
-  ACTIVE_INDEX = Math.max(0, Math.min(total-1, idx));
-  bookMeta.textContent = `Page ${ACTIVE_INDEX+1} / ${total}`;
-
-  const target = bookPages.querySelector(`[data-idx="${ACTIVE_INDEX}"]`);
-  if (target) target.scrollIntoView({ behavior:"smooth", inline:"start", block:"nearest" });
-}
-
-function openBook(bookKey){
-  ACTIVE_BOOK = BOOKS.find(b => b.key === bookKey) || BOOKS[0];
-  if (!ACTIVE_BOOK) return;
-
-  openViewer();
-  bookTitle.textContent = ACTIVE_BOOK.title;
-  renderPages();
-  setActivePage(0);
-}
-
-function renderPages(){
-  bookPages.innerHTML = "";
-  const posts = ACTIVE_BOOK.posts;
-
-  posts.forEach((p, i)=>{
-    const sheet = document.createElement("div");
-    sheet.className = "page-sheet";
-    sheet.dataset.idx = String(i);
-
-    const date = formatDate(p.created_at);
-    sheet.innerHTML = `
-      <div class="page-head">
-        <div class="page-num">#${i+1}</div>
-        <div class="page-date">${date}</div>
-      </div>
-      <div class="page-body"></div>
-    `;
-
-    const body = sheet.querySelector(".page-body");
-    body.innerHTML = sanitizeForReader(p.content || "");
-
-    bookPages.appendChild(sheet);
-  });
-
-  setupIntersectionObserver();
-  renderIndexList();
-  bookMeta.textContent = `Page 1 / ${posts.length}`;
-}
-
-let pageObserver = null;
-function setupIntersectionObserver(){
-  if (pageObserver){ pageObserver.disconnect(); pageObserver = null; }
-  const opts = { root: bookPages, threshold: [0.6] };
-  pageObserver = new IntersectionObserver((entries)=>{
-    let best = null;
-    for (const e of entries){
-      if (!e.isIntersecting) continue;
-      if (!best || e.intersectionRatio > best.intersectionRatio) best = e;
-    }
-    if (!best) return;
-    const idx = Number(best.target.dataset.idx || "0");
-    if (!Number.isNaN(idx) && idx !== ACTIVE_INDEX){
-      ACTIVE_INDEX = idx;
-      bookMeta.textContent = `Page ${ACTIVE_INDEX+1} / ${ACTIVE_BOOK.posts.length}`;
-    }
-  }, opts);
-
-  bookPages.querySelectorAll(".page-sheet").forEach(el => pageObserver.observe(el));
-}
-
-if (prevPageBtn) prevPageBtn.addEventListener("click", ()=> setActivePage(ACTIVE_INDEX - 1));
-if (nextPageBtn) nextPageBtn.addEventListener("click", ()=> setActivePage(ACTIVE_INDEX + 1));
-
-if (bookPagesWrap){
-  bookPagesWrap.addEventListener("keydown", (e)=>{
-    if (!viewer.classList.contains("open")) return;
-    if (e.key === "ArrowLeft"){ e.preventDefault(); setActivePage(ACTIVE_INDEX - 1); }
-    if (e.key === "ArrowRight"){ e.preventDefault(); setActivePage(ACTIVE_INDEX + 1); }
-  });
-}
-
-function renderIndexList(){
-  if (!ACTIVE_BOOK){
-    indexList.innerHTML = "";
-    return;
-  }
-  const q = String(indexSearch.value || "").trim().toLowerCase();
-  const posts = ACTIVE_BOOK.posts;
-
-  const items = posts.map((p,i)=>{
-    const plain = extractPlainText(p.content || "");
-    const title = plain.slice(0, 60) || "(image)";
-    const sub = plain.slice(60, 120);
-    return { i, title, sub, plain };
-  }).filter(it => !q || it.plain.toLowerCase().includes(q));
-
+function buildIndex(){
   indexList.innerHTML = "";
-  if (items.length === 0){
-    const div = document.createElement("div");
-    div.style.padding = "10px 12px";
-    div.style.color = "var(--muted)";
-    div.textContent = "No matches.";
-    indexList.appendChild(div);
+  const q = String(indexSearch.value || "").trim().toLowerCase();
+  const items = POSTS.map((p, idx) => {
+    const text = extractPlainText(p.content);
+    return {
+      idx,
+      pageNo: idx + 1,
+      date: formatDate(p.created_at),
+      text,
+      hay: (text + " " + (p.id||"") + " " + (p.created_at||"")).toLowerCase()
+    };
+  }).filter(it => !q || it.hay.includes(q));
+
+  if (!items.length){
+    const empty = document.createElement("div");
+    empty.style.padding = "12px";
+    empty.style.color = "var(--muted)";
+    empty.textContent = "No results.";
+    indexList.appendChild(empty);
     return;
   }
 
@@ -2384,49 +2545,108 @@ function renderIndexList(){
     const row = document.createElement("div");
     row.className = "index-item";
     row.innerHTML = `
-      <div class="idx-num">${it.i+1}</div>
+      <div class="idx-num">${it.pageNo}</div>
       <div class="idx-text">
-        <div class="idx-title"></div>
-        <div class="idx-sub"></div>
+        <div class="idx-title">${escapeHtml(it.date)}</div>
+        <div class="idx-sub">${escapeHtml(it.text.slice(0, 90) || "(empty)")}</div>
       </div>
     `;
-    row.querySelector(".idx-title").textContent = it.title;
-    row.querySelector(".idx-sub").textContent = it.sub;
-
     row.addEventListener("click", ()=>{
       closeIndex();
-      setActivePage(it.i);
+      setSpread(Math.floor(it.idx / 2));
+      // small visual: focus book for keyboard
+      document.getElementById("bookShell")?.focus();
     });
     indexList.appendChild(row);
   }
 }
 
-if (indexSearch) indexSearch.addEventListener("input", renderIndexList);
+function escapeHtml(s){
+  return String(s||"")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/\"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
 
-/* ===== Init ===== */
-async function loadLibrary(){
-  await refreshMe();
-  if (!CURRENT_USER){
-    ALL_POSTS = [];
-    BOOKS = [];
-    renderLibrary();
+function openIndex(){
+  indexPanel.classList.add("open");
+  indexPanel.setAttribute("aria-hidden","false");
+  buildIndex();
+  setTimeout(()=> indexSearch?.focus(), 0);
+}
+function closeIndex(){
+  indexPanel.classList.remove("open");
+  indexPanel.setAttribute("aria-hidden","true");
+}
+
+if (openIndexBtn) openIndexBtn.addEventListener("click", (e)=>{ e.stopPropagation(); indexPanel.classList.contains("open") ? closeIndex() : openIndex(); });
+if (closeIndexBtn) closeIndexBtn.addEventListener("click", closeIndex);
+if (indexSearch) indexSearch.addEventListener("input", buildIndex);
+
+document.addEventListener("keydown", (e)=>{
+  if (e.key === "Escape"){
+    closeMenu(); closeModal(); closeIndex();
     return;
   }
+  const tag = (document.activeElement && document.activeElement.tagName) ? document.activeElement.tagName.toUpperCase() : "";
+  if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+  if (e.key === "ArrowLeft"){ setSpread(spreadIndex - 1); }
+  if (e.key === "ArrowRight"){ setSpread(spreadIndex + 1); }
+});
+
+if (prevSpreadBtn) prevSpreadBtn.addEventListener("click", ()=> setSpread(spreadIndex - 1));
+if (nextSpreadBtn) nextSpreadBtn.addEventListener("click", ()=> setSpread(spreadIndex + 1));
+if (refreshBtn) refreshBtn.addEventListener("click", ()=> loadPosts());
+
+// Swipe on touch
+(function attachSwipe(){
+  const el = document.getElementById("bookStage");
+  if (!el) return;
+  let startX = 0, startY = 0, down = false;
+
+  el.addEventListener("pointerdown", (e)=>{
+    down = true;
+    startX = e.clientX; startY = e.clientY;
+  });
+  el.addEventListener("pointerup", (e)=>{
+    if (!down) return;
+    down = false;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx > 0) setSpread(spreadIndex - 1);
+    else setSpread(spreadIndex + 1);
+  });
+  el.addEventListener("pointercancel", ()=>{ down=false; });
+})();
+
+async function loadPosts(){
+  showEmpty("Loading…", "Fetching your posts…");
+  await refreshMe();
+
+  if (!CURRENT_USER){
+    POSTS = [];
+    renderSpread();
+    return;
+  }
+
   try{
     const posts = await fetchMyPosts();
-    ALL_POSTS = posts || [];
-    BOOKS = buildBooks(ALL_POSTS);
-    renderLibrary();
+    POSTS = normalizePosts(posts || []);
+    spreadIndex = 0;
+    renderSpread();
   } catch (e){
     console.error(e);
-    ALL_POSTS = [];
-    BOOKS = [];
-    renderLibrary();
-    libSub.textContent = "Failed to load posts.";
+    POSTS = [];
+    showEmpty("Failed to load posts", "Try Refresh. If it keeps failing, check API logs / token.");
+    renderSpread();
   }
 }
 
-loadLibrary();
+loadPosts();
 </script>
 
 </body>
