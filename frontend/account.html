@@ -980,43 +980,27 @@
     Correct direction: rotateY(+deg) swings the free edge toward viewer.
   */
 @keyframes flipOutPrev{
-  0%   { transform: rotateY(-92deg)   translateX(18px)   translateZ(18px);  filter: brightness(.58); }
-  5%   { transform: rotateY(-86.31deg) translateX(16.92px) translateZ(16.92px); filter: brightness(.597); }
-  10%  { transform: rotateY(-80.62deg) translateX(15.85px) translateZ(15.85px); filter: brightness(.614); }
-  15%  { transform: rotateY(-74.92deg) translateX(14.77px) translateZ(14.77px); filter: brightness(.632); }
-  20%  { transform: rotateY(-69.23deg) translateX(13.69px) translateZ(13.69px); filter: brightness(.649); }
-  25%  { transform: rotateY(-63.54deg) translateX(12.62px) translateZ(12.62px); filter: brightness(.666); }
-  30%  { transform: rotateY(-57.85deg) translateX(11.54px) translateZ(11.54px); filter: brightness(.683); }
-  35%  { transform: rotateY(-52.15deg) translateX(10.46px) translateZ(10.46px); filter: brightness(.701); }
-  40%  { transform: rotateY(-46.46deg) translateX(9.38px)  translateZ(9.38px);  filter: brightness(.718); }
-  45%  { transform: rotateY(-40.77deg) translateX(8.31px)  translateZ(8.31px);  filter: brightness(.735); }
-  50%  { transform: rotateY(-35.08deg) translateX(7.23px)  translateZ(7.23px);  filter: brightness(.752); }
-  55%  { transform: rotateY(-29.38deg) translateX(6.15px)  translateZ(6.15px);  filter: brightness(.769); }
-  60%  { transform: rotateY(-23.69deg) translateX(5.08px)  translateZ(5.08px);  filter: brightness(.786); }
-
-  /* punto “atterraggio” come nel tuo (ma senza snap) */
-  65%  { transform: rotateY(-18deg)   translateX(4px)    translateZ(4px);   filter: brightness(.92); }
-
-  /* 65 -> 78 */
-  68%  { transform: rotateY(-15.2deg) translateX(3.54px) translateZ(3.31px); filter: brightness(.934); }
-  71%  { transform: rotateY(-12.5deg) translateX(3.08px) translateZ(2.62px); filter: brightness(.948); }
-  74%  { transform: rotateY(-9.7deg)  translateX(2.62px) translateZ(1.92px); filter: brightness(.962); }
-  78%  { transform: rotateY(-6deg)    translateX(2px)    translateZ(1px);    filter: brightness(.98); }
-
-  /* 78 -> 88 (qui prima ti “spariva” translateX: ora NO) */
-  80%  { transform: rotateY(-4.4deg)  translateX(1.6px)  translateZ(.8px);   filter: brightness(.988); }
-  82%  { transform: rotateY(-2.7deg)  translateX(1.2px)  translateZ(.6px);   filter: brightness(.996); }
-  84%  { transform: rotateY(-1.0deg)  translateX(.8px)   translateZ(.4px);   filter: brightness(1.004); }
-  86%  { transform: rotateY(0.6deg)   translateX(.4px)   translateZ(.2px);   filter: brightness(1.012); }
-  88%  { transform: rotateY(2.2deg)   translateX(0px)    translateZ(0px);    filter: brightness(1.02); }
-
-  /* settling */
-  90%  { transform: rotateY(1.867deg) translateX(0px)    translateZ(0px);    filter: brightness(1.0167); }
-  92%  { transform: rotateY(1.533deg) translateX(0px)    translateZ(0px);    filter: brightness(1.0133); }
-  94%  { transform: rotateY(1.2deg)   translateX(0px)    translateZ(0px);    filter: brightness(1.01); }
-  96%  { transform: rotateY(.8deg)    translateX(0px)    translateZ(0px);    filter: brightness(1.0067); }
-  98%  { transform: rotateY(.4deg)    translateX(0px)    translateZ(0px);    filter: brightness(1.0033); }
-  100% { transform: rotateY(0deg)     translateX(0px)    translateZ(0px);    filter: brightness(1); }
+  0%   { transform: rotateY(0deg)    translateX(0px)    translateZ(0px);   filter: brightness(1); }
+  5%   { transform: rotateY(4.6deg)  translateX(0.9px)  translateZ(0.9px); filter: brightness(.979); }
+  10%  { transform: rotateY(9.2deg)  translateX(1.8px)  translateZ(1.8px); filter: brightness(.958); }
+  15%  { transform: rotateY(13.8deg) translateX(2.7px)  translateZ(2.7px); filter: brightness(.937); }
+  20%  { transform: rotateY(18.4deg) translateX(3.6px)  translateZ(3.6px); filter: brightness(.916); }
+  25%  { transform: rotateY(23deg)   translateX(4.5px)  translateZ(4.5px); filter: brightness(.895); }
+  30%  { transform: rotateY(27.6deg) translateX(5.4px)  translateZ(5.4px); filter: brightness(.874); }
+  35%  { transform: rotateY(32.2deg) translateX(6.3px)  translateZ(6.3px); filter: brightness(.853); }
+  40%  { transform: rotateY(36.8deg) translateX(7.2px)  translateZ(7.2px); filter: brightness(.832); }
+  45%  { transform: rotateY(41.4deg) translateX(8.1px)  translateZ(8.1px); filter: brightness(.811); }
+  50%  { transform: rotateY(46deg)   translateX(9px)    translateZ(9px);   filter: brightness(.79); }
+  55%  { transform: rotateY(50.6deg) translateX(9.9px)  translateZ(9.9px); filter: brightness(.769); }
+  60%  { transform: rotateY(55.2deg) translateX(10.8px) translateZ(10.8px);filter: brightness(.748); }
+  65%  { transform: rotateY(59.8deg) translateX(11.7px) translateZ(11.7px);filter: brightness(.727); }
+  70%  { transform: rotateY(64.4deg) translateX(12.6px) translateZ(12.6px);filter: brightness(.706); }
+  75%  { transform: rotateY(69deg)   translateX(13.5px) translateZ(13.5px);filter: brightness(.685); }
+  80%  { transform: rotateY(73.6deg) translateX(14.4px) translateZ(14.4px);filter: brightness(.664); }
+  85%  { transform: rotateY(78.2deg) translateX(15.3px) translateZ(15.3px);filter: brightness(.643); }
+  90%  { transform: rotateY(82.8deg) translateX(16.2px) translateZ(16.2px);filter: brightness(.622); }
+  95%  { transform: rotateY(87.4deg) translateX(17.1px) translateZ(17.1px);filter: brightness(.601); }
+  100% { transform: rotateY(92deg)   translateX(18px)   translateZ(18px);  filter: brightness(.58); }
 }
 
 @keyframes flipInPrev{
