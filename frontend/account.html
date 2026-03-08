@@ -945,147 +945,115 @@
     }
 
   /* ==========================================
-    PAGE-FLIP ANIMATION — realistic timing + correct direction
+   PAGE-FLIP ANIMATION — definitive fluid version
   ========================================== */
-  /* One source of truth for timing */
   :root{
-    --flip-half: 980ms;          /* duration of OUT or IN */
-    --flip-comp: 1180ms;         /* companion micro-bend */
-    --flip-ease-out: cubic-bezier(.30, .00, .10, 1.00);
-    --flip-ease-in:  cubic-bezier(.16, .84, .20, 1.00);
+    --flip-half: 520ms;   /* out OR in */
+    --flip-comp: 520ms;   /* companion bend */
+    --flip-ease-out: cubic-bezier(.22,.61,.36,1);
+    --flip-ease-in: cubic-bezier(.16,.84,.20,1);
   }
 
-  /* let the turning sheet overlap (otherwise it gets clipped) */
   .book-spread{
     perspective: 2200px;
     perspective-origin: center 42%;
-    overflow: visible; /* important for realism */
+    overflow: visible;
+    transform-style: preserve-3d;
   }
 
-  /* 3D correctness */
   .book-page{
+    position: relative;
     transform-style: preserve-3d;
     backface-visibility: hidden;
     -webkit-backface-visibility: hidden;
     will-change: transform, filter;
-    position: relative;
   }
 
-  /* Layering while turning */
+  .book-page::after{
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .16s ease;
+    background:
+      linear-gradient(
+        90deg,
+        rgba(0,0,0,.16) 0%,
+        rgba(0,0,0,.08) 12%,
+        rgba(0,0,0,0) 28%,
+        rgba(0,0,0,0) 72%,
+        rgba(0,0,0,.10) 88%,
+        rgba(0,0,0,.16) 100%
+      );
+    mix-blend-mode: multiply;
+  }
+
+  .book-page.is-turning::after{
+    opacity: 1;
+  }
+
   .book-page.is-turning{ z-index: 12; }
   .book-page.is-companion{ z-index: 6; }
 
-  /* ---------- NEXT (turn RIGHT page to the LEFT) ----------
-    Right page pivots on LEFT edge.
-    Correct direction: rotateY(+deg) swings the free edge toward viewer.
-  */
-@keyframes flipOutPrev{
-  0%   { transform: rotateY(0deg)    translateX(0px)    translateZ(0px);   filter: brightness(1); }
-  5%   { transform: rotateY(4.6deg)  translateX(0.9px)  translateZ(0.9px); filter: brightness(.979); }
-  10%  { transform: rotateY(9.2deg)  translateX(1.8px)  translateZ(1.8px); filter: brightness(.958); }
-  15%  { transform: rotateY(13.8deg) translateX(2.7px)  translateZ(2.7px); filter: brightness(.937); }
-  20%  { transform: rotateY(18.4deg) translateX(3.6px)  translateZ(3.6px); filter: brightness(.916); }
-  25%  { transform: rotateY(23deg)   translateX(4.5px)  translateZ(4.5px); filter: brightness(.895); }
-  30%  { transform: rotateY(27.6deg) translateX(5.4px)  translateZ(5.4px); filter: brightness(.874); }
-  35%  { transform: rotateY(32.2deg) translateX(6.3px)  translateZ(6.3px); filter: brightness(.853); }
-  40%  { transform: rotateY(36.8deg) translateX(7.2px)  translateZ(7.2px); filter: brightness(.832); }
-  45%  { transform: rotateY(41.4deg) translateX(8.1px)  translateZ(8.1px); filter: brightness(.811); }
-  50%  { transform: rotateY(46deg)   translateX(9px)    translateZ(9px);   filter: brightness(.79); }
-  55%  { transform: rotateY(50.6deg) translateX(9.9px)  translateZ(9.9px); filter: brightness(.769); }
-  60%  { transform: rotateY(55.2deg) translateX(10.8px) translateZ(10.8px);filter: brightness(.748); }
-  65%  { transform: rotateY(59.8deg) translateX(11.7px) translateZ(11.7px);filter: brightness(.727); }
-  70%  { transform: rotateY(64.4deg) translateX(12.6px) translateZ(12.6px);filter: brightness(.706); }
-  75%  { transform: rotateY(69deg)   translateX(13.5px) translateZ(13.5px);filter: brightness(.685); }
-  80%  { transform: rotateY(73.6deg) translateX(14.4px) translateZ(14.4px);filter: brightness(.664); }
-  85%  { transform: rotateY(78.2deg) translateX(15.3px) translateZ(15.3px);filter: brightness(.643); }
-  90%  { transform: rotateY(82.8deg) translateX(16.2px) translateZ(16.2px);filter: brightness(.622); }
-  95%  { transform: rotateY(87.4deg) translateX(17.1px) translateZ(17.1px);filter: brightness(.601); }
-  100% { transform: rotateY(92deg)   translateX(18px)   translateZ(18px);  filter: brightness(.58); }
-}
-
-@keyframes flipInPrev{
-  0%   { transform: rotateY(-92deg)   translateX(18px)   translateZ(18px);  filter: brightness(.58); }
-  5%   { transform: rotateY(-86.31deg) translateX(16.92px) translateZ(16.92px); filter: brightness(.597); }
-  10%  { transform: rotateY(-80.62deg) translateX(15.85px) translateZ(15.85px); filter: brightness(.614); }
-  15%  { transform: rotateY(-74.92deg) translateX(14.77px) translateZ(14.77px); filter: brightness(.632); }
-  20%  { transform: rotateY(-69.23deg) translateX(13.69px) translateZ(13.69px); filter: brightness(.649); }
-  25%  { transform: rotateY(-63.54deg) translateX(12.62px) translateZ(12.62px); filter: brightness(.666); }
-  30%  { transform: rotateY(-57.85deg) translateX(11.54px) translateZ(11.54px); filter: brightness(.683); }
-  35%  { transform: rotateY(-52.15deg) translateX(10.46px) translateZ(10.46px); filter: brightness(.701); }
-  40%  { transform: rotateY(-46.46deg) translateX(9.38px)  translateZ(9.38px);  filter: brightness(.718); }
-  45%  { transform: rotateY(-40.77deg) translateX(8.31px)  translateZ(8.31px);  filter: brightness(.735); }
-  50%  { transform: rotateY(-35.08deg) translateX(7.23px)  translateZ(7.23px);  filter: brightness(.752); }
-  55%  { transform: rotateY(-29.38deg) translateX(6.15px)  translateZ(6.15px);  filter: brightness(.769); }
-  60%  { transform: rotateY(-23.69deg) translateX(5.08px)  translateZ(5.08px);  filter: brightness(.786); }
-
-  /* punto “atterraggio” come nel tuo (ma senza snap) */
-  65%  { transform: rotateY(-18deg)   translateX(4px)    translateZ(4px);   filter: brightness(.92); }
-
-  /* 65 -> 78 */
-  68%  { transform: rotateY(-15.2deg) translateX(3.54px) translateZ(3.31px); filter: brightness(.934); }
-  71%  { transform: rotateY(-12.5deg) translateX(3.08px) translateZ(2.62px); filter: brightness(.948); }
-  74%  { transform: rotateY(-9.7deg)  translateX(2.62px) translateZ(1.92px); filter: brightness(.962); }
-  78%  { transform: rotateY(-6deg)    translateX(2px)    translateZ(1px);    filter: brightness(.98); }
-
-  /* 78 -> 88 (qui prima ti “spariva” translateX: ora NO) */
-  80%  { transform: rotateY(-4.4deg)  translateX(1.6px)  translateZ(.8px);   filter: brightness(.988); }
-  82%  { transform: rotateY(-2.7deg)  translateX(1.2px)  translateZ(.6px);   filter: brightness(.996); }
-  84%  { transform: rotateY(-1.0deg)  translateX(.8px)   translateZ(.4px);   filter: brightness(1.004); }
-  86%  { transform: rotateY(0.6deg)   translateX(.4px)   translateZ(.2px);   filter: brightness(1.012); }
-  88%  { transform: rotateY(2.2deg)   translateX(0px)    translateZ(0px);    filter: brightness(1.02); }
-
-  /* settling */
-  90%  { transform: rotateY(1.867deg) translateX(0px)    translateZ(0px);    filter: brightness(1.0167); }
-  92%  { transform: rotateY(1.533deg) translateX(0px)    translateZ(0px);    filter: brightness(1.0133); }
-  94%  { transform: rotateY(1.2deg)   translateX(0px)    translateZ(0px);    filter: brightness(1.01); }
-  96%  { transform: rotateY(.8deg)    translateX(0px)    translateZ(0px);    filter: brightness(1.0067); }
-  98%  { transform: rotateY(.4deg)    translateX(0px)    translateZ(0px);    filter: brightness(1.0033); }
-  100% { transform: rotateY(0deg)     translateX(0px)    translateZ(0px);    filter: brightness(1); }
-}
-
-@keyframes rightCompanionPrev{
-  0%   { transform: rotateY(0deg); }
-  20%  { transform: rotateY(-2deg); }
-  35%  { transform: rotateY(-7deg); }
-  55%  { transform: rotateY(-5deg); }
-  75%  { transform: rotateY(-2deg); }
-  100% { transform: rotateY(0deg); }
-}
-
-  .book-page.right.flip-out-next{ animation-timing-function: cubic-bezier(.22,.61,.36,1); }
-  .book-page.right.flip-in-next { animation-timing-function: cubic-bezier(.16,.84,.20,1); }
-
-  /* ---------- PREV (turn LEFT page to the RIGHT) ----------
-    Left page pivots on RIGHT edge.
-    Correct direction: rotateY(-deg) swings the free edge toward viewer.
-  */
-  @keyframes flipOutPrev{
-    0%   { transform: rotateY(0deg)   translateZ(0px);  filter: brightness(1); }
-    35%  { transform: rotateY(38deg) translateX(8px)   translateZ(10px); filter: brightness(.90); }
-    70%  { transform: rotateY(72deg) translateX(14px)  translateZ(16px); filter: brightness(.74); }
-    100% { transform: rotateY(92deg) translateX(18px)  translateZ(18px); filter: brightness(.58); }
+  /* NEXT: right page turns to the left */
+  @keyframes flipOutNext{
+    0%   { transform: rotateY(0deg)    translateX(0px)   translateZ(0px);   filter: brightness(1); }
+    18%  { transform: rotateY(-10deg)  translateX(-1px)  translateZ(4px);   filter: brightness(.985); }
+    42%  { transform: rotateY(-34deg)  translateX(-4px)  translateZ(14px);  filter: brightness(.93); }
+    68%  { transform: rotateY(-66deg)  translateX(-8px)  translateZ(20px);  filter: brightness(.82); }
+    100% { transform: rotateY(-92deg)  translateX(-10px) translateZ(24px);  filter: brightness(.68); }
   }
-  @keyframes flipInPrev{
-    0%   { transform: rotateY(-92deg)  translateX(18px)  translateZ(18px); filter: brightness(.58); }
-    65%  { transform: rotateY(-18deg)  translateX(4px)   translateZ(4px);  filter: brightness(.92); }
-    88%  { transform: rotateY(2.2deg) translateZ(0px); filter: brightness(1.02); }
-    100% { transform: rotateY(0deg)   translateZ(0px);  filter: brightness(1); }
+
+  @keyframes flipInNext{
+    0%   { transform: rotateY(92deg)   translateX(10px)  translateZ(24px);  filter: brightness(.68); }
+    36%  { transform: rotateY(52deg)   translateX(6px)   translateZ(14px);  filter: brightness(.84); }
+    68%  { transform: rotateY(18deg)   translateX(2px)   translateZ(4px);   filter: brightness(.96); }
+    86%  { transform: rotateY(-2deg)   translateX(0px)   translateZ(0px);   filter: brightness(1.015); }
+    100% { transform: rotateY(0deg)    translateX(0px)   translateZ(0px);   filter: brightness(1); }
   }
-  @keyframes rightCompanionPrev{
+
+  @keyframes leftCompanionNext{
     0%   { transform: rotateY(0deg); }
-    35%  { transform: rotateY(-7deg); }
+    28%  { transform: rotateY(2deg); }
+    56%  { transform: rotateY(5deg); }
     100% { transform: rotateY(0deg); }
   }
 
-  /* apply animations */
+  /* PREV: left page turns to the right */
+  @keyframes flipOutPrev{
+    0%   { transform: rotateY(0deg)    translateX(0px)   translateZ(0px);   filter: brightness(1); }
+    18%  { transform: rotateY(10deg)   translateX(1px)   translateZ(4px);   filter: brightness(.985); }
+    42%  { transform: rotateY(34deg)   translateX(4px)   translateZ(14px);  filter: brightness(.93); }
+    68%  { transform: rotateY(66deg)   translateX(8px)   translateZ(20px);  filter: brightness(.82); }
+    100% { transform: rotateY(92deg)   translateX(10px)  translateZ(24px);  filter: brightness(.68); }
+  }
+
+  @keyframes flipInPrev{
+    0%   { transform: rotateY(-92deg)  translateX(-10px) translateZ(24px);  filter: brightness(.68); }
+    36%  { transform: rotateY(-52deg)  translateX(-6px)  translateZ(14px);  filter: brightness(.84); }
+    68%  { transform: rotateY(-18deg)  translateX(-2px)  translateZ(4px);   filter: brightness(.96); }
+    86%  { transform: rotateY(2deg)    translateX(0px)   translateZ(0px);   filter: brightness(1.015); }
+    100% { transform: rotateY(0deg)    translateX(0px)   translateZ(0px);   filter: brightness(1); }
+  }
+
+  @keyframes rightCompanionPrev{
+    0%   { transform: rotateY(0deg); }
+    28%  { transform: rotateY(-2deg); }
+    56%  { transform: rotateY(-5deg); }
+    100% { transform: rotateY(0deg); }
+  }
+
   .book-page.right.flip-out-next{
     transform-origin: left center;
     animation: flipOutNext var(--flip-half) var(--flip-ease-out) forwards;
   }
+
   .book-page.right.flip-in-next{
     transform-origin: left center;
     animation: flipInNext var(--flip-half) var(--flip-ease-in) forwards;
   }
+
   .book-page.left.companion-next{
     transform-origin: right center;
     animation: leftCompanionNext var(--flip-comp) cubic-bezier(.25,0,.20,1) forwards;
@@ -1095,25 +1063,42 @@
     transform-origin: right center;
     animation: flipOutPrev var(--flip-half) var(--flip-ease-out) forwards;
   }
+
   .book-page.left.flip-in-prev{
     transform-origin: right center;
     animation: flipInPrev var(--flip-half) var(--flip-ease-in) forwards;
   }
+
   .book-page.right.companion-prev{
     transform-origin: left center;
     animation: rightCompanionPrev var(--flip-comp) cubic-bezier(.25,0,.20,1) forwards;
   }
 
-  /* Gutter: pulse for the whole turn (OUT+IN) */
   .book-gutter.is-flipping{
     animation: gutterPulse calc(var(--flip-half) * 2) cubic-bezier(.25,0,.20,1) forwards;
   }
+
   @keyframes gutterPulse{
     0%   { filter: brightness(1); }
-    40%  { filter: brightness(.72); }
-    60%  { filter: brightness(.72); }
+    35%  { filter: brightness(.76); }
+    65%  { filter: brightness(.76); }
     100% { filter: brightness(1); }
   }
+
+  @media (prefers-reduced-motion: reduce) {
+    .book-page.right.flip-out-next,
+    .book-page.right.flip-in-next,
+    .book-page.left.companion-next,
+    .book-page.left.flip-out-prev,
+    .book-page.left.flip-in-prev,
+    .book-page.right.companion-prev,
+    .book-gutter.is-flipping {
+      animation: none !important;
+      transform: none !important;
+      filter: none !important;
+    }
+  }
+
 
   /* Reduced-motion: skip all transforms */
   @media (prefers-reduced-motion: reduce) {
@@ -1627,21 +1612,43 @@ function _readFlipHalfMs(){
 }
 let _FLIP_MS = _readFlipHalfMs();
 
-function setSpread(i, _dir){
+function waitForAnimationEnd(el, fallbackMs){
+  return new Promise((resolve) => {
+    if (!el) return resolve();
+
+    let done = false;
+
+    const finish = () => {
+      if (done) return;
+      done = true;
+      el.removeEventListener("animationend", onEnd);
+      clearTimeout(timer);
+      resolve();
+    };
+
+    const onEnd = (e) => {
+      if (e.target === el) finish();
+    };
+
+    const timer = setTimeout(finish, fallbackMs);
+    el.addEventListener("animationend", onEnd);
+  });
+}
+
+async function setSpread(i, _dir){
   const max = spreadCount() - 1;
   const next = clamp(i, 0, max);
 
-  /* CO: identical spread → no-op */
   if (next === spreadIndex && POSTS.length > 0) return;
-
-  /* Stab: block re-entry during animation */
   if (_isFlipping) return;
 
-  const dir = _dir || (i > spreadIndex ? 'next' : 'prev');
+  const dir = _dir || (i > spreadIndex ? "next" : "prev");
 
-  /* Univ: skip animation if no real content or reduced-motion preference */
-  const reducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!POSTS.length || !CURRENT_USER || reducedMotion) {
+  const reducedMotion =
+    window.matchMedia &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (!POSTS.length || !CURRENT_USER || reducedMotion){
     spreadIndex = next;
     renderSpread();
     return;
@@ -1649,54 +1656,53 @@ function setSpread(i, _dir){
 
   _isFlipping = true;
 
-  const spread  = document.getElementById('bookSpread');
-  const pageL   = spread ? spread.querySelector('.book-page.left')  : null;
-  const pageR   = spread ? spread.querySelector('.book-page.right') : null;
-  const gutter  = spread ? spread.querySelector('.book-gutter')     : null;
+  const spread = document.getElementById("bookSpread");
+  const pageL = spread ? spread.querySelector(".book-page.left") : null;
+  const pageR = spread ? spread.querySelector(".book-page.right") : null;
+  const gutter = spread ? spread.querySelector(".book-gutter") : null;
 
-  const turning   = dir === 'next' ? pageR   : pageL;
-  const companion = dir === 'next' ? pageL   : pageR;
-  const outCls    = dir === 'next' ? 'flip-out-next' : 'flip-out-prev';
-  const inCls     = dir === 'next' ? 'flip-in-next'  : 'flip-in-prev';
-  const compCls   = dir === 'next' ? 'companion-next': 'companion-prev';
+  const turning   = dir === "next" ? pageR : pageL;
+  const companion = dir === "next" ? pageL : pageR;
+  const outCls    = dir === "next" ? "flip-out-next" : "flip-out-prev";
+  const inCls     = dir === "next" ? "flip-in-next"  : "flip-in-prev";
+  const compCls   = dir === "next" ? "companion-next" : "companion-prev";
 
-  if (turning)   turning.classList.add('is-turning');
-  if (companion) companion.classList.add('is-companion');
+  const halfMs = _readFlipHalfMs();
+  const waitMs = halfMs + 120;
 
-  
-  /* disable nav buttons during flip */
+  if (turning) turning.classList.add("is-turning");
+  if (companion) companion.classList.add("is-companion");
+  if (gutter) gutter.classList.add("is-flipping");
+
   if (prevSpreadBtn) prevSpreadBtn.disabled = true;
   if (nextSpreadBtn) nextSpreadBtn.disabled = true;
 
-  /* ── Phase 1: fold OUT */
-  if (turning)   turning.classList.add(outCls);
-  if (companion) companion.classList.add(compCls);
-  if (gutter)    gutter.classList.add('is-flipping');
+  try {
+    if (companion) companion.classList.add(compCls);
+    if (turning) turning.classList.add(outCls);
 
-  setTimeout(() => {
-    /* content swap at the blind spot (page edge-on) */
-    if (turning)   turning.classList.remove(outCls);
+    await waitForAnimationEnd(turning, waitMs);
+
+    if (turning) turning.classList.remove(outCls);
     if (companion) companion.classList.remove(compCls);
 
     spreadIndex = next;
-    renderSpread(); /* writes new DOM content */
+    renderSpread();
 
-    /* ── Phase 2: fold IN */
     if (turning) turning.classList.add(inCls);
 
-    setTimeout(() => {
-      if (turning)  turning.classList.remove(inCls);
-      if (gutter)   gutter.classList.remove('is-flipping');
-      if (turning)   turning.classList.remove('is-turning');
-      if (companion) companion.classList.remove('is-companion');
-      _isFlipping = false;
-      /* restore correct disabled state from renderSpread logic */
-      renderSpread();
-    }, _FLIP_MS);
+    await waitForAnimationEnd(turning, waitMs);
 
-  }, _FLIP_MS);
+    if (turning) turning.classList.remove(inCls);
+  } finally {
+    if (gutter) gutter.classList.remove("is-flipping");
+    if (turning) turning.classList.remove("is-turning");
+    if (companion) companion.classList.remove("is-companion");
+
+    _isFlipping = false;
+    renderSpread();
+  }
 }
-
 function renderPage(side, post, pageNo){
   const isLeft = side === "left";
   const labelEl = isLeft ? leftLabel : rightLabel;
