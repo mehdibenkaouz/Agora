@@ -2576,6 +2576,20 @@
       return data;
     }
 
+
+    async function fetchCommentsForPost(postId) {
+      return await api(`/api/posts/${encodeURIComponent(postId)}/comments`, {
+        method: "GET"
+      });
+    }
+
+    async function createCommentForPost(postId, content) {
+      return await api(`/api/posts/${encodeURIComponent(postId)}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ content })
+      });
+    }
+
     async function uploadImageToR2(file) {
       const fd = new FormData();
       fd.append("file", file, file.name || "image.png");
@@ -2837,12 +2851,10 @@
       if (threadTitle) threadTitle.textContent = "Comments";
       if (threadSub) threadSub.textContent = "";
       if (threadComments) threadComments.innerHTML = '<div class="thread-empty"></div>';
-      if (threadFootnote) threadFootnote.textContent = "Local-only UI for now (no backend sync yet).";
-
+      if (threadFootnote) threadFootnote.textContent = "Comments are synced with the server.";
       updateThreadAuthState();
     }
-
-    function renderThread(key) {
+    async function renderThread(key) {
       showThreadPanel();
       activeThreadKey = key || null;
 
@@ -2851,41 +2863,62 @@
         return;
       }
 
-      const p = postByKey.get(activeThreadKey);
-      const st = postUI.get(activeThreadKey);
+      const currentKey = activeThreadKey;
+      const p = postByKey.get(currentKey);
+      const st = postUI.get(currentKey);
 
       if (threadTitle) threadTitle.textContent = "Comments";
       if (threadSub) threadSub.textContent = `${p.author_email || "anon"} · ${new Date(p.created_at).toLocaleString()}`;
+      if (threadComments) threadComments.innerHTML = `<div class="thread-empty">Loading comments...</div>`;
+      if (threadFootnote) threadFootnote.textContent = "Comments are synced with the server.";
+      updateThreadAuthState();
 
-      const serverHint = (st.commentBase > 0)
-        ? `<div class="thread-server-hint">(${st.commentBase} comments exist on server — will be loaded later)</div>`
-        : `<div class="thread-server-hint">(Server comments will be loaded later)</div>`;
+      try {
+        const data = await fetchCommentsForPost(p.id);
 
-      let inner = serverHint;
+        if (activeThreadKey !== currentKey) return;
 
-      const list = st.localComments || [];
-      if (!list.length) {
-        inner += `<div class="thread-empty">No local comments yet. Add the first one.</div>`;
-      } else {
-        for (const c of list) {
-          const who = escapeHtml(c.author || "you");
-          const when = new Date(c.at || Date.now()).toLocaleString();
-          inner += `
-            <div class="comment-item">
-              <div class="comment-meta">
-                <span>${who}</span>
-                <span>${escapeHtml(when)}</span>
+        const comments = Array.isArray(data.comments) ? data.comments : [];
+        st.commentBase = Number(data.comment_count ?? comments.length) || 0;
+        st.localComments = [];
+
+        let inner = "";
+
+        if (!comments.length) {
+          inner = `<div class="thread-empty">No comments yet. Add the first one.</div>`;
+        } else {
+          inner = comments.map(c => {
+            const who = escapeHtml(c.author_email || "anon");
+            const when = escapeHtml(new Date(c.created_at).toLocaleString());
+            const text = escapeHtml(c.content || "");
+
+            return `
+              <div class="comment-item">
+                <div class="comment-meta">
+                  <span>${who}</span>
+                  <span>${when}</span>
+                </div>
+                <div class="comment-text">${text}</div>
               </div>
-              <div class="comment-text">${escapeHtml(c.text || "")}</div>
-            </div>
-          `;
+            `;
+          }).join("");
+        }
+
+        if (threadComments) threadComments.innerHTML = inner;
+        bumpFeedCountsForKey(currentKey);
+
+      } catch (err) {
+        if (activeThreadKey !== currentKey) return;
+
+        console.warn("load_comments_failed:", err);
+
+        if (threadComments) {
+          threadComments.innerHTML = `<div class="thread-empty">Failed to load comments.</div>`;
+        }
+        if (threadFootnote) {
+          threadFootnote.textContent = "Comments sync failed.";
         }
       }
-
-      if (threadComments) threadComments.innerHTML = inner;
-      if (threadFootnote) threadFootnote.textContent = "Local-only UI for now (upvotes/saves/comments are not synced yet).";
-
-      updateThreadAuthState();
     }
 
     function bumpFeedCountsForKey(key) {
@@ -2902,7 +2935,7 @@
       if (cEl) cEl.textContent = String(getCommentCount(st));
     }
 
-    function trySendThreadComment() {
+    async function trySendThreadComment() {
       if (!activeThreadKey) return;
 
       if (!getToken()) {
@@ -2910,21 +2943,34 @@
         return;
       }
 
-      const text = (threadInput?.value || "").trim();
-      if (!text) return;
-
+      const p = postByKey.get(activeThreadKey);
       const st = postUI.get(activeThreadKey);
-      if (!st) return;
+      const text = (threadInput?.value || "").trim();
 
-      st.localComments = st.localComments || [];
-      st.localComments.push({ author: "you", text, at: Date.now() });
+      if (!p || !st || !text) return;
 
-      if (threadInput) threadInput.value = "";
-      renderThread(activeThreadKey);
-      bumpFeedCountsForKey(activeThreadKey);
+      threadSendBtn.disabled = true;
+
+      try {
+        await createCommentForPost(p.id, text);
+
+        if (threadInput) {
+          threadInput.value = "";
+          threadInput.style.height = "auto";
+        }
+
+        st.commentBase = (Number(st.commentBase) || 0) + 1;
+        bumpFeedCountsForKey(activeThreadKey);
+
+        await renderThread(activeThreadKey);
+
+      } catch (err) {
+        console.warn("send_comment_failed:", err);
+        alert("Comment failed: " + (err?.message || err));
+      } finally {
+        updateThreadAuthState();
+      }
     }
-
-
     function openMenu() {
       accountMenu.classList.add("open");
       accountBtn.setAttribute("aria-expanded", "true");
