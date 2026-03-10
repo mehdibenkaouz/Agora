@@ -72,22 +72,13 @@
       min-height: 100vh;
     }
 
-    /* ==========================================
-       CINEMATIC STARFIELD — dark mode only
-       Three tiled layers (micro / mid / macro) +
-       a nebula gradient layer injected via JS canvas.
-    ========================================== */
-
-    /* --- Layer A: dense micro-stars (very small, many) --- */
     :root[data-theme="dark"] body::before {
       content: "";
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 0;
-
       background-image:
-        /* cluster 1 */
         radial-gradient(circle, rgba(255,255,255,.96) 0px, rgba(255,255,255,.96) .8px, transparent 1.6px),
         radial-gradient(circle, rgba(200,230,255,.80) 0px, rgba(200,230,255,.80) .7px, transparent 1.4px),
         radial-gradient(circle, rgba(255,255,255,.88) 0px, rgba(255,255,255,.88) .75px, transparent 1.5px),
@@ -106,7 +97,6 @@
         radial-gradient(circle, rgba(240,220,255,.70) 0px, rgba(240,220,255,.70) .64px, transparent 1.28px),
         radial-gradient(circle, rgba(255,255,255,.88) 0px, rgba(255,255,255,.88) .76px, transparent 1.52px),
         radial-gradient(circle, rgba(210,235,255,.78) 0px, rgba(210,235,255,.78) .70px, transparent 1.4px);
-
       background-position:
         17px 23px, 54px 87px, 103px 11px, 138px 65px, 71px 142px,
         8px 178px,  44px 44px, 92px 200px, 166px 130px, 29px 114px,
@@ -114,18 +104,15 @@
         42px 133px, 108px 49px, 177px 168px;
       background-size: 210px 210px;
       background-repeat: repeat;
-
       animation: twinkleA 9s ease-in-out infinite alternate;
     }
 
-    /* --- Layer B: mid-size stars with slight glow --- */
     :root[data-theme="dark"] body::after {
       content: "";
       position: fixed;
       inset: 0;
       pointer-events: none;
       z-index: 0;
-
       background-image:
         radial-gradient(circle, rgba(255,255,255,1) 0px, rgba(255,255,255,.95) 1px, rgba(200,230,255,.18) 3px, transparent 5px),
         radial-gradient(circle, rgba(255,248,220,1) 0px, rgba(255,248,220,.90) 1px, rgba(255,220,100,.10) 3.5px, transparent 6px),
@@ -137,47 +124,29 @@
         radial-gradient(circle, rgba(230,245,255,1) 0px, rgba(230,245,255,.88) 1px, rgba(150,210,255,.16) 3.2px, transparent 5.5px),
         radial-gradient(circle, rgba(255,255,255,1) 0px, rgba(255,255,255,.94) 1px, rgba(255,240,200,.12) 3px, transparent 5px),
         radial-gradient(circle, rgba(255,255,255,1) 0px, rgba(255,255,255,.98) 1.2px, rgba(210,235,255,.22) 4px, transparent 7px);
-
       background-position:
         63px 41px, 189px 97px, 312px 155px, 87px 230px, 245px 18px,
         410px 188px, 155px 310px, 338px 77px, 28px 390px, 480px 255px;
       background-size: 530px 430px;
       background-repeat: repeat;
-
       animation: twinkleB 13s ease-in-out infinite alternate;
     }
 
-    /* --- Keyframes for both layers --- */
     @keyframes twinkleA {
-      0%   { opacity: .38; }
-      15%  { opacity: .52; }
-      32%  { opacity: .30; }
-      48%  { opacity: .56; }
-      65%  { opacity: .34; }
-      80%  { opacity: .50; }
+      0%   { opacity: .38; } 15%  { opacity: .52; } 32%  { opacity: .30; }
+      48%  { opacity: .56; } 65%  { opacity: .34; } 80%  { opacity: .50; }
       100% { opacity: .42; }
     }
-
     @keyframes twinkleB {
-      0%   { opacity: .55; }
-      20%  { opacity: .72; }
-      40%  { opacity: .48; }
-      60%  { opacity: .78; }
-      80%  { opacity: .55; }
-      100% { opacity: .68; }
+      0%   { opacity: .55; } 20%  { opacity: .72; } 40%  { opacity: .48; }
+      60%  { opacity: .78; } 80%  { opacity: .55; } 100% { opacity: .68; }
     }
 
-    /* --- Layer C: sparse bright hero stars (injected as <canvas> via JS) --- */
     #starCanvas {
-      position: fixed;
-      inset: 0;
-      pointer-events: none;
-      z-index: 0;
-      display: none;
+      position: fixed; inset: 0;
+      pointer-events: none; z-index: 0; display: none;
     }
-    :root[data-theme="dark"] #starCanvas {
-      display: block;
-    }
+    :root[data-theme="dark"] #starCanvas { display: block; }
     body{
       position: relative;
       overflow-x: hidden;
@@ -1485,10 +1454,7 @@
 </style>
 </head>
 <body>
-
-<!-- Deep-space canvas starfield (dark mode only) -->
 <canvas id="starCanvas" aria-hidden="true"></canvas>
-
 <header class="topbar">
   <div class="topbar-inner">
     <div class="brand">
@@ -1590,6 +1556,7 @@
             <div id="profileAvatarPreview" class="profile-avatar-preview"></div>
             <button id="profilePickAvatarBtn" class="file-btn" type="button">Upload avatar</button>
             <input id="profileAvatarFileInput" type="file" accept="image/*" hidden />
+            <input id="profilePictureUrlInput" type="hidden" />
           </div>
 
           <form id="profileForm" class="profile-fields">
@@ -2455,7 +2422,7 @@ if (profileForm){
     }
 
     const display_name = (profileDisplayNameInput?.value || "").trim();
-    const picture_url = (profilePictureUrlInput?.value || "").trim();
+    const picture_url = (profilePictureUrlInput?.value || "").trim() || (CURRENT_USER?.picture_url || "");
 
     if (!display_name){
       if (profileStatus) profileStatus.textContent = "Display name required.";
@@ -2494,280 +2461,106 @@ if (profileForm){
 
 
 
-/* =============================================
-   CINEMATIC STARFIELD ENGINE
-   Renders on a fixed <canvas id="starCanvas">:
-   • micro-stars  (constant, ~300 on 1080p)
-   • mid stars    with soft glow
-   • hero stars   with diffraction spikes
-   • nebula colour washes
-   • per-star async twinkling (layered sine)
-   • random meteor every 6–18 s
-   Visible only in dark mode.
-============================================= */
 (function StarfieldEngine(){
   const canvas = document.getElementById("starCanvas");
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-
   let W, H, stars = [], meteors = [], nebulae = [];
-  let raf = null, paused = false;
-
-  const rand  = (a, b) => a + Math.random() * (b - a);
-  const TAU   = Math.PI * 2;
-
-  function isDark(){
-    return document.documentElement.getAttribute("data-theme") === "dark";
-  }
-
-  function resize(){
-    W = canvas.width  = window.innerWidth;
-    H = canvas.height = window.innerHeight;
-    buildScene();
-  }
-
-  function pickStarColor(type){
+  let paused = false;
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const TAU  = Math.PI * 2;
+  function isDark(){ return document.documentElement.getAttribute("data-theme") === "dark"; }
+  function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; buildScene(); }
+  function pickColor(type){
     const r = Math.random();
     if (type === "hero"){
-      if (r < 0.30) return { r:200, g:220, b:255 };
-      if (r < 0.55) return { r:255, g:255, b:255 };
-      if (r < 0.75) return { r:255, g:240, b:200 };
-      if (r < 0.90) return { r:255, g:200, b:150 };
-      return               { r:220, g:240, b:255 };
+      if (r < .30) return {r:200,g:220,b:255}; if (r < .55) return {r:255,g:255,b:255};
+      if (r < .75) return {r:255,g:240,b:200}; if (r < .90) return {r:255,g:200,b:150};
+      return {r:220,g:240,b:255};
     }
     if (type === "mid"){
-      if (r < 0.50) return { r:255, g:255, b:255 };
-      if (r < 0.70) return { r:210, g:230, b:255 };
-      if (r < 0.85) return { r:255, g:245, b:210 };
-      return               { r:240, g:220, b:255 };
+      if (r < .50) return {r:255,g:255,b:255}; if (r < .70) return {r:210,g:230,b:255};
+      if (r < .85) return {r:255,g:245,b:210}; return {r:240,g:220,b:255};
     }
-    if (r < 0.65) return { r:255, g:255, b:255 };
-    if (r < 0.80) return { r:200, g:225, b:255 };
-    return               { r:255, g:240, b:210 };
+    if (r < .65) return {r:255,g:255,b:255}; if (r < .80) return {r:200,g:225,b:255};
+    return {r:255,g:240,b:210};
   }
-
   function buildScene(){
-    stars   = [];
-    meteors = [];
-    buildNebulae();
-
-    const area    = W * H;
-    const density = area / 3800;
-
-    const microCount = Math.floor(density * 1.9);
-    for (let i = 0; i < microCount; i++){
-      stars.push({
-        x: rand(0, W), y: rand(0, H),
-        r: rand(0.28, 0.85),
-        baseAlpha: rand(0.30, 0.80),
-        alpha: 0,
-        twinkleSpeed:  rand(0.003, 0.013),
-        twinkleOffset: rand(0, TAU),
-        color: pickStarColor("micro"),
-        type: "micro"
-      });
-    }
-
-    const midCount = Math.floor(density * 0.55);
-    for (let i = 0; i < midCount; i++){
-      stars.push({
-        x: rand(0, W), y: rand(0, H),
-        r: rand(0.9, 1.9),
-        baseAlpha: rand(0.50, 0.92),
-        alpha: 0,
-        glowR: rand(4, 11),
-        twinkleSpeed:  rand(0.002, 0.009),
-        twinkleOffset: rand(0, TAU),
-        color: pickStarColor("mid"),
-        type: "mid"
-      });
-    }
-
-    const heroCount = Math.max(12, Math.floor(density * 0.08));
-    for (let i = 0; i < heroCount; i++){
-      stars.push({
-        x: rand(0, W), y: rand(0, H),
-        r: rand(1.8, 3.2),
-        baseAlpha: rand(0.70, 1.0),
-        alpha: 0,
-        glowR:    rand(12, 30),
-        spikeLen: rand(18, 46),
-        twinkleSpeed:  rand(0.001, 0.006),
-        twinkleOffset: rand(0, TAU),
-        color: pickStarColor("hero"),
-        type: "hero"
-      });
-    }
+    stars = []; meteors = [];
+    nebulae = [[55,15,110],[8,45,95],[75,15,55],[8,65,75]].map(([r,g,b])=>({
+      x:rand(0,W),y:rand(0,H),rx:rand(W*.18,W*.44),ry:rand(H*.10,H*.34),r,g,b,alpha:rand(.020,.052)
+    }));
+    const d = (W*H)/3800;
+    for(let i=0;i<Math.floor(d*1.9);i++) stars.push({x:rand(0,W),y:rand(0,H),r:rand(.28,.85),baseAlpha:rand(.30,.80),alpha:0,ts:rand(.003,.013),to:rand(0,TAU),color:pickColor("micro"),type:"micro"});
+    for(let i=0;i<Math.floor(d*.55);i++) stars.push({x:rand(0,W),y:rand(0,H),r:rand(.9,1.9),baseAlpha:rand(.50,.92),alpha:0,glowR:rand(4,11),ts:rand(.002,.009),to:rand(0,TAU),color:pickColor("mid"),type:"mid"});
+    const hc=Math.max(12,Math.floor(d*.08));
+    for(let i=0;i<hc;i++) stars.push({x:rand(0,W),y:rand(0,H),r:rand(1.8,3.2),baseAlpha:rand(.70,1.0),alpha:0,glowR:rand(12,30),spikeLen:rand(18,46),ts:rand(.001,.006),to:rand(0,TAU),color:pickColor("hero"),type:"hero"});
   }
-
-  function buildNebulae(){
-    nebulae = [];
-    const palette = [
-      [55,  15, 110],
-      [ 8,  45,  95],
-      [75,  15,  55],
-      [ 8,  65,  75],
-    ];
-    palette.forEach(([r,g,b]) => {
-      nebulae.push({
-        x: rand(0, W), y: rand(0, H),
-        rx: rand(W*0.16, W*0.44),
-        ry: rand(H*0.10, H*0.34),
-        r, g, b,
-        alpha: rand(0.020, 0.052)
-      });
-    });
-  }
-
   function drawNebulae(){
-    for (const n of nebulae){
-      const maxR = Math.max(n.rx, n.ry);
-      const grd  = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, maxR);
-      grd.addColorStop(0,   `rgba(${n.r},${n.g},${n.b},${n.alpha})`);
-      grd.addColorStop(0.5, `rgba(${n.r},${n.g},${n.b},${n.alpha * 0.42})`);
-      grd.addColorStop(1,   `rgba(${n.r},${n.g},${n.b},0)`);
-      ctx.save();
-      ctx.translate(n.x, n.y);
-      ctx.scale(n.rx / maxR, n.ry / maxR);
-      ctx.translate(-n.x, -n.y);
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, maxR, 0, TAU);
-      ctx.fillStyle = grd;
-      ctx.fill();
-      ctx.restore();
-    }
-  }
-
-  function drawMicro(s){
-    const c = s.color;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.r, 0, TAU);
-    ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${s.alpha})`;
-    ctx.fill();
-  }
-
-  function drawMid(s){
-    const c = s.color;
-    const grd = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.glowR);
-    grd.addColorStop(0,  `rgba(${c.r},${c.g},${c.b},${s.alpha * 0.28})`);
-    grd.addColorStop(1,  `rgba(${c.r},${c.g},${c.b},0)`);
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.glowR, 0, TAU);
-    ctx.fillStyle = grd;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.r, 0, TAU);
-    ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${s.alpha})`;
-    ctx.fill();
-  }
-
-  function drawHero(s){
-    const c  = s.color;
-    const grd = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.glowR);
-    grd.addColorStop(0,   `rgba(${c.r},${c.g},${c.b},${s.alpha * 0.44})`);
-    grd.addColorStop(0.4, `rgba(${c.r},${c.g},${c.b},${s.alpha * 0.16})`);
-    grd.addColorStop(1,   `rgba(${c.r},${c.g},${c.b},0)`);
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.glowR, 0, TAU);
-    ctx.fillStyle = grd;
-    ctx.fill();
-    // 4-spike diffraction cross
-    const sp = s.spikeLen * s.alpha;
-    for (let k = 0; k < 4; k++){
-      const angle = k * Math.PI / 2;
-      const ex = s.x + Math.cos(angle) * sp;
-      const ey = s.y + Math.sin(angle) * sp;
-      const gl = ctx.createLinearGradient(s.x, s.y, ex, ey);
-      gl.addColorStop(0,   `rgba(${c.r},${c.g},${c.b},${s.alpha * 0.80})`);
-      gl.addColorStop(0.55,`rgba(${c.r},${c.g},${c.b},${s.alpha * 0.22})`);
-      gl.addColorStop(1,   `rgba(${c.r},${c.g},${c.b},0)`);
-      ctx.beginPath();
-      ctx.moveTo(s.x, s.y);
-      ctx.lineTo(ex, ey);
-      ctx.strokeStyle = gl;
-      ctx.lineWidth = 0.9;
-      ctx.stroke();
-    }
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.r, 0, TAU);
-    ctx.fillStyle = `rgba(${c.r},${c.g},${c.b},${s.alpha})`;
-    ctx.fill();
-  }
-
-  function spawnMeteor(){
-    const angle = rand(0.18, 0.52);
-    const speed = rand(5, 12);
-    meteors.push({
-      x:     rand(-W*0.1, W*1.1),
-      y:     rand(-H*0.2, H*0.35),
-      vx:    Math.cos(angle) * speed,
-      vy:    Math.sin(angle) * speed,
-      len:   rand(80, 210),
-      alpha: rand(0.50, 0.88),
-      width: rand(0.9, 2.2),
-      life:  1.0,
-      decay: rand(0.007, 0.020)
+    nebulae.forEach(n=>{
+      const mx=Math.max(n.rx,n.ry),g=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,mx);
+      g.addColorStop(0,`rgba(${n.r},${n.g},${n.b},${n.alpha})`);
+      g.addColorStop(.5,`rgba(${n.r},${n.g},${n.b},${n.alpha*.42})`);
+      g.addColorStop(1,`rgba(${n.r},${n.g},${n.b},0)`);
+      ctx.save();ctx.translate(n.x,n.y);ctx.scale(n.rx/mx,n.ry/mx);ctx.translate(-n.x,-n.y);
+      ctx.beginPath();ctx.arc(n.x,n.y,mx,0,TAU);ctx.fillStyle=g;ctx.fill();ctx.restore();
     });
-    setTimeout(spawnMeteor, rand(6000, 18000));
   }
-
+  function drawStar(s){
+    const c=s.color,a=s.alpha;
+    if(s.type==="micro"){
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,TAU);
+      ctx.fillStyle=`rgba(${c.r},${c.g},${c.b},${a})`;ctx.fill();
+    } else if(s.type==="mid"){
+      const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,s.glowR);
+      g.addColorStop(0,`rgba(${c.r},${c.g},${c.b},${a*.28})`);g.addColorStop(1,`rgba(${c.r},${c.g},${c.b},0)`);
+      ctx.beginPath();ctx.arc(s.x,s.y,s.glowR,0,TAU);ctx.fillStyle=g;ctx.fill();
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,TAU);ctx.fillStyle=`rgba(${c.r},${c.g},${c.b},${a})`;ctx.fill();
+    } else {
+      const g=ctx.createRadialGradient(s.x,s.y,0,s.x,s.y,s.glowR);
+      g.addColorStop(0,`rgba(${c.r},${c.g},${c.b},${a*.44})`);g.addColorStop(.4,`rgba(${c.r},${c.g},${c.b},${a*.16})`);g.addColorStop(1,`rgba(${c.r},${c.g},${c.b},0)`);
+      ctx.beginPath();ctx.arc(s.x,s.y,s.glowR,0,TAU);ctx.fillStyle=g;ctx.fill();
+      const sp=s.spikeLen*a;
+      for(let k=0;k<4;k++){
+        const ang=k*Math.PI/2,ex=s.x+Math.cos(ang)*sp,ey=s.y+Math.sin(ang)*sp;
+        const gl=ctx.createLinearGradient(s.x,s.y,ex,ey);
+        gl.addColorStop(0,`rgba(${c.r},${c.g},${c.b},${a*.80})`);gl.addColorStop(.55,`rgba(${c.r},${c.g},${c.b},${a*.22})`);gl.addColorStop(1,`rgba(${c.r},${c.g},${c.b},0)`);
+        ctx.beginPath();ctx.moveTo(s.x,s.y);ctx.lineTo(ex,ey);ctx.strokeStyle=gl;ctx.lineWidth=.9;ctx.stroke();
+      }
+      ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,TAU);ctx.fillStyle=`rgba(${c.r},${c.g},${c.b},${a})`;ctx.fill();
+    }
+  }
+  function spawnMeteor(){
+    const ang=rand(.18,.52),sp=rand(5,12);
+    meteors.push({x:rand(-W*.1,W*1.1),y:rand(-H*.2,H*.35),vx:Math.cos(ang)*sp,vy:Math.sin(ang)*sp,len:rand(80,210),alpha:rand(.50,.88),width:rand(.9,2.2),life:1.0,decay:rand(.007,.020)});
+    setTimeout(spawnMeteor,rand(6000,18000));
+  }
   function drawMeteors(){
-    for (let i = meteors.length - 1; i >= 0; i--){
-      const m   = meteors[i];
-      m.x      += m.vx;
-      m.y      += m.vy;
-      m.life   -= m.decay;
-      if (m.life <= 0){ meteors.splice(i, 1); continue; }
-      const ang  = Math.atan2(m.vy, m.vx);
-      const tailX = m.x - Math.cos(ang) * m.len;
-      const tailY = m.y - Math.sin(ang) * m.len;
-      const grd   = ctx.createLinearGradient(tailX, tailY, m.x, m.y);
-      grd.addColorStop(0,   `rgba(255,255,255,0)`);
-      grd.addColorStop(0.6, `rgba(200,230,255,${m.alpha * m.life * 0.38})`);
-      grd.addColorStop(1,   `rgba(255,255,255,${m.alpha * m.life})`);
-      ctx.beginPath();
-      ctx.moveTo(tailX, tailY);
-      ctx.lineTo(m.x, m.y);
-      ctx.strokeStyle = grd;
-      ctx.lineWidth   = m.width;
-      ctx.stroke();
+    for(let i=meteors.length-1;i>=0;i--){
+      const m=meteors[i];m.x+=m.vx;m.y+=m.vy;m.life-=m.decay;
+      if(m.life<=0){meteors.splice(i,1);continue;}
+      const ang=Math.atan2(m.vy,m.vx),tx=m.x-Math.cos(ang)*m.len,ty=m.y-Math.sin(ang)*m.len;
+      const g=ctx.createLinearGradient(tx,ty,m.x,m.y);
+      g.addColorStop(0,"rgba(255,255,255,0)");g.addColorStop(.6,`rgba(200,230,255,${m.alpha*m.life*.38})`);g.addColorStop(1,`rgba(255,255,255,${m.alpha*m.life})`);
+      ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(m.x,m.y);ctx.strokeStyle=g;ctx.lineWidth=m.width;ctx.stroke();
     }
   }
-
-  let t = 0;
+  let t=0;
   function tick(){
-    raf = requestAnimationFrame(tick);
-    if (!isDark() || paused) return;
-
-    t++;
-    ctx.clearRect(0, 0, W, H);
-    drawNebulae();
-
-    for (const s of stars){
-      const phase = t * s.twinkleSpeed + s.twinkleOffset;
-      const wave  = 0.5 + 0.35 * Math.sin(phase) + 0.15 * Math.sin(phase * 2.3 + 1.1);
-      s.alpha     = s.baseAlpha * Math.max(0.04, wave);
-      if      (s.type === "micro") drawMicro(s);
-      else if (s.type === "mid")   drawMid(s);
-      else                         drawHero(s);
+    requestAnimationFrame(tick);
+    if(!isDark()||paused) return;
+    t++;ctx.clearRect(0,0,W,H);drawNebulae();
+    for(const s of stars){
+      const ph=t*s.ts+s.to,wave=.5+.35*Math.sin(ph)+.15*Math.sin(ph*2.3+1.1);
+      s.alpha=s.baseAlpha*Math.max(.04,wave);drawStar(s);
     }
-
     drawMeteors();
   }
-
-  document.addEventListener("visibilitychange", () => { paused = document.hidden; });
-
-  /* hook into existing toggleTheme so stars rebuild on theme switch */
-  const _origToggle = window.toggleTheme;
-  window.toggleTheme = function(){
-    if (_origToggle) _origToggle();
-    if (isDark()) buildScene();
-  };
-
-  window.addEventListener("resize", resize, { passive: true });
-  resize();
-  setTimeout(spawnMeteor, rand(3000, 10000));
-  tick();
+  document.addEventListener("visibilitychange",()=>{paused=document.hidden;});
+  const _orig=window.toggleTheme;
+  window.toggleTheme=function(){if(_orig)_orig();if(isDark())buildScene();};
+  window.addEventListener("resize",resize,{passive:true});
+  resize();setTimeout(spawnMeteor,rand(3000,10000));tick();
 })();
 
 loadPosts();
