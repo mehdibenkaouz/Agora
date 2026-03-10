@@ -1305,6 +1305,91 @@
       filter: none !important;
     }
   }
+
+
+  .profile-card{
+    margin: 0 auto 22px;
+    width: 100%;
+    max-width: 1100px;
+    border-radius: 22px;
+    padding: 20px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--line);
+    box-shadow: var(--soft-shadow);
+  }
+
+  :root[data-theme="dark"] .profile-card{
+    background: rgba(12,22,32,0.78);
+  }
+
+  .profile-grid{
+    display: grid;
+    grid-template-columns: 180px 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .profile-avatar-box{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .profile-avatar-preview{
+    width: 132px;
+    height: 132px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 1px solid rgba(201,147,42,0.28);
+    background: rgba(0,0,0,0.18);
+    display: grid;
+    place-items: center;
+  }
+
+  .profile-avatar-preview img{
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .profile-avatar-preview svg{
+    width: 54px;
+    height: 54px;
+    stroke: var(--gold);
+    stroke-width: 2.2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .profile-fields{
+    display: grid;
+    gap: 12px;
+  }
+
+  .profile-actions{
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .profile-status{
+    font-size: 0.9rem;
+    color: var(--muted);
+    min-height: 1.2em;
+  }
+
+  @media (max-width: 760px){
+    .profile-grid{
+      grid-template-columns: 1fr;
+    }
+    .profile-avatar-box{
+      align-items: flex-start;
+    }
+  }
 </style>
 </head>
 <body>
@@ -1403,6 +1488,33 @@
           </div>
         </div>
       </div>
+
+      <section class="profile-card">
+        <div class="profile-grid">
+          <div class="profile-avatar-box">
+            <div id="profileAvatarPreview" class="profile-avatar-preview"></div>
+            <button id="profilePickAvatarBtn" class="file-btn" type="button">Upload avatar</button>
+            <input id="profileAvatarFileInput" type="file" accept="image/*" hidden />
+          </div>
+
+          <form id="profileForm" class="profile-fields">
+            <label class="field">
+              <span>Display name</span>
+              <input id="profileDisplayNameInput" type="text" maxlength="60" placeholder="Your public name" />
+            </label>
+
+            <label class="field">
+              <span>Avatar URL</span>
+              <input id="profilePictureUrlInput" type="url" placeholder="https://... or uploaded image URL" />
+            </label>
+
+            <div class="profile-actions">
+              <button id="profileSaveBtn" class="primary-btn" type="submit">Save profile</button>
+              <div id="profileStatus" class="profile-status"></div>
+            </div>
+          </form>
+        </div>
+      </section>
 
       <div id="bookStage" class="book-stage" aria-label="Book viewer">
 
@@ -1581,7 +1693,80 @@ const accountBtn = document.getElementById("accountBtn");
 const accountMenu = document.getElementById("accountMenu");
 const accountMenuSub = document.getElementById("accountMenuSub");
 const menuPrimaryAction = document.getElementById("menuPrimaryAction");
-const themeToggleBtn = document.getElementById("themeToggleBtn");
+const ACCOUNT_ICON_SVG = `
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20 21a8 8 0 0 0-16 0"></path>
+    <circle cx="12" cy="8" r="4"></circle>
+  </svg>
+`;
+
+const profileForm = document.getElementById("profileForm");
+const profileDisplayNameInput = document.getElementById("profileDisplayNameInput");
+const profilePictureUrlInput = document.getElementById("profilePictureUrlInput");
+const profileAvatarPreview = document.getElementById("profileAvatarPreview");
+const profilePickAvatarBtn = document.getElementById("profilePickAvatarBtn");
+const profileAvatarFileInput = document.getElementById("profileAvatarFileInput");
+const profileStatus = document.getElementById("profileStatus");
+
+function escapeHtml(s){
+  return String(s || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function syncAccountAvatar(){
+  if (!accountBtn) return;
+
+  const name = CURRENT_USER?.display_name || CURRENT_USER?.email || "Account";
+  const pic = CURRENT_USER?.picture_url || "";
+
+  if (pic){
+    accountBtn.classList.add("has-avatar");
+    accountBtn.innerHTML = `<img class="account-avatar" src="${escapeHtml(pic)}" alt="${escapeHtml(name)}">`;
+  } else {
+    accountBtn.classList.remove("has-avatar");
+    accountBtn.innerHTML = ACCOUNT_ICON_SVG;
+  }
+}
+
+function renderProfilePreview(url){
+  const name = CURRENT_USER?.display_name || CURRENT_USER?.email || "Account";
+  if (!profileAvatarPreview) return;
+
+  if (url){
+    profileAvatarPreview.innerHTML = `<img src="${escapeHtml(url)}" alt="${escapeHtml(name)}">`;
+  } else {
+    profileAvatarPreview.innerHTML = ACCOUNT_ICON_SVG;
+  }
+}
+
+function fillProfileForm(){
+  if (profileDisplayNameInput) {
+    profileDisplayNameInput.value = CURRENT_USER?.display_name || "";
+  }
+  if (profilePictureUrlInput) {
+    profilePictureUrlInput.value = CURRENT_USER?.picture_url || "";
+    renderProfilePreview(profilePictureUrlInput.value.trim());
+  } else {
+    renderProfilePreview(CURRENT_USER?.picture_url || "");
+  }
+}
+
+async function uploadProfileAvatar(file){
+  const fd = new FormData();
+  fd.append("file", file, file.name || "avatar.png");
+
+  const out = await api("/api/media/upload", {
+    method: "POST",
+    body: fd
+  });
+
+  if (!out || !out.url) throw new Error("upload_failed");
+  return out;
+}
 
 function openMenu(){
   accountMenu.classList.add("open");
@@ -1653,6 +1838,7 @@ let CURRENT_USER = null; // {id,email,display_name,picture_url}
 function userEmailLower(){ return String(CURRENT_USER && CURRENT_USER.email ? CURRENT_USER.email : "").trim().toLowerCase(); }
 
 async function refreshMe(){
+  
   const token = getToken();
   const openLoginBtn = document.getElementById("openLoginBtn");
 
@@ -1662,6 +1848,8 @@ async function refreshMe(){
     if (menuPrimaryAction) menuPrimaryAction.textContent = "Login";
     if (menuPrimaryAction) menuPrimaryAction.classList.remove("danger");
     if (openLoginBtn) openLoginBtn.style.display = "inline-flex";
+    syncAccountAvatar();
+    fillProfileForm();
     return;
   }
 
@@ -1674,7 +1862,9 @@ async function refreshMe(){
       display_name: u.display_name || u.displayName || "",
       picture_url: u.picture_url || u.pictureUrl || ""
     };
-    if (accountMenuSub) accountMenuSub.textContent = CURRENT_USER.email || "Logged in";
+    if (accountMenuSub) accountMenuSub.textContent = CURRENT_USER.display_name || CURRENT_USER.email || "Logged in";
+    syncAccountAvatar();
+    fillProfileForm();
     if (menuPrimaryAction) menuPrimaryAction.textContent = "Logout";
     if (menuPrimaryAction) menuPrimaryAction.classList.add("danger");
     if (openLoginBtn) openLoginBtn.style.display = "none";
@@ -1685,6 +1875,8 @@ async function refreshMe(){
     if (menuPrimaryAction) menuPrimaryAction.textContent = "Login";
     if (menuPrimaryAction) menuPrimaryAction.classList.remove("danger");
     if (openLoginBtn) openLoginBtn.style.display = "inline-flex";
+    syncAccountAvatar();
+    fillProfileForm();
   }
 }
 
@@ -2105,6 +2297,89 @@ async function loadPosts(){
     showEmpty("Failed to load posts", "Try Refresh. If it keeps failing, check API logs / token.");
     renderSpread();
   }
+}
+
+if (profilePictureUrlInput){
+  profilePictureUrlInput.addEventListener("input", ()=>{
+    renderProfilePreview((profilePictureUrlInput.value || "").trim());
+  });
+}
+
+if (profilePickAvatarBtn){
+  profilePickAvatarBtn.addEventListener("click", ()=>{
+    if (!getToken()){
+      openModal();
+      return;
+    }
+    profileAvatarFileInput?.click();
+  });
+}
+
+if (profileAvatarFileInput){
+  profileAvatarFileInput.addEventListener("change", async ()=>{
+    const file = profileAvatarFileInput.files && profileAvatarFileInput.files[0];
+    if (!file) return;
+
+    try{
+      if (profileStatus) profileStatus.textContent = "Uploading avatar...";
+      const up = await uploadProfileAvatar(file);
+      if (profilePictureUrlInput) profilePictureUrlInput.value = up.url || "";
+      renderProfilePreview(up.url || "");
+      if (profileStatus) profileStatus.textContent = "Avatar uploaded. Save profile to apply it.";
+    } catch (e){
+      console.error(e);
+      if (profileStatus) profileStatus.textContent = "Avatar upload failed.";
+    } finally {
+      profileAvatarFileInput.value = "";
+    }
+  });
+}
+
+if (profileForm){
+  profileForm.addEventListener("submit", async (e)=>{
+    e.preventDefault();
+
+    if (!getToken()){
+      openModal();
+      return;
+    }
+
+    const display_name = (profileDisplayNameInput?.value || "").trim();
+    const picture_url = (profilePictureUrlInput?.value || "").trim();
+
+    if (!display_name){
+      if (profileStatus) profileStatus.textContent = "Display name required.";
+      return;
+    }
+
+    try{
+      if (profileStatus) profileStatus.textContent = "Saving...";
+      const out = await api("/api/profile", {
+        method: "POST",
+        body: JSON.stringify({ display_name, picture_url })
+      });
+
+      const u = out && out.user ? out.user : {};
+      CURRENT_USER = {
+        id: u.id || CURRENT_USER?.id || "",
+        email: u.email || CURRENT_USER?.email || "",
+        display_name: u.display_name || "",
+        picture_url: u.picture_url || ""
+      };
+
+      syncAccountAvatar();
+      fillProfileForm();
+
+      if (accountMenuSub) {
+        accountMenuSub.textContent = CURRENT_USER.display_name || CURRENT_USER.email || "Logged in";
+      }
+
+      if (profileStatus) profileStatus.textContent = "Profile saved.";
+    } catch (err){
+      console.error(err);
+      if (profileStatus) profileStatus.textContent = "Save failed.";
+    }
+  });
 }
 
 loadPosts();

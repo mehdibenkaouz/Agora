@@ -55,14 +55,21 @@ export default {
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const row = await env.dbagora.prepare(
-          `SELECT u.id as id, u.email as email
-           FROM sessions s
-           JOIN users u ON u.id = s.user_id
-           WHERE s.token = ?1 AND s.expires_at > ?2`
+          `SELECT
+            s.user_id AS id,
+            u.email AS email,
+            COALESCE(
+              NULLIF(TRIM(u.display_name), ''),
+              CASE
+                WHEN instr(u.email, '@') > 1 THEN substr(u.email, 1, instr(u.email, '@') - 1)
+                ELSE u.email
+              END
+            ) AS display_name,
+            COALESCE(u.picture_url, '') AS picture_url`
         ).bind(token, new Date().toISOString()).first();
 
         if (!row) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
-        return json({ ok: true, user: { id: row.id, email: row.email } }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true, user: { id: row.id, email: row.email,  display_name: row.display_name, picture_url: row.picture_url} }, 200, ALLOWED_ORIGIN);
       }
 
       if (url.pathname === "/api/posts" && request.method === "POST") {
@@ -119,6 +126,14 @@ export default {
               p.content,
               p.created_at,
               u.email as author_email,
+              COALESCE(
+                NULLIF(TRIM(u.display_name), ''),
+                CASE
+                  WHEN instr(u.email, '@') > 1 THEN substr(u.email, 1, instr(u.email, '@') - 1)
+                  ELSE u.email
+                END
+              ) AS author_display_name,
+              COALESCE(u.picture_url, '') AS author_picture_url,
               (
                 SELECT COUNT(*)
                 FROM comments c
@@ -148,6 +163,14 @@ export default {
               c.content,
               c.created_at,
               u.email as author_email
+              COALESCE(
+                NULLIF(TRIM(u.display_name), ''),
+                CASE
+                  WHEN instr(u.email, '@') > 1 THEN substr(u.email, 1, instr(u.email, '@') - 1)
+                  ELSE u.email
+                END
+              ) AS author_display_name,
+              COALESCE(u.picture_url, '') AS author_picture_url
           FROM comments c
           JOIN users u ON u.id = c.user_id
           WHERE c.post_id = ?1
@@ -225,7 +248,19 @@ export default {
         ).run();
 
         const author = await env.dbagora.prepare(
-          "SELECT email FROM users WHERE id = ?1"
+        `SELECT
+            id,
+            email,
+            COALESCE(
+              NULLIF(TRIM(display_name), ''),
+              CASE
+                WHEN instr(email, '@') > 1 THEN substr(email, 1, instr(email, '@') - 1)
+                ELSE email
+              END
+            ) AS display_name,
+            COALESCE(picture_url, '') AS picture_url
+          FROM users
+          WHERE id = ?1`
         ).bind(session.user_id).first();
 
         return json({
@@ -235,8 +270,11 @@ export default {
             post_id: postId,
             content,
             created_at: now,
-            author_email: author?.email || "anon"
-          }
+            author_id: author?.id || "",
+            author_email: author?.email || "anon",
+            author_display_name: author?.display_name || author?.email || "anon",
+            author_picture_url: author?.picture_url || ""        
+  }
         }, 200, ALLOWED_ORIGIN);
       }
 
