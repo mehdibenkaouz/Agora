@@ -37,11 +37,6 @@ created_at TEXT NOT NULL
 google_sub TEXT
 display_name TEXT
 picture_url TEXT
-```
-
-#### sessions
-
-```sql
 token TEXT PRIMARY KEY
 user_id TEXT NOT NULL
 created_at TEXT NOT NULL
@@ -56,6 +51,13 @@ user_id TEXT NOT NULL
 content TEXT NOT NULL
 created_at TEXT NOT NULL
 ```
+
+Relazioni logiche:
+
+* `sessions.user_id -> users.id`
+* `posts.user_id -> users.id`
+* `comments.user_id -> users.id`
+* `comments.post_id -> posts.id`
 
 ---
 
@@ -116,6 +118,14 @@ Crea:
 
 ---
 
+## 2.4 Local Frontend Configuration
+
+Nel frontend statico, la base API è definita direttamente in `index.html`:
+
+```js
+
+const API_BASE = "https://agora-api.convergegame.workers.dev";
+
 ## 3.2 Session Management
 
 * Token salvato in `localStorage` con chiave:
@@ -133,6 +143,24 @@ CURRENT_USER_EMAIL
 Non si basa sul testo UI.
 
 ---
+
+
+---
+
+## 2.5 Sostituisci / amplia la sezione `4. Feed System`
+
+```md
+ # Feed System
+
+```txt
+GET /api/posts
+```
+# Endpoint
+
+
+
+
+
 
 # 4. Feed System
 
@@ -481,3 +509,44 @@ Se vuoi, nel prossimo step posso:
 * Oppure fare una versione “Product Spec” per presentazione
 * Oppure fare una mappa completa UI con tutti i componenti nominati
 
+
+
+---
+
+## 15 Aggiungi una nuova sezione `4.5 Thread / Comments System`
+
+```md
+## 4.5 Thread / Comments System
+
+Il layout include un pannello laterale thread dedicato ai commenti del post selezionato.
+
+### Frontend elements
+
+* `#threadComments`
+* `#threadInput`
+* `#threadSendBtn`
+* `#threadClearBtn`
+
+### Comment constraints
+
+Il frontend limita il campo commento a:
+
+```txt
+maxlength="300"
+```
+
+
+## 16 Aggiorna la sezione `7. Editor System`
+
+La tua attuale è buona, ma incompleta. Sostituiscila con questa:
+
+```md
+# 7. Editor System
+
+## 7.1 ContentEditable
+
+Elemento principale:
+
+```txt
+#createPostContent
+```
