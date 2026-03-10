@@ -1410,6 +1410,27 @@
       object-position: center;
       border-radius: 50%;
     }
+    .awards-list{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:8px;
+    }
+
+    .award{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      padding:4px 10px;
+      border-radius:999px;
+      background:rgba(201,147,42,0.12);
+      border:1px solid rgba(201,147,42,0.3);
+      font-size:0.85rem;
+    }
+
+    .award-icon{
+      font-size:0.9rem;
+    }
 </style>
 </head>
 <body>
@@ -1525,7 +1546,28 @@
 
             <label class="field">
               <span>AWARDS</span>
-              
+              <div class="awards-list">
+
+              <div class="award">
+                <img class="award-icon" src="item/Socrates_AW.png" alt="Socrates award">
+              </div>
+
+              <div class="award">
+                <img class="award-icon" src="item/Hypatia_AW.png" alt="Hypatia award">
+              </div>
+
+              <div class="award">
+                <img class="award-icon" src="item/Aristotle_AW.png" alt="Aristotle award">
+              </div>
+
+              <div class="award">
+                <img class="award-icon" src="item/DaVinci_AW.png" alt="Da Vinci award">
+              </div>
+
+              <div class="award">
+                <img class="award-icon " src="item/Alexandria_AW.png" alt="Library of Alexandria award">  
+              </div>
+            </div>
             </label>
 
             <div class="profile-actions">
