@@ -1529,6 +1529,25 @@
 
     .rt-editor{ font-weight: 400; }
     .rt-editor b, .rt-editor strong{ font-weight: 700; } /* evita “bolder” */
+
+    .account-btn.has-avatar{
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .account-avatar{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .comment-avatar{
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
   </style>
 </head>
 
@@ -1819,10 +1838,10 @@
       if (btn) btn.textContent = isDark ? "Light mode" : "Dark mode";
     }
     // --- Auth state (do NOT rely on UI text) ---
-    let CURRENT_USER_EMAIL = ""; // lowercase, empty if not logged in
-
+    let CURRENT_USER = null; // lowercase, empty if not logged in
     function getCurrentUserEmail() {
-      return (CURRENT_USER_EMAIL || "").trim().toLowerCase();
+
+      return String(CURRENT_USER?.email || "").trim().toLowerCase();
     }
     const createPostBtn = document.getElementById("createPostBtn");
 
@@ -2868,8 +2887,7 @@
       const st = postUI.get(currentKey);
 
       if (threadTitle) threadTitle.textContent = "Comments";
-      if (threadSub) threadSub.textContent = `${p.author_email || "anon"} · ${new Date(p.created_at).toLocaleString()}`;
-      if (threadComments) threadComments.innerHTML = `<div class="thread-empty">Loading comments...</div>`;
+      if (threadSub) threadSub.textContent = `${p.author_display_name || p.author_email || "anon"} · ${new Date(p.created_at).toLocaleString()}`;      if (threadComments) threadComments.innerHTML = `<div class="thread-empty">Loading comments...</div>`;
       if (threadFootnote) threadFootnote.textContent = "Comments are synced with the server.";
       updateThreadAuthState();
 
@@ -2888,19 +2906,20 @@
           inner = `<div class="thread-empty">No comments yet. Add the first one.</div>`;
         } else {
           inner = comments.map(c => {
-            const who = escapeHtml(c.author_email || "anon");
+            const who = escapeHtml(c.author_display_name || c.author_email || "anon");
             const when = escapeHtml(new Date(c.created_at).toLocaleString());
             const text = escapeHtml(c.content || "");
 
-            return `
-              <div class="comment-item">
-                <div class="comment-meta">
-                  <span>${who}</span>
-                  <span>${when}</span>
-                </div>
-                <div class="comment-text">${text}</div>
+          return `
+            <div class="comment-item">
+              <div class="comment-meta">
+                <img class="comment-avatar" src="${escapeHtml(c.author_picture_url || '/avatar-default.png')}" />
+                <span>${who}</span>
+                <span>${when}</span>
               </div>
-            `;
+              <div class="comment-text">${text}</div>
+            </div>
+          `;
           }).join("");
         }
 
@@ -2997,35 +3016,62 @@
       const token = getToken();
 
       if (!token) {
-        CURRENT_USER_EMAIL = "";
+        CURRENT_USER = null;
         feedHint.textContent = "";
         accountMenuSub.textContent = "Not logged in";
         menuPrimaryAction.textContent = "Login";
         menuPrimaryAction.classList.remove("danger");
+        syncAccountAvatar();
         updateThreadAuthState();
         return;
       }
 
       try {
         const me = await api("/api/me", { method: "GET" });
-        CURRENT_USER_EMAIL = String(me?.user?.email || "").trim().toLowerCase();
+        CCURRENT_USER = {
+          id: me?.user?.id || "",
+          email: me?.user?.email || "",
+          display_name: me?.user?.display_name || "",
+          picture_url: me?.user?.picture_url || ""
+        };
 
         feedHint.textContent = "";
-        accountMenuSub.textContent = me.user.email;
+        accountMenuSub.textContent = me.user.display_name || me.user.email;
         menuPrimaryAction.textContent = "Logout";
         menuPrimaryAction.classList.add("danger");
+        syncAccountAvatar();
         updateThreadAuthState();
       } catch {
         localStorage.removeItem(TOKEN_KEY);
-        CURRENT_USER_EMAIL = "";
+        CURRENT_USER = null;
         accountMenuSub.textContent = "Not logged in";
         menuPrimaryAction.textContent = "Login";
-        menuPrimaryAction.classList.remove("danger");
+        f
+        syncAccountAvatar();
         feedHint.textContent = "";
       }
       updateThreadAuthState();
     }
-    function closeAllPostMenus(exceptCard) {
+    const ACCOUNT_ICON_SVG = `
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 21a8 8 0 0 0-16 0"></path>
+          <circle cx="12" cy="8" r="4"></circle>
+        </svg>
+      `;
+
+      function syncAccountAvatar() {
+        const name = CURRENT_USER?.display_name || CURRENT_USER?.email || "Account";
+        const pic = CURRENT_USER?.picture_url || "";
+
+        if (pic) {
+          accountBtn.classList.add("has-avatar");
+          accountBtn.innerHTML = `<img class="account-avatar" src="${escapeHtml(pic)}" alt="${escapeHtml(name)}">`;
+        } else {
+          accountBtn.classList.remove("has-avatar");
+          accountBtn.innerHTML = ACCOUNT_ICON_SVG;
+        }
+      }
+          function closeAllPostMenus(exceptCard) {
       document.querySelectorAll(".post-menu.open").forEach(m => {
         if (exceptCard && exceptCard.contains(m)) return;
         m.classList.remove("open");
@@ -3117,13 +3163,16 @@
         if (isMine) card.classList.add("my-post");
         const contentHtml = renderPostBodyWithMore(p.content || "", key);
         card.innerHTML = `
-            <div class="post-head">
-              <div class="post-author">${escapeHtml(p.author_email || "anon")}</div>
-              <div class="post-head-right">
-                <div class="post-date">${escapeHtml(new Date(p.created_at).toLocaleString())}</div>
-                ${postMenuHtml}
-              </div>
+          <div class="post-head">
+            <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+              <img class="comment-avatar" src="${escapeHtml(p.author_picture_url || '/avatar-default.png')}" />
+              <div class="post-author">${escapeHtml(p.author_display_name || p.author_email || "anon")}</div>
             </div>
+            <div class="post-head-right">
+              <div class="post-date">${escapeHtml(new Date(p.created_at).toLocaleString())}</div>
+              ${postMenuHtml}
+            </div>
+          </div>
 
           ${contentHtml}
 

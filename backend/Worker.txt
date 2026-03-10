@@ -1,98 +1,98 @@
 export default {
   async fetch(request, env) {
-    const origin = request.headers.get(Origin)  ;
-    const ALLOWED_ORIGIN = origin.endsWith(.pages.dev)  origin  httpsagora-bce.pages.dev;
+    const origin = request.headers.get("Origin") || "";
+    const ALLOWED_ORIGIN = origin.endsWith(".pages.dev") ? origin : "https://agora-bce.pages.dev";
     const url = new URL(request.url);
 
-     --- CORS ---
-    if (request.method === OPTIONS) {
-      return new Response(null, { status 204, headers corsHeaders(ALLOWED_ORIGIN) });
+    // --- CORS ---
+    if (request.method === "OPTIONS") {
+      return new Response(null, { status: 204, headers: corsHeaders(ALLOWED_ORIGIN) });
     }
 
     try {
-      if (url.pathname === apihealth) {
-        return json({ ok true }, 200, ALLOWED_ORIGIN);
+      if (url.pathname === "/api/health") {
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
-      if (url.pathname === apilogin && request.method === POST) {
-        const body = await request.json().catch(() = ({}));
-        const emailRaw = String(body.email  ).trim().toLowerCase();
-        if (!emailRaw  !emailRaw.includes(@)) {
-          return json({ ok false, error invalid_email }, 400, ALLOWED_ORIGIN);
+      if (url.pathname === "/api/login" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const emailRaw = String(body.email || "").trim().toLowerCase();
+        if (!emailRaw || !emailRaw.includes("@")) {
+          return json({ ok: false, error: "invalid_email" }, 400, ALLOWED_ORIGIN);
         }
 
         const now = new Date().toISOString();
         const userId = crypto.randomUUID();
 
-         Create user if not exists
+        // Create user if not exists
         const existing = await env.dbagora.prepare(
-          SELECT id, email FROM users WHERE email = 1
+          "SELECT id, email FROM users WHERE email = ?1"
         ).bind(emailRaw).first();
 
-        let finalUserId = existing.id;
+        let finalUserId = existing?.id;
         if (!finalUserId) {
           await env.dbagora.prepare(
-            INSERT INTO users (id, email, created_at) VALUES (1, 2, 3)
+            "INSERT INTO users (id, email, created_at) VALUES (?1, ?2, ?3)"
           ).bind(userId, emailRaw, now).run();
           finalUserId = userId;
         }
 
-         Create session token
+        // Create session token
         const token = crypto.randomUUID();
         const createdAt = now;
-        const expiresAt = new Date(Date.now() + 1000  60  60  24  30).toISOString();  30 days
+        const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(); // 30 days
 
         await env.dbagora.prepare(
-          INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (1, 2, 3, 4)
+          "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)"
         ).bind(token, finalUserId, createdAt, expiresAt).run();
 
-        return json({ ok true, token, user { id finalUserId, email emailRaw } }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true, token, user: { id: finalUserId, email: emailRaw } }, 200, ALLOWED_ORIGIN);
       }
 
-      if (url.pathname === apime && request.method === GET) {
-        const auth = request.headers.get(Authorization)  ;
+      if (url.pathname === "/api/me" && request.method === "GET") {
+        const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
-        if (!token) return json({ ok false, error missing_token }, 401, ALLOWED_ORIGIN);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const row = await env.dbagora.prepare(
           `SELECT u.id as id, u.email as email
            FROM sessions s
            JOIN users u ON u.id = s.user_id
-           WHERE s.token = 1 AND s.expires_at  2`
+           WHERE s.token = ?1 AND s.expires_at > ?2`
         ).bind(token, new Date().toISOString()).first();
 
-        if (!row) return json({ ok false, error invalid_token }, 401, ALLOWED_ORIGIN);
-        return json({ ok true, user { id row.id, email row.email } }, 200, ALLOWED_ORIGIN);
+        if (!row) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+        return json({ ok: true, user: { id: row.id, email: row.email } }, 200, ALLOWED_ORIGIN);
       }
 
-      if (url.pathname === apiposts && request.method === POST) {
-        const auth = request.headers.get(Authorization)  ;
+      if (url.pathname === "/api/posts" && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
-        if (!token) return json({ ok false, error missing_token }, 401, ALLOWED_ORIGIN);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
-          SELECT user_id FROM sessions WHERE token = 1 AND expires_at  2
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first();
 
-        if (!session) return json({ ok false, error invalid_token }, 401, ALLOWED_ORIGIN);
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
-        const body = await request.json().catch(() = ({}));
+        const body = await request.json().catch(() => ({}));
 
-         Accetta sia il vecchio campo (content) sia il nuovo (content_html)
-        const content_html = String(body.content_html  ).trim();
-        const legacy_text  = String(body.content  ).trim();
+        // Accetta sia il vecchio campo (content) sia il nuovo (content_html)
+        const content_html = String(body.content_html || "").trim();
+        const legacy_text  = String(body.content || "").trim();
         
-         Se mi hai mandato HTML lo uso, altrimenti cado sul testo
-        const contentToStore = content_html  legacy_text;
+        // Se mi hai mandato HTML lo uso, altrimenti cado sul testo
+        const contentToStore = content_html || legacy_text;
 
-         Contenuto valido se testo non vuoto OPPURE contiene almeno un img
-        const hasImg = imgbi.test(contentToStore);
+        // Contenuto valido se: testo non vuoto OPPURE contiene almeno un <img>
+        const hasImg = /<img\b/i.test(contentToStore);
         const textLike = (body.content_text != null)
-           String(body.content_text  ).trim()
-           legacy_text;
+          ? String(body.content_text || "").trim()
+          : legacy_text;
 
         if (!textLike && !hasImg) {
-          return json({ ok false, error empty_content }, 400, ALLOWED_ORIGIN);
+          return json({ ok: false, error: "empty_content" }, 400, ALLOWED_ORIGIN);
         }
 
         const postId = crypto.randomUUID();
@@ -100,7 +100,7 @@ export default {
 
         await env.dbagora.prepare(`
           INSERT INTO posts (id, user_id, content, created_at)
-          VALUES (1, 2, 3, 4)
+          VALUES (?1, ?2, ?3, ?4)
         `).bind(
           postId,
           session.user_id,
@@ -108,11 +108,11 @@ export default {
           now
         ).run();
 
-         ✅ QUESTA È LA PARTE CHE TI MANCAVA rispondi 200 e NON cadere nel not_found
-        return json({ ok true, post { id postId, created_at now } }, 200, ALLOWED_ORIGIN);
+        // ✅ QUESTA È LA PARTE CHE TI MANCAVA: rispondi 200 e NON cadere nel not_found
+        return json({ ok: true, post: { id: postId, created_at: now } }, 200, ALLOWED_ORIGIN);
       }
 
-      if (url.pathname === apiposts && request.method === GET) {
+      if (url.pathname === "/api/posts" && request.method === "GET") {
         const rows = await env.dbagora.prepare(
           `SELECT
               p.id,
@@ -120,7 +120,7 @@ export default {
               p.created_at,
               u.email as author_email,
               (
-                SELECT COUNT()
+                SELECT COUNT(*)
                 FROM comments c
                 WHERE c.post_id = p.id
               ) as comment_count
@@ -130,16 +130,16 @@ export default {
           LIMIT 30`
         ).all();
 
-        return json({ ok true, posts rows.results  [] }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true, posts: rows.results || [] }, 200, ALLOWED_ORIGIN);
       }
 
 
-      const postCommentsMatch = url.pathname.match(^apiposts([^]+)comments$);
-      if (postCommentsMatch && request.method === GET) {
+      const postCommentsMatch = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments$/);
+      if (postCommentsMatch && request.method === "GET") {
 
-        const postId = decodeURIComponent(postCommentsMatch[1]  ).trim();
+        const postId = decodeURIComponent(postCommentsMatch[1] || "").trim();
         if (!postId) {
-          return json({ ok false, error missing_post_id }, 400, ALLOWED_ORIGIN);
+          return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
         }
 
         const rows = await env.dbagora.prepare(
@@ -150,64 +150,64 @@ export default {
               u.email as author_email
           FROM comments c
           JOIN users u ON u.id = c.user_id
-          WHERE c.post_id = 1
+          WHERE c.post_id = ?1
           ORDER BY c.created_at ASC`
         ).bind(postId).all();
 
-        const comments = rows.results  [];
+        const comments = rows.results || [];
         return json({
-          ok true,
+          ok: true,
           comments,
-          comment_count comments.length
+          comment_count: comments.length
         }, 200, ALLOWED_ORIGIN);
       }
 
-      if (postCommentsMatch && request.method === POST) {
-        const auth = request.headers.get(Authorization)  ;
+      if (postCommentsMatch && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
-        if (!token) return json({ ok false, error missing_token }, 401, ALLOWED_ORIGIN);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
-          SELECT user_id FROM sessions WHERE token = 1 AND expires_at  2
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first();
 
-        if (!session) return json({ ok false, error invalid_token }, 401, ALLOWED_ORIGIN);
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
-        const postId = decodeURIComponent(postCommentsMatch[1]  ).trim();
+        const postId = decodeURIComponent(postCommentsMatch[1] || "").trim();
         if (!postId) {
-          return json({ ok false, error missing_post_id }, 400, ALLOWED_ORIGIN);
+          return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
         }
 
         const post = await env.dbagora.prepare(
-          SELECT id FROM posts WHERE id = 1
+          "SELECT id FROM posts WHERE id = ?1"
         ).bind(postId).first();
 
         if (!post) {
-          return json({ ok false, error post_not_found }, 404, ALLOWED_ORIGIN);
+          return json({ ok: false, error: "post_not_found" }, 404, ALLOWED_ORIGIN);
         }
 
-        const body = await request.json().catch(() = ({}));
-        const content = String(body.content  ).trim();
+        const body = await request.json().catch(() => ({}));
+        const content = String(body.content || "").trim();
 
 
         if (!content) {
-          return json({ ok false, error empty_comment }, 400, ALLOWED_ORIGIN);
+          return json({ ok: false, error: "empty_comment" }, 400, ALLOWED_ORIGIN);
         }
 
-        if (content.length  2) {
-          return json({ ok false, error comment_too_short }, 400, ALLOWED_ORIGIN);
+        if (content.length < 2) {
+          return json({ ok: false, error: "comment_too_short" }, 400, ALLOWED_ORIGIN);
         }
 
-        if (content.length  300) {
-          return json({ ok false, error comment_too_long }, 400, ALLOWED_ORIGIN);
+        if (content.length > 300) {
+          return json({ ok: false, error: "comment_too_long" }, 400, ALLOWED_ORIGIN);
         }
 
         if (!content) {
-          return json({ ok false, error empty_comment }, 400, ALLOWED_ORIGIN);
+          return json({ ok: false, error: "empty_comment" }, 400, ALLOWED_ORIGIN);
         }
 
-        if (content.length  300) {
-          return json({ ok false, error comment_too_long }, 400, ALLOWED_ORIGIN);
+        if (content.length > 300) {
+          return json({ ok: false, error: "comment_too_long" }, 400, ALLOWED_ORIGIN);
         }
 
         const commentId = crypto.randomUUID();
@@ -215,7 +215,7 @@ export default {
 
         await env.dbagora.prepare(
           `INSERT INTO comments (id, post_id, user_id, content, created_at)
-          VALUES (1, 2, 3, 4, 5)`
+          VALUES (?1, ?2, ?3, ?4, ?5)`
         ).bind(
           commentId,
           postId,
@@ -225,300 +225,300 @@ export default {
         ).run();
 
         const author = await env.dbagora.prepare(
-          SELECT email FROM users WHERE id = 1
+          "SELECT email FROM users WHERE id = ?1"
         ).bind(session.user_id).first();
 
         return json({
-          ok true,
-          comment {
-            id commentId,
-            post_id postId,
+          ok: true,
+          comment: {
+            id: commentId,
+            post_id: postId,
             content,
-            created_at now,
-            author_email author.email  anon
+            created_at: now,
+            author_email: author?.email || "anon"
           }
         }, 200, ALLOWED_ORIGIN);
       }
 
 
-       Delete post (auth required)
-      if (url.pathname.startsWith(apiposts) && request.method === DELETE) {
-        const auth = request.headers.get(Authorization)  ;
+      // Delete post (auth required)
+      if (url.pathname.startsWith("/api/posts/") && request.method === "DELETE") {
+        const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
-        if (!token) return json({ ok false, error missing_token }, 401, ALLOWED_ORIGIN);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
-          SELECT user_id FROM sessions WHERE token = 1 AND expires_at  2
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first();
 
-        if (!session) return json({ ok false, error invalid_token }, 401, ALLOWED_ORIGIN);
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
-        const postId = decodeURIComponent(url.pathname.slice(apiposts.length)).trim();
-        if (!postId) return json({ ok false, error missing_post_id }, 400, ALLOWED_ORIGIN);
+        const postId = decodeURIComponent(url.pathname.slice("/api/posts/".length)).trim();
+        if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
 
-         check owner + grab content (serve anche per cleanup media)
+        // check owner + grab content (serve anche per cleanup media)
         const row = await env.dbagora.prepare(
-          SELECT content FROM posts WHERE id = 1 AND user_id = 2
+          "SELECT content FROM posts WHERE id = ?1 AND user_id = ?2"
         ).bind(postId, session.user_id).first();
 
-        if (!row) return json({ ok false, error not_found }, 404, ALLOWED_ORIGIN);
+        if (!row) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
 
-         best-effort elimina anche le immagini del post (solo quelle dell’utente)
+        // best-effort: elimina anche le immagini del post (solo quelle dell’utente)
         try {
-          const prefix = `u${session.user_id}`;
-          const html = String(row.content  );
-          const re = media([^' nrt)]+)g;
+          const prefix = `u/${session.user_id}/`;
+          const html = String(row.content || "");
+          const re = /\/media\/([^"'<> \n\r\t\)]+)/g;
           const keys = new Set();
           let m;
           while ((m = re.exec(html))) {
-            const k = decodeURIComponent(m[1]  );
+            const k = decodeURIComponent(m[1] || "");
             if (k && k.startsWith(prefix)) keys.add(k);
           }
-          await Promise.allSettled([...keys].map(k = env.AGORA_MEDIA.delete(k)));
+          await Promise.allSettled([...keys].map(k => env.AGORA_MEDIA.delete(k)));
         } catch (_) {}
 
         await env.dbagora.prepare(
-          DELETE FROM comments WHERE post_id = 1
+          "DELETE FROM comments WHERE post_id = ?1"
         ).bind(postId).run();
         const del = await env.dbagora.prepare(
-          DELETE FROM posts WHERE id = 1 AND user_id = 2
+          "DELETE FROM posts WHERE id = ?1 AND user_id = ?2"
         ).bind(postId, session.user_id).run();
 
-        const changes = del.meta.changes  0;
-        if (changes === 0) return json({ ok false, error not_found }, 404, ALLOWED_ORIGIN);
+        const changes = del?.meta?.changes ?? 0;
+        if (changes === 0) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
 
-        return json({ ok true }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
 
-      if (url.pathname === apiauthgooglestart && request.method === GET) {
-        const returnTo = new URL(request.url).searchParams.get(returnTo)  env.FRONTEND_ORIGIN + ;
+      if (url.pathname === "/api/auth/google/start" && request.method === "GET") {
+        const returnTo = new URL(request.url).searchParams.get("returnTo") || env.FRONTEND_ORIGIN + "/";
         if (!returnTo.startsWith(env.FRONTEND_ORIGIN)) {
-          return new Response(Invalid returnTo, { status 400 });
+          return new Response("Invalid returnTo", { status: 400 });
         }
 
-        const state = await signState({ returnTo, ts Date.now() }, env.STATE_SECRET);
+        const state = await signState({ returnTo, ts: Date.now() }, env.STATE_SECRET);
 
-        const auth = new URL(httpsaccounts.google.comooauth2v2auth);
-        auth.searchParams.set(client_id, env.GOOGLE_CLIENT_ID);
-        auth.searchParams.set(response_type, code);
-        auth.searchParams.set(scope, openid email profile);
-        auth.searchParams.set(state, state);
-        auth.searchParams.set(prompt, select_account);
-        auth.searchParams.set(redirect_uri, env.GOOGLE_REDIRECT_URI);
+        const auth = new URL("https://accounts.google.com/o/oauth2/v2/auth");
+        auth.searchParams.set("client_id", env.GOOGLE_CLIENT_ID);
+        auth.searchParams.set("response_type", "code");
+        auth.searchParams.set("scope", "openid email profile");
+        auth.searchParams.set("state", state);
+        auth.searchParams.set("prompt", "select_account");
+        auth.searchParams.set("redirect_uri", env.GOOGLE_REDIRECT_URI);
         
         return Response.redirect(auth.toString(), 302);
       }
 
-      if (url.pathname === apiauthgooglecallback && request.method === GET) {
+      if (url.pathname === "/api/auth/google/callback" && request.method === "GET") {
         const qp = new URL(request.url).searchParams;
-        const code = qp.get(code)  ;
-        const state = qp.get(state)  ;
-        if (!code  !state) return new Response(Missing codestate, { status 400 });
+        const code = qp.get("code") || "";
+        const state = qp.get("state") || "";
+        if (!code || !state) return new Response("Missing code/state", { status: 400 });
 
         const payload = await verifyState(state, env.STATE_SECRET);
-        if (!payload) return new Response(Invalid state, { status 400 });
-        if (Date.now() - payload.ts  10  60  1000) return new Response(State expired, { status 400 });
+        if (!payload) return new Response("Invalid state", { status: 400 });
+        if (Date.now() - payload.ts > 10 * 60 * 1000) return new Response("State expired", { status: 400 });
 
-        const tokenRes = await fetch(httpsoauth2.googleapis.comtoken, {
-          method POST,
-          headers { Content-Type applicationx-www-form-urlencoded },
-          body new URLSearchParams({
+        const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
             code,
-            client_id env.GOOGLE_CLIENT_ID,
-            client_secret env.GOOGLE_CLIENT_SECRET,
-            redirect_uri env.GOOGLE_REDIRECT_URI,
-            grant_type authorization_code,
+            client_id: env.GOOGLE_CLIENT_ID,
+            client_secret: env.GOOGLE_CLIENT_SECRET,
+            redirect_uri: env.GOOGLE_REDIRECT_URI,
+            grant_type: "authorization_code",
           }),
         });
 
         const tokenJson = await tokenRes.json();
-        if (!tokenRes.ok) return new Response(Token exchange failed, { status 400 });
+        if (!tokenRes.ok) return new Response("Token exchange failed", { status: 400 });
 
         const idToken = tokenJson.id_token;
-        if (!idToken) return new Response(No id_token, { status 400 });
+        if (!idToken) return new Response("No id_token", { status: 400 });
 
-        const infoRes = await fetch(httpsoauth2.googleapis.comtokeninfoid_token= + encodeURIComponent(idToken));
+        const infoRes = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(idToken));
         const info = await infoRes.json();
-        if (!infoRes.ok) return new Response(Invalid id_token, { status 400 });
-        if (info.aud !== env.GOOGLE_CLIENT_ID) return new Response(Invalid aud, { status 400 });
+        if (!infoRes.ok) return new Response("Invalid id_token", { status: 400 });
+        if (info.aud !== env.GOOGLE_CLIENT_ID) return new Response("Invalid aud", { status: 400 });
 
-        const email = String(info.email  ).toLowerCase();
-        const sub = String(info.sub  );
-        const name = String(info.name  );
-        const picture = String(info.picture  );
+        const email = String(info.email || "").toLowerCase();
+        const sub = String(info.sub || "");
+        const name = String(info.name || "");
+        const picture = String(info.picture || "");
 
-        if (!email  !sub) return new Response(Missing user info, { status 400 });
+        if (!email || !sub) return new Response("Missing user info", { status: 400 });
 
         const now = new Date().toISOString();
 
-        let user = await env.dbagora.prepare(SELECT id FROM users WHERE google_sub = 1).bind(sub).first();
-        if (!user) user = await env.dbagora.prepare(SELECT id FROM users WHERE email = 1).bind(email).first();
+        let user = await env.dbagora.prepare("SELECT id FROM users WHERE google_sub = ?1").bind(sub).first();
+        if (!user) user = await env.dbagora.prepare("SELECT id FROM users WHERE email = ?1").bind(email).first();
 
-        let userId = user.id;
+        let userId = user?.id;
         if (!userId) {
           userId = crypto.randomUUID();
           await env.dbagora.prepare(
-            INSERT INTO users (id, email, created_at, google_sub, display_name, picture_url) VALUES (1, 2, 3, 4, 5, 6)
+            "INSERT INTO users (id, email, created_at, google_sub, display_name, picture_url) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
           ).bind(userId, email, now, sub, name, picture).run();
         } else {
           await env.dbagora.prepare(
-            UPDATE users SET google_sub=1, display_name=2, picture_url=3 WHERE id=4
+            "UPDATE users SET google_sub=?1, display_name=?2, picture_url=?3 WHERE id=?4"
           ).bind(sub, name, picture, userId).run();
         }
 
         const token = crypto.randomUUID();
-        const expiresAt = new Date(Date.now() + 1000  60  60  24  30).toISOString();
+        const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
 
         await env.dbagora.prepare(
-          INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (1, 2, 3, 4)
+          "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)"
         ).bind(token, userId, now, expiresAt).run();
 
         const back = new URL(payload.returnTo);
-        back.hash = token= + encodeURIComponent(token);
+        back.hash = "token=" + encodeURIComponent(token);
         return Response.redirect(back.toString(), 302);
       }
-      if (url.pathname === apidebugoauth && request.method === GET) {
-        const keys = Object.keys(env  {});
-        const cid = env.GOOGLE_CLIENT_ID  ;
-        const redir = env.GOOGLE_REDIRECT_URI  ;
+      if (url.pathname === "/api/debug/oauth" && request.method === "GET") {
+        const keys = Object.keys(env || {});
+        const cid = env.GOOGLE_CLIENT_ID || "";
+        const redir = env.GOOGLE_REDIRECT_URI || "";
         return json({
-          ok true,
-          build_tag DEBUG_KEYS_V2,
-          env_keys keys,
-          google_client_id_len cid.length,
-          client_id_present !!cid,
-          client_id_suffix_ok cid.endsWith(.apps.googleusercontent.com),
-          redirect_uri redir,
-          frontend_origin env.FRONTEND_ORIGIN  
+          ok: true,
+          build_tag: "DEBUG_KEYS_V2",
+          env_keys: keys,
+          google_client_id_len: cid.length,
+          client_id_present: !!cid,
+          client_id_suffix_ok: cid.endsWith(".apps.googleusercontent.com"),
+          redirect_uri: redir,
+          frontend_origin: env.FRONTEND_ORIGIN || ""
         }, 200, ALLOWED_ORIGIN);
       }
-       Serve files from R2 through the Worker
-      if (url.pathname.startsWith(media) && request.method === GET) {
-        const key = decodeURIComponent(url.pathname.slice(media.length));
-        if (!key) return new Response(Not found, { status 404 });
+      // Serve files from R2 through the Worker
+      if (url.pathname.startsWith("/media/") && request.method === "GET") {
+        const key = decodeURIComponent(url.pathname.slice("/media/".length));
+        if (!key) return new Response("Not found", { status: 404 });
 
         const obj = await env.AGORA_MEDIA.get(key);
-        if (!obj) return new Response(Not found, { status 404 });
+        if (!obj) return new Response("Not found", { status: 404 });
 
         return new Response(obj.body, {
-          headers {
-            Content-Type obj.httpMetadata.contentType  applicationoctet-stream,
-            Cache-Control public, max-age=31536000, immutable,
+          headers: {
+            "Content-Type": obj.httpMetadata?.contentType || "application/octet-stream",
+            "Cache-Control": "public, max-age=31536000, immutable",
           },
         });
       }
-       Upload image to R2 (auth required)
-      if (url.pathname === apimediaupload && request.method === POST) {
-        const auth = request.headers.get(Authorization)  ;
+      // Upload image to R2 (auth required)
+      if (url.pathname === "/api/media/upload" && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
-        if (!token) return json({ ok false, error missing_token }, 401, ALLOWED_ORIGIN);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
-          SELECT user_id FROM sessions WHERE token = 1 AND expires_at  2
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first();
 
-        if (!session) return json({ ok false, error invalid_token }, 401, ALLOWED_ORIGIN);
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
-        const ct = request.headers.get(content-type)  ;
-        if (!ct.includes(multipartform-data)) {
-          return json({ ok false, error expected_multipart }, 400, ALLOWED_ORIGIN);
+        const ct = request.headers.get("content-type") || "";
+        if (!ct.includes("multipart/form-data")) {
+          return json({ ok: false, error: "expected_multipart" }, 400, ALLOWED_ORIGIN);
         }
 
         const form = await request.formData();
-        const file = form.get(file);
-        if (!file  typeof file.arrayBuffer !== function) {
-          return json({ ok false, error missing_file }, 400, ALLOWED_ORIGIN);
+        const file = form.get("file");
+        if (!file || typeof file.arrayBuffer !== "function") {
+          return json({ ok: false, error: "missing_file" }, 400, ALLOWED_ORIGIN);
         }
 
-        const mime = file.type  ;
-        if (!mime.startsWith(image)) {
-          return json({ ok false, error not_image }, 400, ALLOWED_ORIGIN);
+        const mime = file.type || "";
+        if (!mime.startsWith("image/")) {
+          return json({ ok: false, error: "not_image" }, 400, ALLOWED_ORIGIN);
         }
 
         const buf = await file.arrayBuffer();
-        const maxBytes = 8  1024  1024;  8MB
-        if (buf.byteLength  maxBytes) {
-          return json({ ok false, error too_big }, 400, ALLOWED_ORIGIN);
+        const maxBytes = 8 * 1024 * 1024; // 8MB
+        if (buf.byteLength > maxBytes) {
+          return json({ ok: false, error: "too_big" }, 400, ALLOWED_ORIGIN);
         }
 
-        const ext = (mime.split()[1]  bin).replace([^a-z0-9]gi, );
-        const key = `u${session.user_id}${crypto.randomUUID()}.${ext}`;
+        const ext = (mime.split("/")[1] || "bin").replace(/[^a-z0-9]/gi, "");
+        const key = `u/${session.user_id}/${crypto.randomUUID()}.${ext}`;
 
-        await env.AGORA_MEDIA.put(key, buf, { httpMetadata { contentType mime } });
+        await env.AGORA_MEDIA.put(key, buf, { httpMetadata: { contentType: mime } });
 
         const base = new URL(request.url);
-        const publicUrl = `${base.origin}media${encodeURIComponent(key)}`;
+        const publicUrl = `${base.origin}/media/${encodeURIComponent(key)}`;
 
-        return json({ ok true, key, url publicUrl }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true, key, url: publicUrl }, 200, ALLOWED_ORIGIN);
       }
       
-       Delete image from R2 (auth required)
-      if (url.pathname === apimediadelete && request.method === DELETE) {
-        const auth = request.headers.get(Authorization)  ;
+      // Delete image from R2 (auth required)
+      if (url.pathname === "/api/media/delete" && request.method === "DELETE") {
+        const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
-        if (!token) return json({ ok false, error missing_token }, 401, ALLOWED_ORIGIN);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
-          SELECT user_id FROM sessions WHERE token = 1 AND expires_at  2
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first();
 
-        if (!session) return json({ ok false, error invalid_token }, 401, ALLOWED_ORIGIN);
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
-        const body = await request.json().catch(() = ({}));
-        const key = String(body.key  ).trim();
-        if (!key) return json({ ok false, error missing_key }, 400, ALLOWED_ORIGIN);
+        const body = await request.json().catch(() => ({}));
+        const key = String(body.key || "").trim();
+        if (!key) return json({ ok: false, error: "missing_key" }, 400, ALLOWED_ORIGIN);
 
-         Ownership check user can delete only their own files
-        const prefix = `u${session.user_id}`;
+        // Ownership check: user can delete only their own files
+        const prefix = `u/${session.user_id}/`;
         if (!key.startsWith(prefix)) {
-          return json({ ok false, error forbidden }, 403, ALLOWED_ORIGIN);
+          return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
         }
 
         await env.AGORA_MEDIA.delete(key);
-        return json({ ok true }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
-      return json({ ok false, error not_found }, 404, ALLOWED_ORIGIN);
+      return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
     } catch (e) {
-      return json({ ok false, error server_error, detail String(e.message  e) }, 500, ALLOWED_ORIGIN);
+      return json({ ok: false, error: "server_error", detail: String(e?.message || e) }, 500, ALLOWED_ORIGIN);
     }
   }
 };
 
 function corsHeaders(origin) {
   return {
-    Access-Control-Allow-Origin origin,
-    Access-Control-Allow-Methods GET,POST,DELETE,OPTIONS,
-    Access-Control-Allow-Headers Content-Type, Authorization,
-    Access-Control-Allow-Credentials true,
-    Access-Control-Max-Age 86400,
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Credentials": "true",
+    "Access-Control-Max-Age": "86400",
   };
 }
 
 function json(obj, status, origin) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers {
-      Content-Type applicationjson; charset=utf-8,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
       ...corsHeaders(origin),
     },
   });
 }
 
 function parseBearer(authHeader) {
-  const m = authHeader.match(^Bearers+(.+)$i);
-  return m  m[1].trim()  ;
+  const m = authHeader.match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : "";
 }
 
 async function signState(obj, secret) {
   const data = b64url(JSON.stringify(obj));
   const sig = await hmac(data, secret);
-  return data + . + sig;
+  return data + "." + sig;
 }
 
 async function verifyState(state, secret) {
-  const [data, sig] = state.split(.);
-  if (!data  !sig) return null;
+  const [data, sig] = state.split(".");
+  if (!data || !sig) return null;
   const expected = await hmac(data, secret);
   if (sig !== expected) return null;
   try { return JSON.parse(atobUrl(data)); } catch { return null; }
@@ -526,29 +526,29 @@ async function verifyState(state, secret) {
 
 async function hmac(data, secret) {
   const key = await crypto.subtle.importKey(
-    raw,
+    "raw",
     new TextEncoder().encode(secret),
-    { name HMAC, hash SHA-256 },
+    { name: "HMAC", hash: "SHA-256" },
     false,
-    [sign]
+    ["sign"]
   );
-  const mac = await crypto.subtle.sign(HMAC, key, new TextEncoder().encode(data));
+  const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
   return b64urlBytes(new Uint8Array(mac));
 }
 
 function b64url(s) {
-  return btoa(unescape(encodeURIComponent(s))).replace(+g, -).replace(g, _).replace(=+$g, );
+  return btoa(unescape(encodeURIComponent(s))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
 function atobUrl(s) {
-  s = s.replace(-g, +).replace(_g, );
-  while (s.length % 4) s += =;
+  s = s.replace(/-/g, "+").replace(/_/g, "/");
+  while (s.length % 4) s += "=";
   return decodeURIComponent(escape(atob(s)));
 }
 
 function b64urlBytes(bytes) {
-  let bin = ;
+  let bin = "";
   for (const b of bytes) bin += String.fromCharCode(b);
-  return btoa(bin).replace(+g, -).replace(g, _).replace(=+$g, );
+  return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
-da rendere OTP vero
+//da rendere OTP vero
