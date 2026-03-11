@@ -1559,37 +1559,43 @@
             <input id="profilePictureUrlInput" type="hidden" />
           </div>
 
-          <form id="profileForm" class="profile-fields">
-            <label class="field">
-              <span>Display name</span>
-              <input id="profileDisplayNameInput" type="text" maxlength="60" placeholder="Your public name" />
-            </label>
+            <form id="profileForm" class="profile-fields">
+              <label class="field">
+                <span>Display name</span>
+                <input id="profileDisplayNameInput" type="text" maxlength="60" placeholder="Your public name" />
+              </label>
 
-            <label class="field">
-              <span>AWARDS</span>
-              <div class="awards-list">
+              <div class="field">
+                <span>AWARDS</span>
+                <div class="awards-list">
+                  <div class="award">
+                    <img class="award-icon" src="item/Socrate_AW.png" alt="Socrates award">
+                  </div>
 
-              <div class="award">
-                <img class="award-icon" src="item/Socrate_AW.png" alt="Socrates award">
+                  <div class="award">
+                    <img class="award-icon" src="item/DaVinci_AW.png" alt="Da Vinci award">
+                  </div>
 
-                            <img class="award-icon" src="item/DaVinci_AW.png" alt="Da Vinci award">
+                  <div class="award">
+                    <img class="award-icon" src="item/Alexandria_AW.png" alt="Library of Alexandria award">
+                  </div>
 
-                
-                <img class="award-icon " src="item/Alexandria_AW.png" alt="Library of Alexandria award">  
+                  <div class="award">
+                    <img class="award-icon" src="item/Hypatia_AW.png" alt="Hypatia award">
+                  </div>
 
-                <img class="award-icon" src="item/Hypatia_AW.png" alt="Hypatia award">
-                <img class="award-icon" src="item/Aristotele_AW.png" alt="Aristotle award">
+                  <div class="award">
+                    <img class="award-icon" src="item/Aristotele_AW.png" alt="Aristotle award">
+                  </div>
+                </div>
+              </div>
 
+              <div class="profile-actions">
+                <button id="profileSaveBtn" class="primary-btn" type="button">Save profile</button>
+                <div id="profileStatus" class="profile-status"></div>
+              </div>
+            </form>
 
-       
-            </div>
-            </label>
-
-
-          </form>
-                      <div class="profile-actions">
-              <button id="profileSaveBtn" class="primary-btn" type="button">Save profile</button>              <div id="profileStatus" class="profile-status"></div>
-            </div>
         </div>
       </section>
 
@@ -2415,6 +2421,7 @@ if (profileAvatarFileInput){
   });
 }
 
+
 async function saveProfileManually(){
   if (!getToken()){
     openModal();
@@ -2468,9 +2475,7 @@ if (profileForm){
   });
 
   profileForm.addEventListener("keydown", (e)=>{
-    if (e.key === "Enter") {
-      e.preventDefault();
-    }
+    if (e.key === "Enter") e.preventDefault();
   });
 }
 
