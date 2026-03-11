@@ -462,20 +462,21 @@ const TOPIC_COLORS={
   "Psicologia":"#da70d6","Ingegneria":"#ff8c00"
 };
 
-// ── Mock sessions ──────────────────────────────────────────────────
-let sessions=[
-  {id:1,name:"Laura M.",type:"persona",topic:"Analisi matematica — ripasso per l'esame di giugno",tags:["Matematica"],duration:"2 ore",lat:44.498,lng:11.343,time:"10 min fa"},
-  {id:2,name:"Biblioteca Universitaria",type:"luogo",place:"Biblioteca Universitaria di Bologna",topic:"Spazio studio silenzioso — sempre aperto a nuovi studenti",tags:["Matematica","Fisica","Ingegneria"],duration:"tutto il giorno",lat:44.496,lng:11.352,time:"2 ore fa"},
-  {id:3,name:"Davide",type:"persona",topic:"Chiacchiere di filosofia e politica contemporanea",tags:["Filosofia","Politica"],duration:"1 ora",lat:44.502,lng:11.340,time:"25 min fa"},
-  {id:4,name:"Caffè Letterario",type:"luogo",place:"Caffè Letterario Le Murate",topic:"Incontri su letteratura e scrittura creativa ogni giovedì",tags:["Letteratura","Arte"],duration:"questa settimana",lat:44.500,lng:11.358,time:"1 ora fa"},
-  {id:5,name:"Sara K.",type:"persona",topic:"Machine learning e AI — studio paper e implementazioni",tags:["Informatica","Matematica"],duration:"1 ora",lat:44.494,lng:11.346,time:"5 min fa"},
-  {id:6,name:"Marco T.",type:"persona",topic:"Chitarra classica e teoria musicale — confronto e pratica",tags:["Musica"],duration:"30 min",lat:44.505,lng:11.350,time:"40 min fa"},
-  {id:7,name:"Aula Studio Ingegneria",type:"luogo",place:"Aula Studio — Facoltà di Ingegneria",topic:"Studio ingegneria civile, meccanica, elettrica",tags:["Ingegneria","Fisica","Matematica"],duration:"tutto il giorno",lat:44.490,lng:11.355,time:"3 ore fa"},
-  {id:8,name:"Chiara F.",type:"persona",topic:"Economia politica e microeconomia — esame a luglio",tags:["Economia"],duration:"2 ore",lat:44.501,lng:11.337,time:"15 min fa"},
-  {id:9,name:"Andrea V.",type:"persona",topic:"Discussioni di psicologia cognitiva e neuroscienze",tags:["Psicologia","Biologia"],duration:"1 ora",lat:44.497,lng:11.361,time:"1 ora fa"},
-  {id:10,name:"Giardino della Montagnola",type:"luogo",place:"Giardino della Montagnola",topic:"Studio all'aperto in buona compagnia — portate i libri!",tags:["Filosofia","Letteratura","Musica"],duration:"questa settimana",lat:44.503,lng:11.344,time:"30 min fa"},
-];
+// ── API ────────────────────────────────────────────────────────────
+const API_BASE="https://agora-api.convergegame.workers.dev";
+const TOKEN_KEY="agora_token";
+let sessions=[];
 
+async function loadSessions(){
+  document.getElementById("sessionCount").textContent="Caricamento…";
+  try{
+    const res=await fetch(`${API_BASE}/api/map/sessions`);
+    const data=await res.json();
+    if(data.ok){sessions=data.sessions||[];}
+    else{sessions=[];}
+  }catch(e){sessions=[];}
+  refresh();
+}
 // ── State ──────────────────────────────────────────────────────────
 let activeTopics=new Set();
 let activeType="all";
@@ -584,9 +585,8 @@ function focusSession(id){
 
 window.contactSession=function(id){
   const s=sessions.find(x=>x.id===id);if(!s)return;
-  alert(`Per ora questa funzione richiede il backend AGORÀ.\nSessione: ${s.name}\nArgomento: ${s.topic}`);
+  window.location.href=`index.html?studyContact=${encodeURIComponent(s.name)}`;
 };
-
 // ── FILTER ─────────────────────────────────────────────────────────
 function getFiltered(){
   return sessions.filter(s=>{
@@ -692,7 +692,7 @@ document.getElementById("modalOverlay").addEventListener("click",e=>{
   if(e.target===document.getElementById("modalOverlay"))document.getElementById("modalOverlay").classList.remove("open");
 });
 
-document.getElementById("modalSubmit").addEventListener("click",()=>{
+document.getElementById("modalSubmit").addEventListener("click",async()=>{
   const name=document.getElementById("fName").value.trim();
   const topic=document.getElementById("fTopic").value.trim();
   const type=document.getElementById("fType").value;
@@ -700,18 +700,29 @@ document.getElementById("modalSubmit").addEventListener("click",()=>{
   const duration=document.getElementById("fDuration").value;
   if(!name||!topic){alert("Inserisci almeno il nome e l'argomento.");return;}
 
-  const jitter=(Math.random()-.5)*.004;
-  const newSession={
-    id:Date.now(),name,type,topic,tags:[...selectedTags],duration,
-    place:type==="luogo"?place:"",
-    lat:(pendingLat||userLat)+jitter,
-    lng:(pendingLng||userLng)+jitter,
-    time:"Adesso"
-  };
-  sessions.unshift(newSession);
-  document.getElementById("modalOverlay").classList.remove("open");
-  refresh();
-  setTimeout(()=>focusSession(newSession.id),300);
+  const token=localStorage.getItem(TOKEN_KEY);
+  const btn=document.getElementById("modalSubmit");
+  btn.textContent="Pubblicazione…";btn.disabled=true;
+
+  try{
+    const res=await fetch(`${API_BASE}/api/map/sessions`,{
+      method:"POST",
+      headers:{"Content-Type":"application/json",...(token?{"Authorization":"Bearer "+token}:{})},
+      body:JSON.stringify({name,type,place,topic,tags:[...selectedTags],duration,lat:pendingLat||userLat,lng:pendingLng||userLng})
+    });
+    const data=await res.json();
+    if(data.ok){
+      document.getElementById("modalOverlay").classList.remove("open");
+      await loadSessions();
+      setTimeout(()=>focusSession(data.id),300);
+    }else{
+      alert("Errore: "+( data.error||"sconosciuto"));
+    }
+  }catch(e){
+    alert("Errore di connessione.");
+  }finally{
+    btn.textContent="Pubblica →";btn.disabled=false;
+  }
 });
 
 // ── GEOLOCATION ────────────────────────────────────────────────────
@@ -740,7 +751,8 @@ document.getElementById("sidebarToggle").addEventListener("click",()=>{
 // ── INIT ───────────────────────────────────────────────────────────
 buildTopicFilters();
 buildTagPicker();
-refresh();
+loadSessions();
+
 </script>
 </body>
 </html>
