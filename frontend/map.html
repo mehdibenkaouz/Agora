@@ -270,6 +270,19 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 /* ── EMPTY STATE ── */
 .empty-list{padding:20px;text-align:center;color:var(--muted);font-size:.8rem;font-style:italic;}
 
+/* POI TOGGLE */
+.poi-toggle{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:12px;cursor:pointer;transition:border-color .15s;
+}
+.poi-toggle:hover{border-color:var(--brand);}
+.poi-toggle-label{font-family:'Cinzel',serif;font-size:.66rem;letter-spacing:.10em;text-transform:uppercase;color:var(--muted);}
+.poi-switch{width:36px;height:20px;border-radius:999px;background:var(--line);position:relative;transition:background .2s;flex-shrink:0;}
+.poi-switch.on{background:var(--brand);}
+.poi-switch::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s;}
+.poi-switch.on::after{transform:translateX(16px);}
+
 /* Mobile */
 @media(max-width:640px){
   .sidebar{position:absolute;top:0;bottom:0;z-index:600;}
@@ -329,6 +342,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
             <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
             Luogo
           </button>
+        </div>
+      </div>
+
+<div class="filter-section">
+        <div class="poi-toggle" id="poiToggle">
+          <span class="poi-toggle-label">📍 Luoghi OSM (biblioteche, università…)</span>
+          <div class="poi-switch on" id="poiSwitch"></div>
         </div>
       </div>
 
@@ -742,6 +762,136 @@ function locateUser(){
 document.getElementById("locBtn").addEventListener("click",locateUser);
 document.getElementById("locateBtn").addEventListener("click",locateUser);
 
+// ── POI — OpenStreetMap via Overpass API ───────────────────────────
+let poiMarkers=[];
+let poiVisible=true;
+let poiLastBounds=null;
+let poiLoading=false;
+
+const POI_TYPES=[
+  {key:"amenity",values:["university","library","college","cafe","bar","community_centre"],emoji:"🎓📚☕",label:{university:"Università",library:"Biblioteca",college:"Istituto",cafe:"Caffè",bar:"Bar",community_centre:"Centro Comunitario"}},
+  {key:"leisure",values:["park","garden"],emoji:"🌿",label:{park:"Parco",garden:"Giardino"}},
+  {key:"building",values:["university","college"],emoji:"🏛️",label:{university:"Edificio Università",college:"Edificio Istituto"}},
+];
+
+function poiColor(tags){
+  const a=tags.amenity,l=tags.leisure;
+  if(a==="university"||a==="college"||tags.building==="university")return"#4a90d9";
+  if(a==="library")return"#c9932a";
+  if(a==="cafe"||a==="bar")return"#3a8a3a";
+  if(l==="park"||l==="garden")return"#228b22";
+  return"#708090";
+}
+
+function poiLabel(tags){
+  if(tags.amenity)return POI_TYPES[0].label[tags.amenity]||tags.amenity;
+  if(tags.leisure)return POI_TYPES[1].label[tags.leisure]||tags.leisure;
+  if(tags.building)return POI_TYPES[2].label[tags.building]||tags.building;
+  return"Luogo";
+}
+
+function poiEmoji(tags){
+  const a=tags.amenity,l=tags.leisure;
+  if(a==="university"||a==="college")return"🎓";
+  if(a==="library")return"📚";
+  if(a==="cafe")return"☕";
+  if(a==="bar")return"🍺";
+  if(a==="community_centre")return"🏛️";
+  if(l==="park"||l==="garden")return"🌿";
+  return"📍";
+}
+
+function makePOIIcon(tags){
+  const c=poiColor(tags);
+  const emoji=poiEmoji(tags);
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="38" viewBox="0 0 32 38">
+    <path d="M16 2C9.9 2 5 6.9 5 13c0 8.5 11 23 11 23S27 21.5 27 13C27 6.9 22.1 2 16 2z" fill="${c}" stroke="white" stroke-width="1.5" opacity="0.85"/>
+    <circle cx="16" cy="13" r="7" fill="white" opacity="0.92"/>
+    <text x="16" y="17" text-anchor="middle" font-size="9">${emoji}</text>
+  </svg>`;
+  return L.divIcon({html:svg,className:"",iconSize:[32,38],iconAnchor:[16,38],popupAnchor:[0,-38]});
+}
+
+function buildPOIPopup(el){
+  const tags=el.tags||{};
+  const name=tags.name||tags["name:it"]||tags["name:en"]||poiLabel(tags);
+  const type=poiLabel(tags);
+  const hours=tags.opening_hours||"";
+  const website=tags.website||tags["contact:website"]||"";
+  const addr=[tags["addr:street"],tags["addr:housenumber"]].filter(Boolean).join(" ");
+  return `<div class="popup-inner">
+    <div class="popup-type">${poiEmoji(tags)} ${type}</div>
+    <div class="popup-name">${name}</div>
+    ${addr?`<div class="popup-topic" style="font-size:.7rem">${addr}</div>`:""}
+    ${hours?`<div class="popup-meta">🕐 ${hours}</div>`:""}
+    ${website?`<div class="popup-meta"><a href="${website}" target="_blank" style="color:var(--brand)">🌐 Sito web</a></div>`:""}
+    <div class="popup-meta" style="opacity:.5;font-size:.65rem">Dati © OpenStreetMap contributors</div>
+  </div>`;
+}
+
+async function loadPOI(){
+  if(!poiVisible||poiLoading)return;
+  const bounds=map.getBounds();
+  // Non ricaricare se i bounds sono quasi uguali
+  if(poiLastBounds&&poiLastBounds.contains(bounds)&&bounds.contains(poiLastBounds.pad(-0.1)))return;
+  poiLoading=true;
+  poiLastBounds=bounds.pad(0.05);
+  const{_southWest:sw,_northEast:ne}=poiLastBounds;
+
+  // Overpass query: tutti i POI rilevanti nel bbox
+  const query=`[out:json][timeout:15];
+(
+  node["amenity"~"university|library|college|cafe|bar|community_centre"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+  node["leisure"~"park|garden"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+  way["amenity"~"university|library|college"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+  way["leisure"~"park|garden"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+)->.all;
+out center 120;`;
+
+  try{
+    const res=await fetch("https://overpass-api.de/api/interpreter",{
+      method:"POST",body:query
+    });
+    const data=await res.json();
+    clearPOI();
+    (data.elements||[]).forEach(el=>{
+      const lat=el.lat||(el.center&&el.center.lat);
+      const lng=el.lon||(el.center&&el.center.lon);
+      if(!lat||!lng)return;
+      const tags=el.tags||{};
+      if(!tags.name&&!tags["name:it"])return; // salta luoghi senza nome
+      const m=L.marker([lat,lng],{icon:makePOIIcon(tags),zIndexOffset:-100})
+        .addTo(map)
+        .bindPopup(buildPOIPopup(el),{maxWidth:240});
+      poiMarkers.push(m);
+    });
+  }catch(e){
+    // Overpass non disponibile — silenzioso
+  }finally{
+    poiLoading=false;
+  }
+}
+
+function clearPOI(){
+  poiMarkers.forEach(m=>map.removeLayer(m));
+  poiMarkers=[];
+}
+
+// Toggle POI on/off
+document.getElementById("poiToggle").addEventListener("click",()=>{
+  poiVisible=!poiVisible;
+  document.getElementById("poiSwitch").classList.toggle("on",poiVisible);
+  if(poiVisible){loadPOI();}else{clearPOI();}
+});
+
+// Ricarica POI quando la mappa si sposta (con debounce)
+let poiDebounce=null;
+map.on("moveend",()=>{
+  if(!poiVisible)return;
+  clearTimeout(poiDebounce);
+  poiDebounce=setTimeout(loadPOI,600);
+});
+
 // ── MOBILE SIDEBAR TOGGLE ──────────────────────────────────────────
 document.getElementById("sidebarToggle").addEventListener("click",()=>{
   document.getElementById("sidebar").classList.toggle("collapsed");
@@ -751,7 +901,7 @@ document.getElementById("sidebarToggle").addEventListener("click",()=>{
 buildTopicFilters();
 buildTagPicker();
 loadSessions();
-
+loadPOI();
 </script>
 </body>
 </html>
