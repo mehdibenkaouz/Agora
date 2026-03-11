@@ -1681,78 +1681,57 @@
       </div><!-- /bookStage posts -->
 
       <div class="h-title">Book of saved posts</div>
-      <div id="bookStage" class="book-stage" aria-label="Book viewer">
-
-        <!-- Spine decoration -->
+<div id="savedBookStage" class="book-stage" aria-label="Book viewer">
         <div class="book-stage-spine" aria-hidden="true"></div>
-
-        <!-- Index button -->
-        <button id="openIndexBtn" class="file-btn book-index-btn" type="button">Index</button>
-
-        <!-- THE BOOK -->
-        <div class="book-shell" id="bookShell" tabindex="0" aria-label="Book pages">
-          <div class="book-spread" id="bookSpread">
-
-            <!-- LEFT PAGE -->
+        <button id="savedOpenIndexBtn" class="file-btn book-index-btn" type="button">Index</button>
+        <div class="book-shell" id="savedBookShell" tabindex="0" aria-label="Book pages">
+          <div class="book-spread" id="savedBookSpread">
             <div class="book-page left" aria-label="Left page">
               <div class="page-inner">
                 <div class="page-top">
-                  <div id="leftLabel" class="page-label">—</div>
-                  <div id="leftDate" class="page-date"></div>
+                  <div id="savedLeftLabel" class="page-label">—</div>
+                  <div id="savedLeftDate" class="page-date"></div>
                 </div>
-                <div id="leftContent" class="page-content"></div>
+                <div id="savedLeftContent" class="page-content"></div>
                 <div class="page-bottom">
-                  <span id="leftNum" class="pnum"></span>
-                  <span id="leftId" style="opacity:.55; font-style:italic; font-size:0.68rem;"></span>
+                  <span id="savedLeftNum" class="pnum"></span>
+                  <span id="savedLeftId" style="opacity:.55; font-style:italic; font-size:0.68rem;"></span>
                 </div>
               </div>
             </div>
-
-            <!-- GUTTER -->
             <div class="book-gutter" aria-hidden="true"></div>
-
-            <!-- RIGHT PAGE -->
             <div class="book-page right" aria-label="Right page">
               <div class="page-inner">
                 <div class="page-top">
-                  <div id="rightLabel" class="page-label">—</div>
-                  <div id="rightDate" class="page-date"></div>
+                  <div id="savedRightLabel" class="page-label">—</div>
+                  <div id="savedRightDate" class="page-date"></div>
                 </div>
-                <div id="rightContent" class="page-content"></div>
+                <div id="savedRightContent" class="page-content"></div>
                 <div class="page-bottom">
-                  <span id="rightNum" class="pnum"></span>
-                  <span id="rightId" style="opacity:.55; font-style:italic; font-size:0.68rem;"></span>
+                  <span id="savedRightNum" class="pnum"></span>
+                  <span id="savedRightId" style="opacity:.55; font-style:italic; font-size:0.68rem;"></span>
                 </div>
               </div>
             </div>
-
           </div>
         </div>
-
-        <!-- FLIP BUTTONS -->
-        <button id="prevSpreadBtn" class="flip-btn prev" type="button" aria-label="Previous pages" title="Previous (←)">
+        <button id="savedPrevSpreadBtn" class="flip-btn prev" type="button" aria-label="Previous pages" title="Previous (←)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
         </button>
-        <button id="nextSpreadBtn" class="flip-btn next" type="button" aria-label="Next pages" title="Next (→)">
+        <button id="savedNextSpreadBtn" class="flip-btn next" type="button" aria-label="Next pages" title="Next (→)">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
         </button>
-
-        <!-- FOOTER META -->
         <div class="book-footer">
-          <div id="spreadMeta" class="book-meta-chip">—</div>
+          <div id="savedSpreadMeta" class="book-meta-chip">—</div>
         </div>
-
-        <!-- EMPTY STATE -->
-        <div id="emptyState" class="empty-state" style="display:none;">
-          <div class="empty-title" id="emptyTitle">Loading…</div>
-          <div class="empty-sub" id="emptySub">If you're not logged in, open the account menu → Login.</div>
+        <div id="savedEmptyState" class="empty-state" style="display:none;">
+          <div class="empty-title" id="savedEmptyTitle">Loading…</div>
+          <div class="empty-sub" id="savedEmptySub">No saved posts yet.</div>
         </div>
-
-        <!-- INDEX PANEL -->
-        <div id="indexPanel" class="index-panel" aria-hidden="true">
+        <div id="savedIndexPanel" class="index-panel" aria-hidden="true">
           <div class="index-head">
             <span>Index</span>
-            <button id="closeIndexBtn" class="icon-btn" type="button" title="Close">
+            <button id="savedCloseIndexBtn" class="icon-btn" type="button" title="Close">
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 6l12 12"></path><path d="M18 6L6 18"></path>
               </svg>
@@ -1761,13 +1740,13 @@
           <div class="index-body">
             <label class="field" style="margin:0;">
               <span>Search</span>
-              <input id="indexSearch" type="text" placeholder="Search entries…" autocomplete="off" />
+              <input id="savedIndexSearch" type="text" placeholder="Search entries…" autocomplete="off" />
             </label>
-            <div id="indexList" class="index-list"></div>
+            <div id="savedIndexList" class="index-list"></div>
           </div>
         </div>
-
       </div><!-- /bookStage saved -->
+
 
 
     </div>
@@ -2465,6 +2444,7 @@ async function loadPosts(){
   if (!CURRENT_USER){
     POSTS = [];
     renderSpread();
+    if (window.loadSavedPosts) window.loadSavedPosts();
     return;
   }
 
@@ -2479,6 +2459,7 @@ async function loadPosts(){
     showEmpty("Failed to load posts", "Try Refresh. If it keeps failing, check API logs / token.");
     renderSpread();
   }
+  if (window.loadSavedPosts) window.loadSavedPosts();
 }
 
 if (profilePictureUrlInput){
@@ -2681,6 +2662,239 @@ if (profileForm){
 })();
 
 loadPosts();
+
+/* ===== SAVED BOOK ENGINE ===== */
+(function(){
+  let SAVED_POSTS = [];
+  let savedSpreadIndex = 0;
+  let _savedFlipping = false;
+
+  const els = {
+    emptyState:    document.getElementById("savedEmptyState"),
+    emptyTitle:    document.getElementById("savedEmptyTitle"),
+    emptySub:      document.getElementById("savedEmptySub"),
+    leftLabel:     document.getElementById("savedLeftLabel"),
+    leftDate:      document.getElementById("savedLeftDate"),
+    leftContent:   document.getElementById("savedLeftContent"),
+    leftNum:       document.getElementById("savedLeftNum"),
+    leftId:        document.getElementById("savedLeftId"),
+    rightLabel:    document.getElementById("savedRightLabel"),
+    rightDate:     document.getElementById("savedRightDate"),
+    rightContent:  document.getElementById("savedRightContent"),
+    rightNum:      document.getElementById("savedRightNum"),
+    rightId:       document.getElementById("savedRightId"),
+    prevBtn:       document.getElementById("savedPrevSpreadBtn"),
+    nextBtn:       document.getElementById("savedNextSpreadBtn"),
+    meta:          document.getElementById("savedSpreadMeta"),
+    openIndexBtn:  document.getElementById("savedOpenIndexBtn"),
+    indexPanel:    document.getElementById("savedIndexPanel"),
+    closeIndexBtn: document.getElementById("savedCloseIndexBtn"),
+    indexSearch:   document.getElementById("savedIndexSearch"),
+    indexList:     document.getElementById("savedIndexList"),
+    bookStage:     document.getElementById("savedBookStage"),
+    bookSpread:    document.getElementById("savedBookSpread"),
+  };
+
+  function showEmpty(title, sub){
+    if (els.emptyState) els.emptyState.style.display = "flex";
+    if (els.emptyTitle) els.emptyTitle.textContent = title || "—";
+    if (els.emptySub) els.emptySub.textContent = sub || "";
+  }
+  function hideEmpty(){ if (els.emptyState) els.emptyState.style.display = "none"; }
+  function spreadCount(){ return Math.max(1, Math.ceil(SAVED_POSTS.length / 2)); }
+
+  function renderPage(side, post, pageNo){
+    const isLeft = side === "left";
+    const labelEl   = isLeft ? els.leftLabel   : els.rightLabel;
+    const dateEl    = isLeft ? els.leftDate    : els.rightDate;
+    const contentEl = isLeft ? els.leftContent : els.rightContent;
+    const numEl     = isLeft ? els.leftNum     : els.rightNum;
+    const idEl      = isLeft ? els.leftId      : els.rightId;
+    if (!post){
+      if (labelEl) labelEl.textContent = "—";
+      if (dateEl) dateEl.textContent = "";
+      if (contentEl) contentEl.innerHTML = "";
+      if (numEl) numEl.textContent = "";
+      if (idEl) idEl.textContent = "";
+      return;
+    }
+    if (labelEl) labelEl.textContent = "Saved " + pageNo;
+    if (dateEl) dateEl.textContent = formatDate(post.saved_at || post.created_at);
+    if (contentEl) contentEl.innerHTML = sanitizeForReader(post.content);
+    if (numEl) numEl.textContent = String(pageNo);
+    if (idEl) idEl.textContent = post.id ? ("#" + String(post.id).slice(0,8)) : "";
+  }
+
+  function renderSpread(){
+    if (!CURRENT_USER){
+      showEmpty("Login required", "Open the account menu → Login.");
+      renderPage("left", null, 0); renderPage("right", null, 0);
+      if (els.prevBtn) els.prevBtn.disabled = true;
+      if (els.nextBtn) els.nextBtn.disabled = true;
+      if (els.meta) els.meta.textContent = "—";
+      return;
+    }
+    if (!SAVED_POSTS.length){
+      showEmpty("No saved posts", "Save posts from Home using the bookmark button.");
+      renderPage("left", null, 0); renderPage("right", null, 0);
+      if (els.prevBtn) els.prevBtn.disabled = true;
+      if (els.nextBtn) els.nextBtn.disabled = true;
+      if (els.meta) els.meta.textContent = "0 saved";
+      return;
+    }
+    hideEmpty();
+    const li = savedSpreadIndex * 2;
+    const ri = li + 1;
+    renderPage("left",  SAVED_POSTS[li] || null, li + 1);
+    renderPage("right", SAVED_POSTS[ri] || null, ri + 1);
+    if (els.prevBtn) els.prevBtn.disabled = (savedSpreadIndex <= 0);
+    if (els.nextBtn) els.nextBtn.disabled = (savedSpreadIndex >= spreadCount() - 1);
+    if (els.meta) els.meta.textContent = `Spread ${savedSpreadIndex+1} / ${spreadCount()} • ${SAVED_POSTS.length} saved`;
+  }
+
+  function _readFlipMs(){
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--flip-half').trim();
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : 980;
+  }
+
+  function waitEnd(el, ms){
+    return new Promise(res => {
+      if (!el) return res();
+      let done = false;
+      const finish = () => { if (done) return; done=true; el.removeEventListener("animationend", onEnd); clearTimeout(t); res(); };
+      const onEnd = (e) => { if (e.target === el) finish(); };
+      const t = setTimeout(finish, ms);
+      el.addEventListener("animationend", onEnd);
+    });
+  }
+
+  async function setSpread(i, dir){
+    const max = spreadCount() - 1;
+    const next = Math.max(0, Math.min(max, i));
+    if (next === savedSpreadIndex && SAVED_POSTS.length > 0) return;
+    if (_savedFlipping) return;
+    const d = dir || (i > savedSpreadIndex ? "next" : "prev");
+    const reducedMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (!SAVED_POSTS.length || !CURRENT_USER || reducedMotion){
+      savedSpreadIndex = next; renderSpread(); return;
+    }
+    _savedFlipping = true;
+    const spread = els.bookSpread;
+    const pageL = spread ? spread.querySelector(".book-page.left") : null;
+    const pageR = spread ? spread.querySelector(".book-page.right") : null;
+    const gutter = spread ? spread.querySelector(".book-gutter") : null;
+    const turning   = d === "next" ? pageR : pageL;
+    const companion = d === "next" ? pageL : pageR;
+    const outCls = d === "next" ? "flip-out-next" : "flip-out-prev";
+    const inCls  = d === "next" ? "flip-in-next"  : "flip-in-prev";
+    const compCls= d === "next" ? "companion-next" : "companion-prev";
+    const half = _readFlipMs();
+    if (turning) turning.classList.add("is-turning");
+    if (companion) companion.classList.add("is-companion");
+    if (gutter) gutter.classList.add("is-flipping");
+    if (els.prevBtn) els.prevBtn.disabled = true;
+    if (els.nextBtn) els.nextBtn.disabled = true;
+    try {
+      if (companion) companion.classList.add(compCls);
+      if (turning) turning.classList.add(outCls);
+      await waitEnd(turning, half + 120);
+      if (turning) turning.classList.remove(outCls);
+      if (companion) companion.classList.remove(compCls);
+      savedSpreadIndex = next;
+      renderSpread();
+      if (turning) turning.classList.add(inCls);
+      await waitEnd(turning, half + 120);
+      if (turning) turning.classList.remove(inCls);
+    } finally {
+      if (gutter) gutter.classList.remove("is-flipping");
+      if (turning) turning.classList.remove("is-turning");
+      if (companion) companion.classList.remove("is-companion");
+      _savedFlipping = false;
+      renderSpread();
+    }
+  }
+
+  function buildIndex(){
+    if (!els.indexList) return;
+    els.indexList.innerHTML = "";
+    const q = String(els.indexSearch ? els.indexSearch.value : "").trim().toLowerCase();
+    const items = SAVED_POSTS.map((p, idx) => {
+      const text = extractPlainText(p.content);
+      return { idx, pageNo: idx+1, date: formatDate(p.saved_at || p.created_at), text,
+               hay: (text+" "+(p.id||"")+" "+(p.created_at||"")).toLowerCase() };
+    }).filter(it => !q || it.hay.includes(q));
+    if (!items.length){
+      const d = document.createElement("div");
+      d.style.cssText = "padding:12px;color:var(--muted)";
+      d.textContent = "No results.";
+      els.indexList.appendChild(d); return;
+    }
+    for (const it of items){
+      const row = document.createElement("div");
+      row.className = "index-item";
+      row.innerHTML = `<div class="idx-num">${it.pageNo}</div>
+        <div class="idx-text">
+          <div class="idx-title">${escapeHtml(it.date)}</div>
+          <div class="idx-sub">${escapeHtml(it.text.slice(0,90)||"(empty)")}</div>
+        </div>`;
+      row.addEventListener("click", ()=>{ closeIndex(); setSpread(Math.floor(it.idx/2)); els.bookStage?.querySelector(".book-shell")?.focus(); });
+      els.indexList.appendChild(row);
+    }
+  }
+
+  function openIndex(){
+    if (!els.indexPanel) return;
+    els.indexPanel.classList.add("open");
+    els.indexPanel.setAttribute("aria-hidden","false");
+    buildIndex();
+    setTimeout(()=> els.indexSearch?.focus(), 0);
+  }
+  function closeIndex(){
+    if (!els.indexPanel) return;
+    els.indexPanel.classList.remove("open");
+    els.indexPanel.setAttribute("aria-hidden","true");
+  }
+
+  if (els.openIndexBtn) els.openIndexBtn.addEventListener("click", (e)=>{ e.stopPropagation(); els.indexPanel?.classList.contains("open") ? closeIndex() : openIndex(); });
+  if (els.closeIndexBtn) els.closeIndexBtn.addEventListener("click", closeIndex);
+  if (els.indexSearch) els.indexSearch.addEventListener("input", buildIndex);
+  if (els.prevBtn) els.prevBtn.addEventListener("click", ()=> setSpread(savedSpreadIndex - 1, 'prev'));
+  if (els.nextBtn) els.nextBtn.addEventListener("click", ()=> setSpread(savedSpreadIndex + 1, 'next'));
+
+  // Swipe
+  if (els.bookStage){
+    let sx=0, sy=0, down=false;
+    els.bookStage.addEventListener("pointerdown", (e)=>{ down=true; sx=e.clientX; sy=e.clientY; });
+    els.bookStage.addEventListener("pointerup", (e)=>{
+      if (!down) return; down=false;
+      const dx=e.clientX-sx, dy=e.clientY-sy;
+      if (Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)) return;
+      dx>0 ? setSpread(savedSpreadIndex-1,'prev') : setSpread(savedSpreadIndex+1,'next');
+    });
+    els.bookStage.addEventListener("pointercancel", ()=>{ down=false; });
+  }
+
+  window.loadSavedPosts = async function(){
+    showEmpty("Loading…", "Fetching saved posts…");
+    if (!CURRENT_USER){
+      SAVED_POSTS = []; renderSpread(); return;
+    }
+    try {
+      const out = await api("/api/saved", { method: "GET" });
+      SAVED_POSTS = Array.isArray(out.posts) ? out.posts : [];
+      savedSpreadIndex = 0;
+      renderSpread();
+    } catch(e){
+      console.error(e);
+      SAVED_POSTS = [];
+      showEmpty("Failed to load", "Try refreshing.");
+    }
+  };
+
+  // initial render (aspetta che refreshMe sia fatto)
+  // viene chiamato da loadPosts() già
+})();
 </script>
 
 </body>

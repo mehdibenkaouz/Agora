@@ -3119,7 +3119,7 @@
         document.addEventListener("keydown", onKey);
       });
     }
-    function renderPosts(posts) {
+    function renderPosts(posts, savedIds = new Set()) {
       feed.innerHTML = "";
       postByKey.clear();
 
@@ -3135,6 +3135,7 @@
         const key = makePostKey(p, idx);
         postByKey.set(key, p);
         const st = ensurePostUI(key, p);
+          if (savedIds.has(p.id)) st.saved = true;
 
         const card = document.createElement("article");
         card.className = "post-card";
@@ -3260,11 +3261,24 @@
           bumpFeedCountsForKey(key);
         });
 
-        saveBtn?.addEventListener("click", (e) => {
+        saveBtn?.addEventListener("click", async (e) => {
           e.stopPropagation();
           if (!getToken()) { openModal(); return; }
-          st.saved = !st.saved;
+          const newSaved = !st.saved;
+          st.saved = newSaved;
           saveBtn.classList.toggle("is-on", st.saved);
+          try {
+            if (newSaved) {
+              await api("/api/saved", { method: "POST", body: JSON.stringify({ post_id: p.id }) });
+            } else {
+              await api("/api/saved", { method: "DELETE", body: JSON.stringify({ post_id: p.id }) });
+            }
+          } catch (err) {
+            // rollback visivo se la chiamata fallisce
+            st.saved = !newSaved;
+            saveBtn.classList.toggle("is-on", st.saved);
+            console.warn("save toggle failed:", err);
+          }
         });
 
         commentBtn?.addEventListener("click", (e) => {
@@ -3284,7 +3298,15 @@
 
     async function loadFeed() {
       const data = await api("/api/posts", { method: "GET" });
-      renderPosts(data.posts || []);
+      // Se loggato, carica anche i post salvati per inizializzare lo stato
+      let savedIds = new Set();
+      if (getToken()) {
+        try {
+          const saved = await api("/api/saved", { method: "GET" });
+          (saved.posts || []).forEach(p => savedIds.add(p.id));
+        } catch (_) {}
+      }
+      renderPosts(data.posts || [], savedIds);
     }
     
     // Thread interactions (frontend-only for now)

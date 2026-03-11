@@ -65,12 +65,78 @@ export default {
                 ELSE u.email
               END
             ) AS display_name,
-            COALESCE(u.picture_url, '') AS picture_url`
+            COALESCE(u.picture_url, '') AS picture_url
+          FROM sessions s
+          JOIN users u ON u.id = s.user_id
+          WHERE s.token = ?1
+            AND s.expires_at > ?2`
         ).bind(token, new Date().toISOString()).first();
 
         if (!row) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
         return json({ ok: true, user: { id: row.id, email: row.email,  display_name: row.display_name, picture_url: row.picture_url} }, 200, ALLOWED_ORIGIN);
       }
+
+
+      if (url.pathname === "/api/profile" && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+
+        const session = await env.dbagora.prepare(
+          `SELECT
+            s.user_id AS user_id,
+            u.email AS email
+          FROM sessions s
+          JOIN users u ON u.id = s.user_id
+          WHERE s.token = ?1
+            AND s.expires_at > ?2`
+        ).bind(token, new Date().toISOString()).first();
+
+        if (!session) {
+          return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+        }
+
+        const body = await request.json().catch(() => ({}));
+
+        const display_name = String(body.display_name || "")
+          .trim()
+          .replace(/\s+/g, " ")
+          .slice(0, 60);
+
+        const picture_url = String(body.picture_url || "")
+          .trim()
+          .slice(0, 1000);
+
+        if (!display_name) {
+          return json({ ok: false, error: "invalid_display_name" }, 400, ALLOWED_ORIGIN);
+        }
+
+        if (
+          picture_url &&
+          !/^https?:\/\//i.test(picture_url) &&
+          !picture_url.startsWith("/media/")
+        ) {
+          return json({ ok: false, error: "invalid_picture_url" }, 400, ALLOWED_ORIGIN);
+        }
+
+        await env.dbagora.prepare(
+          `UPDATE users
+          SET display_name = ?1,
+              picture_url = ?2
+          WHERE id = ?3`
+        ).bind(display_name, picture_url, session.user_id).run();
+
+        return json({
+          ok: true,
+          user: {
+            id: session.user_id,
+            email: session.email || "",
+            display_name,
+            picture_url
+          }
+        }, 200, ALLOWED_ORIGIN);
+      }
+
 
       if (url.pathname === "/api/posts" && request.method === "POST") {
         const auth = request.headers.get("Authorization") || "";
@@ -162,7 +228,7 @@ export default {
               c.id,
               c.content,
               c.created_at,
-              u.email as author_email
+              u.email as author_email,
               COALESCE(
                 NULLIF(TRIM(u.display_name), ''),
                 CASE
@@ -397,11 +463,23 @@ export default {
         if (!userId) {
           userId = crypto.randomUUID();
           await env.dbagora.prepare(
-            "INSERT INTO users (id, email, created_at, google_sub, display_name, picture_url) VALUES (?1, ?2, ?3, ?4, ?5, ?6)"
+            `INSERT INTO users (id, email, created_at, google_sub, display_name, picture_url)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
           ).bind(userId, email, now, sub, name, picture).run();
         } else {
           await env.dbagora.prepare(
-            "UPDATE users SET google_sub=?1, display_name=?2, picture_url=?3 WHERE id=?4"
+            `UPDATE users
+            SET
+              google_sub = ?1,
+              display_name = CASE
+                WHEN display_name IS NULL OR TRIM(display_name) = '' THEN ?2
+                ELSE display_name
+              END,
+              picture_url = CASE
+                WHEN picture_url IS NULL OR TRIM(picture_url) = '' THEN ?3
+                ELSE picture_url
+              END
+            WHERE id = ?4`
           ).bind(sub, name, picture, userId).run();
         }
 
