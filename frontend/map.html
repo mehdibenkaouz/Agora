@@ -831,38 +831,81 @@ function buildPOIPopup(el){
 
 async function loadPOI(){
   if(!poiVisible||poiLoading)return;
+  const zoom=map.getZoom();
+  const center=map.getCenter();
   const bounds=map.getBounds();
-  if(poiLastBounds&&poiLastBounds.contains(bounds)&&bounds.contains(poiLastBounds.pad(-0.1)))return;
+
+  // Ricarica se il centro si è spostato di più di 1/3 della vista
+  if(poiLastBounds){
+    const h=poiLastBounds.getNorth()-poiLastBounds.getSouth();
+    const w=poiLastBounds.getEast()-poiLastBounds.getWest();
+    const dlat=Math.abs(center.lat-(poiLastBounds.getSouth()+h/2));
+    const dlng=Math.abs(center.lng-(poiLastBounds.getWest()+w/2));
+    if(dlat<h*0.33&&dlng<w*0.33&&poiLastZoom===zoom)return;
+  }
+
   poiLoading=true;
-  poiLastBounds=bounds.pad(0.08);
+  poiLastBounds=bounds.pad(0.15);
+  poiLastZoom=zoom;
   const{_southWest:sw,_northEast:ne}=poiLastBounds;
 
-  // Query pulita: solo luoghi rilevanti per lo studio, tutti i tipi OSM (node/way/relation)
-  const query=`[out:json][timeout:25];
+  // Zoom-based priority:
+  // < 12 → solo università e musei (grandi, visibili da lontano)
+  // 12-14 → aggiungi biblioteche e community centre
+  // ≥ 15 → aggiungi parchi e giardini
+  let amenityFilter,leisureFilter;
+  if(zoom<12){
+    amenityFilter="university|college|museum";
+    leisureFilter=null;
+  }else if(zoom<15){
+    amenityFilter="university|college|museum|library|community_centre";
+    leisureFilter=null;
+  }else{
+    amenityFilter="university|college|museum|library|community_centre";
+    leisureFilter="park|garden";
+  }
+
+  const bbox=`${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
+  const leisurePart=leisureFilter?`
+  node["leisure"~"^(${leisureFilter})$"]["name"](${bbox});
+  way["leisure"~"^(${leisureFilter})$"]["name"](${bbox});`:"";
+
+  const query=`[out:json][timeout:20];
 (
-  node["amenity"~"^(university|library|college|community_centre)$"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-  way["amenity"~"^(university|library|college|community_centre)$"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-  relation["amenity"~"^(university|library|college|community_centre)$"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-  node["leisure"~"^(park|garden)$"]["name"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-  way["leisure"~"^(park|garden)$"]["name"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-  relation["leisure"~"^(park|garden)$"]["name"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-  node["building"~"^(university|college)$"]["name"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-  way["building"~"^(university|college)$"]["name"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+  node["amenity"~"^(${amenityFilter})$"](${bbox});
+  way["amenity"~"^(${amenityFilter})$"](${bbox});
+  node["tourism"="museum"]["name"](${bbox});
+  way["tourism"="museum"]["name"](${bbox});${leisurePart}
 );
-out center 300;`;
+out center 200;`;
 
   try{
-    const res=await fetch("https://overpass-api.de/api/interpreter",{
+    // Usa un mirror veloce di Overpass
+    const res=await fetch("https://overpass.kumi.systems/api/interpreter",{
       method:"POST",body:query
     });
+    if(!res.ok)throw new Error("overpass error");
     const data=await res.json();
-    clearPOI();
+
+    // Rimuovi solo i marker fuori dai nuovi bounds (invece di clearPOI totale)
+    const keepBounds=bounds.pad(0.3);
+    poiMarkers=poiMarkers.filter(m=>{
+      if(!keepBounds.contains(m.getLatLng())){map.removeLayer(m);return false;}
+      return true;
+    });
+
+    // Evita duplicati con un set di coordinate già caricate
+    const existing=new Set(poiMarkers.map(m=>`${m.getLatLng().lat.toFixed(5)},${m.getLatLng().lng.toFixed(5)}`));
+
     (data.elements||[]).forEach(el=>{
       const lat=el.lat||(el.center&&el.center.lat);
       const lng=el.lon||(el.center&&el.center.lon);
       if(!lat||!lng)return;
       const tags=el.tags||{};
       if(!tags.name)return;
+      const key=`${lat.toFixed(5)},${lng.toFixed(5)}`;
+      if(existing.has(key))return;
+      existing.add(key);
       const m=L.marker([lat,lng],{icon:makePOIIcon(tags),zIndexOffset:-100})
         .addTo(map)
         .bindPopup(buildPOIPopup(el),{maxWidth:240});
@@ -873,12 +916,15 @@ out center 300;`;
   }finally{
     poiLoading=false;
   }
-  
 }
+
+let poiLastZoom=null;
 
 function clearPOI(){
   poiMarkers.forEach(m=>map.removeLayer(m));
   poiMarkers=[];
+  poiLastBounds=null;
+  poiLastZoom=null;
 }
 
 // Toggle POI on/off
@@ -888,12 +934,12 @@ document.getElementById("poiToggle").addEventListener("click",()=>{
   if(poiVisible){loadPOI();}else{clearPOI();}
 });
 
-// Ricarica POI quando la mappa si sposta (con debounce)
+// Ricarica POI quando la mappa si sposta o zooma
 let poiDebounce=null;
-map.on("moveend",()=>{
+map.on("moveend zoomend",()=>{
   if(!poiVisible)return;
   clearTimeout(poiDebounce);
-  poiDebounce=setTimeout(loadPOI,600);
+  poiDebounce=setTimeout(loadPOI,700);
 });
 
 // ── MOBILE SIDEBAR TOGGLE ──────────────────────────────────────────
