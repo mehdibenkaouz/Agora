@@ -283,6 +283,43 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .poi-switch::after{content:'';position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .2s;}
 .poi-switch.on::after{transform:translateX(16px);}
 
+/* POI STATUS */
+.poi-status{
+  position:absolute;top:14px;right:14px;z-index:850;
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:999px;padding:7px 12px;
+  box-shadow:var(--soft);font-size:.72rem;color:var(--muted);
+  display:flex;align-items:center;gap:8px;
+  max-width:min(70vw, 360px);
+}
+.poi-status.hidden{display:none;}
+.poi-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;opacity:.8;}
+.poi-status.loading .poi-dot{background:var(--gold);animation:poiPulse 1s infinite;}
+.poi-status.ready .poi-dot{background:#2e9b62;animation:none;}
+.poi-status.error .poi-dot{background:#c14a4a;animation:none;}
+@keyframes poiPulse{0%{transform:scale(.9);opacity:.45;}50%{transform:scale(1.15);opacity:1;}100%{transform:scale(.9);opacity:.45;}}
+
+/* POI STATUS */
+.poi-status{
+  position:absolute;top:14px;right:14px;z-index:850;
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:999px;padding:7px 12px;
+  box-shadow:var(--soft);font-size:.72rem;color:var(--muted);
+  display:flex;align-items:center;gap:8px;
+  max-width:min(70vw, 360px);
+}
+.poi-status.hidden{display:none;}
+.poi-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;opacity:.8;}
+.poi-status.loading .poi-dot{background:var(--gold);animation:poiPulse 1s infinite;}
+.poi-status.ready .poi-dot{background:#2e9b62;animation:none;}
+.poi-status.error .poi-dot{background:#c14a4a;animation:none;}
+@keyframes poiPulse{
+  0%{transform:scale(.9);opacity:.45;}
+  50%{transform:scale(1.15);opacity:1;}
+  100%{transform:scale(.9);opacity:.45;}
+}
+
+
 /* Mobile */
 @media(max-width:640px){
   .sidebar{position:absolute;top:0;bottom:0;z-index:600;}
@@ -380,6 +417,12 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     <button class="locate-btn" id="locateBtn" title="Centrami sulla mappa">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 2"/></svg>
     </button>
+
+    <div class="poi-status hidden" id="poiStatus">
+      <span class="poi-dot"></span>
+      <span id="poiStatusText">Caricamento luoghi culturali…</span>
+    </div>
+
 
     <!-- FAB -->
     <button class="fab" id="fabBtn" title="Aggiungi sessione">
@@ -762,196 +805,453 @@ function locateUser(){
 document.getElementById("locBtn").addEventListener("click",locateUser);
 document.getElementById("locateBtn").addEventListener("click",locateUser);
 
-// ── POI — OpenStreetMap via Overpass API ───────────────────────────
-let poiMarkers=[];
-let poiVisible=true;
-let poiLastBounds=null;
-let poiLoading=false;
+// ══════════════════════════════════════════════════════════════════
+// POI — LOD + griglia stabile + cache in memoria
+// ══════════════════════════════════════════════════════════════════
 
-const POI_TYPES=[
-  {key:"amenity",values:["university","library","college","cafe","bar","community_centre"],emoji:"🎓📚☕",label:{university:"Università",library:"Biblioteca",college:"Istituto",cafe:"Caffè",bar:"Bar",community_centre:"Centro Comunitario"}},
-  {key:"leisure",values:["park","garden"],emoji:"🌿",label:{park:"Parco",garden:"Giardino"}},
-  {key:"building",values:["university","college"],emoji:"🏛️",label:{university:"Edificio Università",college:"Edificio Istituto"}},
+let poiMarkers  = new Map();
+let poiVisible  = true;
+let poiAbort    = null;
+let poiAbortStarted = 0;
+let poiTimer    = null;
+let _lastLOD    = 3;
+const POI_ABORT_MIN_AGE = 600;
+
+const OVERPASS_ENDPOINTS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter"
 ];
 
-function poiColor(tags){
-  const a=tags.amenity,l=tags.leisure;
-  if(a==="university"||a==="college"||tags.building==="university")return"#4a90d9";
-  if(a==="library")return"#c9932a";
-  if(a==="cafe"||a==="bar")return"#3a8a3a";
-  if(l==="park"||l==="garden")return"#228b22";
-  return"#708090";
+const POI_CACHE     = new Map();
+const POI_CACHE_TTL = 20 * 60 * 1000;
+const LS_KEY = "poi_cache_v2";
+
+(function _restoreCache() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return;
+    const saved = JSON.parse(raw);
+    const now = Date.now();
+    for (const [k, v] of Object.entries(saved)) {
+      if (now - v.ts < POI_CACHE_TTL) POI_CACHE.set(k, v);
+    }
+  } catch(e) {}
+})();
+
+function _persistCache() {
+  try {
+    const obj = {};
+    for (const [k, v] of POI_CACHE) obj[k] = v;
+    localStorage.setItem(LS_KEY, JSON.stringify(obj));
+  } catch(e) {}
 }
 
-function poiLabel(tags){
-  if(tags.amenity)return POI_TYPES[0].label[tags.amenity]||tags.amenity;
-  if(tags.leisure)return POI_TYPES[1].label[tags.leisure]||tags.leisure;
-  if(tags.building)return POI_TYPES[2].label[tags.building]||tags.building;
-  return"Luogo";
+// ── Status pill ───────────────────────────────────────────────────
+let _hideT = null;
+function setPOIStatus(kind, text, ms) {
+  const box = document.getElementById("poiStatus");
+  const txt = document.getElementById("poiStatusText");
+  if (!box || !txt) return;
+  clearTimeout(_hideT);
+  if (!text) { box.className = "poi-status hidden"; txt.textContent = ""; return; }
+  box.className = `poi-status ${kind || ""}`.trim();
+  box.classList.remove("hidden");
+  txt.textContent = text;
+  if (ms > 0) _hideT = setTimeout(() => setPOIStatus("", ""), ms);
 }
 
-function poiEmoji(tags){
-  const a=tags.amenity,l=tags.leisure;
-  if(a==="university"||a==="college")return"🎓";
-  if(a==="library")return"📚";
-  if(a==="cafe")return"☕";
-  if(a==="bar")return"🍺";
-  if(a==="community_centre")return"🏛️";
-  if(l==="park"||l==="garden")return"🌿";
-  return"📍";
+// ── Metadati ──────────────────────────────────────────────────────
+function _poiColor(tags) {
+  const a=tags.amenity, t=tags.tourism, l=tags.leisure;
+  if (t==="museum"||t==="gallery")   return "#a64d79";
+  if (a==="university"||a==="college"||tags.building==="university") return "#4a90d9";
+  if (a==="community_centre")        return "#8a5a2b";
+  if (a==="library")                 return "#c9932a";
+  if (a==="archive"||a==="arts_centre") return "#7b68ee";
+  if (l==="park"||l==="garden")      return "#228b22";
+  if (tags.historic)                 return "#8b4513";
+  return "#708090";
 }
 
-function makePOIIcon(tags){
-  const c=poiColor(tags);
-  const emoji=poiEmoji(tags);
-  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="32" height="38" viewBox="0 0 32 38">
-    <path d="M16 2C9.9 2 5 6.9 5 13c0 8.5 11 23 11 23S27 21.5 27 13C27 6.9 22.1 2 16 2z" fill="${c}" stroke="white" stroke-width="1.5" opacity="0.85"/>
-    <circle cx="16" cy="13" r="7" fill="white" opacity="0.92"/>
-    <text x="16" y="17" text-anchor="middle" font-size="9">${emoji}</text>
+function _poiLabel(tags) {
+  const a=tags.amenity, t=tags.tourism, l=tags.leisure, b=tags.building, h=tags.historic;
+  if (t==="museum")    return "Museo";     if (t==="gallery")  return "Galleria";
+  if (a==="university") return "Università"; if (a==="college") return "Istituto";
+  if (a==="community_centre") return "Centro Comunitario";
+  if (a==="library")   return "Biblioteca"; if (a==="archive") return "Archivio";
+  if (a==="arts_centre") return "Centro Culturale";
+  if (l==="park")      return "Parco";     if (l==="garden")   return "Giardino";
+  if (b==="university") return "Edificio Università";
+  if (h==="castle")    return "Castello";  if (h==="ruins")    return "Rovine";
+  if (h)               return "Sito storico";
+  return "Luogo culturale";
+}
+
+// Forma SVG geometrica per tipo — NIENTE emoji, funziona ovunque
+function _poiShape(tags) {
+  const a=tags.amenity, t=tags.tourism, l=tags.leisure, b=tags.building, h=tags.historic;
+  const c = _poiColor(tags);
+
+  // Museo/galleria: colonne classiche
+  if (t==="museum"||t==="gallery")
+    return `<rect x="9" y="11" width="2" height="6" fill="${c}"/>
+            <rect x="13" y="11" width="2" height="6" fill="${c}"/>
+            <rect x="17" y="11" width="2" height="6" fill="${c}"/>
+            <rect x="7" y="10" width="14" height="1.5" fill="${c}"/>
+            <polygon points="16,5 22,10 10,10" fill="${c}"/>`;
+
+  // Università: berretto di laurea
+  if (a==="university"||a==="college"||b==="university")
+    return `<polygon points="16,6 23,10 16,14 9,10" fill="${c}"/>
+            <rect x="20.5" y="10" width="1.5" height="5" fill="${c}"/>
+            <circle cx="21.5" cy="15.5" r="1.5" fill="${c}"/>`;
+
+  // Biblioteca: libro aperto
+  if (a==="library"||a==="archive")
+    return `<rect x="8" y="8" width="7" height="9" rx="0.5" fill="${c}"/>
+            <rect x="15.5" y="8" width="7" height="9" rx="0.5" fill="${c}"/>
+            <rect x="14.5" y="8" width="2" height="9" fill="white" opacity="0.9"/>
+            <line x1="16" y1="8" x2="16" y2="17" stroke="${c}" stroke-width="1"/>`;
+
+  // Centro comunitario / arts centre: persone
+  if (a==="community_centre"||a==="arts_centre")
+    return `<circle cx="12" cy="9" r="2.5" fill="${c}"/>
+            <path d="M7,18 Q12,13 17,18" fill="${c}"/>
+            <circle cx="20" cy="9" r="2.5" fill="${c}"/>
+            <path d="M15,18 Q20,13 25,18" fill="${c}"/>`;
+
+  // Parco/giardino: albero
+  if (l==="park"||l==="garden")
+    return `<polygon points="16,4 23,14 9,14" fill="${c}"/>
+            <polygon points="16,9 22,18 10,18" fill="${c}"/>
+            <rect x="14.5" y="18" width="3" height="4" fill="${c}"/>`;
+
+  // Storico: torre/castello
+  if (h)
+    return `<rect x="9" y="9" width="14" height="10" fill="${c}"/>
+            <rect x="9" y="7" width="3" height="3" fill="${c}"/>
+            <rect x="14" y="7" width="3" height="3" fill="${c}"/>
+            <rect x="19" y="7" width="3" height="3" fill="${c}"/>
+            <rect x="13" y="13" width="5" height="6" fill="white" opacity="0.7"/>`;
+
+  // Default: punto
+  return `<circle cx="16" cy="13" r="5" fill="${c}"/>`;
+}
+
+const _iconCache = new Map();
+function _poiIcon(tags) {
+  const c = _poiColor(tags);
+  const shape = _poiShape(tags);
+  const k = _poiLabel(tags); // chiave per cache
+  if (_iconCache.has(k)) return _iconCache.get(k);
+
+  const html = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="36" viewBox="0 0 32 38" style="display:block;overflow:visible;">
+    <path d="M16 2C9.9 2 5 6.9 5 13c0 8.5 11 23 11 23S27 21.5 27 13C27 6.9 22.1 2 16 2z"
+          fill="${c}" stroke="white" stroke-width="1.5"/>
+    <circle cx="16" cy="13" r="8" fill="white" opacity="0.95"/>
+    ${shape}
   </svg>`;
-  return L.divIcon({html:svg,className:"",iconSize:[32,38],iconAnchor:[16,38],popupAnchor:[0,-38]});
+
+  const icon = L.divIcon({
+    html,
+    className: "",
+    iconSize: [30, 36],
+    iconAnchor: [15, 36],
+    popupAnchor: [0, -38]
+  });
+  _iconCache.set(k, icon);
+  return icon;
 }
 
-function buildPOIPopup(el){
-  const tags=el.tags||{};
-  const name=tags.name||tags["name:it"]||tags["name:en"]||poiLabel(tags);
-  const type=poiLabel(tags);
-  const hours=tags.opening_hours||"";
-  const website=tags.website||tags["contact:website"]||"";
-  const addr=[tags["addr:street"],tags["addr:housenumber"]].filter(Boolean).join(" ");
+function _poiPopup(el) {
+  const tags = el.tags || {};
+  const name = tags.name || tags["name:it"] || tags["name:en"] || _poiLabel(tags);
+  const addr = [tags["addr:street"], tags["addr:housenumber"]].filter(Boolean).join(" ");
+  const hours = tags.opening_hours || "";
+  const web   = tags.website || tags["contact:website"] || "";
+  const wikiLang = tags.wikipedia ? tags.wikipedia.split(":")[0] : null;
+  const wikiSlug = tags.wikipedia ? tags.wikipedia.split(":").slice(1).join(":") : null;
+  const wiki  = wikiLang ? `https://${wikiLang}.wikipedia.org/wiki/${encodeURIComponent(wikiSlug)}` : "";
   return `<div class="popup-inner">
-    <div class="popup-type">${poiEmoji(tags)} ${type}</div>
+    <div class="popup-type" style="color:${_poiColor(tags)};font-weight:600">${_poiLabel(tags)}</div>
     <div class="popup-name">${name}</div>
-    ${addr?`<div class="popup-topic" style="font-size:.7rem">${addr}</div>`:""}
-    ${hours?`<div class="popup-meta">🕐 ${hours}</div>`:""}
-    ${website?`<div class="popup-meta"><a href="${website}" target="_blank" style="color:var(--brand)">🌐 Sito web</a></div>`:""}
-    <div class="popup-meta" style="opacity:.5;font-size:.65rem">Dati © OpenStreetMap contributors</div>
+    ${addr  ? `<div class="popup-topic" style="font-size:.7rem">${addr}</div>` : ""}
+    ${hours ? `<div class="popup-meta">⏱ ${hours}</div>` : ""}
+    ${web   ? `<div class="popup-meta"><a href="${web}" target="_blank" rel="noopener" style="color:var(--brand)">Sito web →</a></div>` : ""}
+    ${wiki  ? `<div class="popup-meta"><a href="${wiki}" target="_blank" rel="noopener" style="color:var(--brand)">Wikipedia →</a></div>` : ""}
+    <div class="popup-meta" style="opacity:.35;font-size:.6rem">© OpenStreetMap contributors</div>
   </div>`;
 }
 
-async function loadPOI(){
-  if(!poiVisible||poiLoading)return;
-  const zoom=map.getZoom();
-  const center=map.getCenter();
-  const bounds=map.getBounds();
-
-  // Ricarica se il centro si è spostato di più di 1/3 della vista
-  if(poiLastBounds){
-    const h=poiLastBounds.getNorth()-poiLastBounds.getSouth();
-    const w=poiLastBounds.getEast()-poiLastBounds.getWest();
-    const dlat=Math.abs(center.lat-(poiLastBounds.getSouth()+h/2));
-    const dlng=Math.abs(center.lng-(poiLastBounds.getWest()+w/2));
-    if(dlat<h*0.33&&dlng<w*0.33&&poiLastZoom===zoom)return;
+// ── Culling + render da cache ─────────────────────────────────────
+function _cullPOI() {
+  const vp = map.getBounds().pad(0.12);
+  for (const [k, m] of poiMarkers) {
+    if (!vp.contains(m.getLatLng())) {
+      map.removeLayer(m);
+      poiMarkers.delete(k);
+    }
   }
+}
 
-  poiLoading=true;
-  poiLastBounds=bounds.pad(0.15);
-  poiLastZoom=zoom;
-  const{_southWest:sw,_northEast:ne}=poiLastBounds;
+function _addOne(el) {
+  const tags = el.tags || {};
+  const lat  = el.lat ?? el.center?.lat;
+  const lng  = el.lon ?? el.center?.lon;
+  if (lat == null || lng == null) return;
 
-  // Zoom-based priority:
-  // < 12 → solo università e musei (grandi, visibili da lontano)
-  // 12-14 → aggiungi biblioteche e community centre
-  // ≥ 15 → aggiungi parchi e giardini
-  let amenityFilter,leisureFilter;
-  if(zoom<12){
-    amenityFilter="university|college|museum";
-    leisureFilter=null;
-  }else if(zoom<15){
-    amenityFilter="university|college|museum|library|community_centre";
-    leisureFilter=null;
-  }else{
-    amenityFilter="university|college|museum|library|community_centre";
-    leisureFilter="park|garden";
+  // Accetta anche POI senza name: molti oggetti OSM utili arrivano solo con wikidata / categoria.
+  // Deduplica per id quando presente, altrimenti per coordinate arrotondate + etichetta.
+  const fallbackLabel = _poiLabel(tags);
+  const key = `${el.type||"n"}:${el.id||`${Number(lat).toFixed(5)},${Number(lng).toFixed(5)}:${fallbackLabel}`}`;
+  if (poiMarkers.has(key)) return;
+
+  const m = L.marker([lat, lng], { icon: _poiIcon(tags), zIndexOffset: -50 })
+    .addTo(map).bindPopup(_poiPopup(el), { maxWidth: 260 });
+  poiMarkers.set(key, m);
+}
+
+function _renderFromCache() {
+  const vp = map.getBounds().pad(0.08);
+  for (const entry of POI_CACHE.values()) {
+    for (const el of entry.elements) {
+      const lat = el.lat ?? el.center?.lat;
+      const lng = el.lon ?? el.center?.lon;
+      if (lat != null && lng != null && vp.contains([lat, lng])) _addOne(el);
+    }
   }
+}
 
-  const bbox=`${sw.lat},${sw.lng},${ne.lat},${ne.lng}`;
-  const leisurePart=leisureFilter?`
-  node["leisure"~"^(${leisureFilter})$"]["name"](${bbox});
-  way["leisure"~"^(${leisureFilter})$"]["name"](${bbox});`:"";
+// ── LOD + griglia stabile ─────────────────────────────────────────
+function _getLOD(zoom) {
+  if (zoom < 8)  return 1;
+  if (zoom < 12) return 2;
+  return 3;
+}
 
-  const query=`[out:json][timeout:20];
+function _getCacheCell() {
+  const z   = map.getZoom();
+  const lod = _getLOD(z);
+  const c   = map.getCenter();
+  const b   = map.getBounds();
+
+  const maxLat = lod===1 ? 20 : lod===2 ? 5  : 0.4;
+  const maxLng = lod===1 ? 30 : lod===2 ? 7  : 0.6;
+  const gridLat= lod===1 ? 10 : lod===2 ? 1  : 0.1;
+  const gridLng= lod===1 ? 15 : lod===2 ? 1.5: 0.15;
+
+  const latSpan = Math.min(b.getNorth() - b.getSouth(), maxLat);
+  const lngSpan = Math.min(b.getEast()  - b.getWest(),  maxLng);
+  const cLat = Math.round(c.lat / gridLat) * gridLat;
+  const cLng = Math.round(c.lng / gridLng) * gridLng;
+
+  const s = +(cLat - latSpan / 2).toFixed(5);
+  const w = +(cLng - lngSpan / 2).toFixed(5);
+  const n = +(cLat + latSpan / 2).toFixed(5);
+  const e = +(cLng + lngSpan / 2).toFixed(5);
+
+  return { s, w, n, e, lod, key: `${lod}:${cLat.toFixed(2)}:${cLng.toFixed(2)}` };
+}
+
+function _buildQuery(s, w, n, e, lod) {
+  const bb = `${s},${w},${n},${e}`;
+
+  // LOD 1: panorama ampio → grandi POI culturali / istituzionali, ma senza dipendere solo da wikipedia.
+  if (lod === 1) {
+    return `[out:json][timeout:12];
 (
-  node["amenity"~"^(${amenityFilter})$"](${bbox});
-  way["amenity"~"^(${amenityFilter})$"](${bbox});
-  node["tourism"="museum"]["name"](${bbox});
-  way["tourism"="museum"]["name"](${bbox});${leisurePart}
+  node["tourism"~"^(museum|gallery)$"](${bb});
+  way["tourism"~"^(museum|gallery)$"](${bb});
+  relation["tourism"~"^(museum|gallery)$"](${bb});
+
+  node["amenity"~"^(university|college|library|archive|arts_centre)$"](${bb});
+  way["amenity"~"^(university|college|library|archive|arts_centre)$"](${bb});
+  relation["amenity"~"^(university|college|library|archive|arts_centre)$"](${bb});
+
+  node["building"="university"](${bb});
+  way["building"="university"](${bb});
+  relation["building"="university"](${bb});
+
+  node["historic"](${bb});
+  way["historic"](${bb});
+  relation["historic"](${bb});
 );
-out center 200;`;
+out tags center 40;`;
+  }
 
-  try{
-    // Usa un mirror veloce di Overpass
-    const res=await fetch("https://overpass.kumi.systems/api/interpreter",{
-      method:"POST",body:query
-    });
-    if(!res.ok)throw new Error("overpass error");
-    const data=await res.json();
+  // LOD 2: città / quartiere → query più ricca, include relation e non richiede wikipedia/wikidata.
+  if (lod === 2) {
+    return `[out:json][timeout:14];
+(
+  node["amenity"~"^(university|college|community_centre|library|archive|arts_centre)$"](${bb});
+  way["amenity"~"^(university|college|community_centre|library|archive|arts_centre)$"](${bb});
+  relation["amenity"~"^(university|college|community_centre|library|archive|arts_centre)$"](${bb});
 
-    // Rimuovi solo i marker fuori dai nuovi bounds (invece di clearPOI totale)
-    const keepBounds=bounds.pad(0.3);
-    poiMarkers=poiMarkers.filter(m=>{
-      if(!keepBounds.contains(m.getLatLng())){map.removeLayer(m);return false;}
-      return true;
-    });
+  node["tourism"~"^(museum|gallery)$"](${bb});
+  way["tourism"~"^(museum|gallery)$"](${bb});
+  relation["tourism"~"^(museum|gallery)$"](${bb});
 
-    // Evita duplicati con un set di coordinate già caricate
-    const existing=new Set(poiMarkers.map(m=>`${m.getLatLng().lat.toFixed(5)},${m.getLatLng().lng.toFixed(5)}`));
+  node["building"="university"](${bb});
+  way["building"="university"](${bb});
+  relation["building"="university"](${bb});
 
-    (data.elements||[]).forEach(el=>{
-      const lat=el.lat||(el.center&&el.center.lat);
-      const lng=el.lon||(el.center&&el.center.lon);
-      if(!lat||!lng)return;
-      const tags=el.tags||{};
-      if(!tags.name)return;
-      const key=`${lat.toFixed(5)},${lng.toFixed(5)}`;
-      if(existing.has(key))return;
-      existing.add(key);
-      const m=L.marker([lat,lng],{icon:makePOIIcon(tags),zIndexOffset:-100})
-        .addTo(map)
-        .bindPopup(buildPOIPopup(el),{maxWidth:240});
-      poiMarkers.push(m);
-    });
-  }catch(e){
-    // Overpass non disponibile — silenzioso
-  }finally{
-    poiLoading=false;
+  node["historic"](${bb});
+  way["historic"](${bb});
+  relation["historic"](${bb});
+);
+out tags center 120;`;
+  }
+
+  const le = map.getZoom() >= 13
+    ? `
+  node["leisure"~"^(park|garden)$"](${bb});
+  way["leisure"~"^(park|garden)$"](${bb});
+  relation["leisure"~"^(park|garden)$"](${bb});`
+    : "";
+
+  // LOD 3: zoom vicino → tutti i luoghi culturali del viewport, inclusi relation.
+  return `[out:json][timeout:16];
+(
+  node["amenity"~"^(university|college|community_centre|library|archive|arts_centre)$"](${bb});
+  way["amenity"~"^(university|college|community_centre|library|archive|arts_centre)$"](${bb});
+  relation["amenity"~"^(university|college|community_centre|library|archive|arts_centre)$"](${bb});
+
+  node["tourism"~"^(museum|gallery)$"](${bb});
+  way["tourism"~"^(museum|gallery)$"](${bb});
+  relation["tourism"~"^(museum|gallery)$"](${bb});
+
+  node["building"="university"](${bb});
+  way["building"="university"](${bb});
+  relation["building"="university"](${bb});
+
+  node["historic"](${bb});
+  way["historic"](${bb});
+  relation["historic"](${bb});${le}
+);
+out tags center 180;`;
+}
+
+async function _fetch(query, signal) {
+  if (signal.aborted) throw new DOMException("", "AbortError");
+
+  // ── Parallel race: tutti gli endpoint contemporaneamente, vince il primo ──
+  const attempts = OVERPASS_ENDPOINTS.map(ep =>
+    fetch(ep, {
+      method: "POST", body: query, signal,
+      headers: { "Content-Type": "text/plain;charset=UTF-8" }
+    }).then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.json();
+    })
+  );
+
+  // Promise.any: risolve al primo successo, lancia solo se TUTTI falliscono
+  try {
+    return await Promise.any(attempts);
+  } catch(e) {
+    // Se abortito durante la gara, rilancia come AbortError
+    if (signal.aborted) throw new DOMException("", "AbortError");
+    throw new Error("overpass_unavailable");
   }
 }
 
-let poiLastZoom=null;
+// ── Entry point ───────────────────────────────────────────────────
+async function loadPOI() {
+  if (!poiVisible) return;
 
-function clearPOI(){
-  poiMarkers.forEach(m=>map.removeLayer(m));
-  poiMarkers=[];
-  poiLastBounds=null;
-  poiLastZoom=null;
+  _cullPOI();
+  _renderFromCache();
+  if (poiMarkers.size > 0) setPOIStatus("ready", `${poiMarkers.size} luoghi visibili`, 1500);
+
+  const cell = _getCacheCell();
+  const cached = POI_CACHE.get(cell.key);
+  if (cached && Date.now() - cached.ts < POI_CACHE_TTL) return;
+
+  // Non abortire un fetch avviato meno di 600ms fa — evita abort storm su init
+  if (poiAbort && Date.now() - poiAbortStarted < 600) return;
+  if (poiAbort) { poiAbort.abort(); poiAbort = null; }
+  const ac = new AbortController();
+  poiAbort = ac;
+  poiAbortStarted = Date.now();
+
+  if (!cached) setPOIStatus("loading", "Caricamento luoghi culturali…");
+
+  try {
+    const data = await _fetch(_buildQuery(cell.s, cell.w, cell.n, cell.e, cell.lod), ac.signal);
+    if (ac.signal.aborted) return;
+
+    POI_CACHE.set(cell.key, { elements: data.elements || [], ts: Date.now() });
+    if (POI_CACHE.size > 120) {
+      let oldK = null, oldT = Infinity;
+      for (const [k, v] of POI_CACHE) if (v.ts < oldT) { oldT = v.ts; oldK = k; }
+      if (oldK) POI_CACHE.delete(oldK);
+    }
+    _persistCache();
+
+    _renderFromCache();
+    setPOIStatus("ready", `${poiMarkers.size} luoghi culturali visibili`, 2000);
+  } catch(e) {
+    if (e.name === "AbortError") return;
+    setPOIStatus(
+      poiMarkers.size ? "ready" : "error",
+      poiMarkers.size ? `${poiMarkers.size} luoghi visibili · rete lenta` : "Nessun server raggiungibile"
+    );
+  }
 }
 
-// Toggle POI on/off
-document.getElementById("poiToggle").addEventListener("click",()=>{
-  poiVisible=!poiVisible;
-  document.getElementById("poiSwitch").classList.toggle("on",poiVisible);
-  if(poiVisible){loadPOI();}else{clearPOI();}
+// ── Toggle ────────────────────────────────────────────────────────
+document.getElementById("poiToggle").addEventListener("click", () => {
+  poiVisible = !poiVisible;
+  document.getElementById("poiSwitch").classList.toggle("on", poiVisible);
+  if (poiVisible) {
+    loadPOI();
+  } else {
+    if (poiAbort) { poiAbort.abort(); poiAbort = null; }
+    clearTimeout(poiTimer);
+    for (const m of poiMarkers.values()) map.removeLayer(m);
+    poiMarkers.clear();
+    setPOIStatus("", "");
+  }
 });
 
-// Ricarica POI quando la mappa si sposta o zooma
-let poiDebounce=null;
-map.on("moveend zoomend",()=>{
-  if(!poiVisible)return;
-  clearTimeout(poiDebounce);
-  poiDebounce=setTimeout(loadPOI,700);
+// ── Eventi mappa ──────────────────────────────────────────────────
+map.on("move", () => { if (poiVisible) _cullPOI(); });
+
+map.on("moveend", () => {
+  if (!poiVisible) return;
+  clearTimeout(poiTimer);
+  poiTimer = setTimeout(loadPOI, 300);
 });
 
-// ── MOBILE SIDEBAR TOGGLE ──────────────────────────────────────────
-document.getElementById("sidebarToggle").addEventListener("click",()=>{
+map.on("zoomend", () => {
+  if (!poiVisible) return;
+  clearTimeout(poiTimer);
+  const newLOD = _getLOD(map.getZoom());
+  if (newLOD !== _lastLOD) {
+    for (const m of poiMarkers.values()) map.removeLayer(m);
+    poiMarkers.clear();
+  }
+  _lastLOD = newLOD;
+  poiTimer = setTimeout(loadPOI, 200);
+});
+
+map.whenReady(() => {
+  _lastLOD = _getLOD(map.getZoom());
+  // Usa il timer con delay leggero per lasciare spazio agli event moveend di init
+  clearTimeout(poiTimer);
+  poiTimer = setTimeout(loadPOI, 150);
+});
+
+// ── MOBILE SIDEBAR ────────────────────────────────────────────────
+document.getElementById("sidebarToggle").addEventListener("click", () => {
   document.getElementById("sidebar").classList.toggle("collapsed");
 });
 
-// ── INIT ───────────────────────────────────────────────────────────
+// ── INIT ─────────────────────────────────────────────────────────
 buildTopicFilters();
 buildTagPicker();
 loadSessions();
-loadPOI();
 </script>
 </body>
 </html>
