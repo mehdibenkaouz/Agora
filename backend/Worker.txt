@@ -592,8 +592,75 @@ export default {
         }
 
         await env.AGORA_MEDIA.delete(key);
-        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
+
+      // Save a post
+      if (url.pathname === "/api/saved" && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+        const body = await request.json().catch(() => ({}));
+        const postId = String(body.post_id || "").trim();
+        if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
+        const post = await env.dbagora.prepare("SELECT id FROM posts WHERE id = ?1").bind(postId).first();
+        if (!post) return json({ ok: false, error: "post_not_found" }, 404, ALLOWED_ORIGIN);
+        await env.dbagora.prepare(
+          "INSERT OR IGNORE INTO saved_posts (user_id, post_id, saved_at) VALUES (?1, ?2, ?3)"
+        ).bind(session.user_id, postId, new Date().toISOString()).run();
+        return json({ ok: true, saved: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // Unsave a post
+      if (url.pathname === "/api/saved" && request.method === "DELETE") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+        const body = await request.json().catch(() => ({}));
+        const postId = String(body.post_id || "").trim();
+        if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
+        await env.dbagora.prepare(
+          "DELETE FROM saved_posts WHERE user_id = ?1 AND post_id = ?2"
+        ).bind(session.user_id, postId).run();
+        return json({ ok: true, saved: false }, 200, ALLOWED_ORIGIN);
+      }
+
+      // Get saved posts
+      if (url.pathname === "/api/saved" && request.method === "GET") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+        const rows = await env.dbagora.prepare(`
+          SELECT
+            p.id, p.content, p.created_at,
+            u.email as author_email,
+            COALESCE(NULLIF(TRIM(u.display_name),''),
+              CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
+            ) AS author_display_name,
+            COALESCE(u.picture_url,'') AS author_picture_url,
+            sp.saved_at
+          FROM saved_posts sp
+          JOIN posts p ON p.id = sp.post_id
+          JOIN users u ON u.id = p.user_id
+          WHERE sp.user_id = ?1
+          ORDER BY sp.saved_at DESC
+          LIMIT 100
+        `).bind(session.user_id).all();
+        return json({ ok: true, posts: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
       return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
     } catch (e) {
       return json({ ok: false, error: "server_error", detail: String(e?.message || e) }, 500, ALLOWED_ORIGIN);
