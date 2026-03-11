@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AGORÀ — Go</title>
+<link rel="icon" type="image/png" sizes="32x32" href="item/Logoaagora.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #e8e2d5;
+  --panel: #f5f0e8;
+  --panel2: #faf7f2;
+  --text: #1a1008;
+  --muted: #6b5b48;
+  --brand: #571929;
+  --brand2: #8b2239;
+  --gold: #c9932a;
+  --line: rgba(87,25,41,0.12);
+  --shadow: 0 20px 50px rgba(30,10,5,0.25);
+  --soft: 0 8px 24px rgba(30,10,5,0.12);
+  --board-wood: #c8963a;
+  --board-wood2: #a87828;
+  --board-line: rgba(60,30,0,0.55);
+  --star-pt: rgba(60,30,0,0.75);
+}
+:root[data-theme="dark"] {
+  --bg: #0a0d12;
+  --panel: #12171f;
+  --panel2: #1a2030;
+  --text: #f0e8d8;
+  --muted: rgba(200,220,255,0.55);
+  --brand: #a8ebf6;
+  --brand2: #7dd8e8;
+  --gold: #25acc1;
+  --line: rgba(168,235,246,0.14);
+  --shadow: 0 20px 50px rgba(0,0,0,0.70);
+  --soft: 0 8px 24px rgba(0,0,0,0.50);
+  --board-wood: #3a2810;
+  --board-wood2: #2a1c08;
+  --board-line: rgba(200,160,80,0.40);
+  --star-pt: rgba(200,160,80,0.80);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{
+  min-height:100vh;background:var(--bg);color:var(--text);
+  font-family:'Lora',Georgia,serif;transition:background .25s,color .25s;
+}
+
+/* TOPBAR */
+.topbar{
+  background:var(--panel);border-bottom:1px solid var(--line);
+  box-shadow:var(--soft);padding:0 24px;height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:20;
+}
+.topbar-brand{font-family:'Cinzel',serif;font-size:.85rem;letter-spacing:.14em;color:var(--brand);text-decoration:none;text-transform:uppercase;}
+.topbar-title{font-family:'Cinzel',serif;font-size:1.05rem;letter-spacing:.08em;}
+.btn-icon{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:transparent;cursor:pointer;display:grid;place-items:center;transition:background .15s;color:var(--text);}
+.btn-icon:hover{background:var(--line);}
+.btn-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* PAGE */
+.page{max-width:740px;margin:0 auto;padding:24px 16px 60px;display:flex;flex-direction:column;align-items:center;gap:18px;}
+
+/* MODE */
+.mode-bar{display:flex;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px;box-shadow:var(--soft);}
+.mode-btn{padding:8px 20px;border-radius:999px;border:none;background:transparent;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;color:var(--muted);transition:all .18s;}
+.mode-btn.active{background:var(--brand);color:#fff;box-shadow:0 4px 14px rgba(87,25,41,.28);}
+:root[data-theme="dark"] .mode-btn.active{color:#0a0d12;}
+
+/* AI BAR */
+.ai-bar{display:flex;align-items:center;gap:12px;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.ai-bar select{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:7px 16px;font-family:inherit;font-size:.75rem;cursor:pointer;}
+
+/* SIZE BAR */
+.size-bar{display:flex;align-items:center;gap:12px;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.size-bar select{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:7px 16px;font-family:inherit;font-size:.75rem;cursor:pointer;}
+
+/* SCOREBOARD */
+.scoreboard{
+  display:flex;align-items:center;gap:16px;
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:22px;padding:12px 22px;
+  box-shadow:var(--soft);width:100%;max-width:480px;
+}
+.score-side{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;}
+.score-stone{width:36px;height:36px;border-radius:50%;box-shadow:0 4px 12px rgba(0,0,0,.35);}
+.score-stone.black{background:radial-gradient(circle at 35% 32%,#666,#0a0a0a);}
+.score-stone.white{background:radial-gradient(circle at 35% 32%,#fff,#ccc);}
+.score-num{font-family:'Cinzel',serif;font-size:1.5rem;font-weight:700;}
+.score-label{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.score-cap{font-size:.72rem;color:var(--muted);}
+.score-mid{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.turn-stone{width:20px;height:20px;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.35);transition:background .3s;}
+.turn-stone.black{background:radial-gradient(circle at 35% 32%,#666,#0a0a0a);}
+.turn-stone.white{background:radial-gradient(circle at 35% 32%,#fff,#ccc);}
+.turn-label{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+
+/* STATUS */
+.status-bar{font-family:'Cinzel',serif;font-size:.82rem;letter-spacing:.06em;color:var(--muted);min-height:22px;text-align:center;}
+
+/* BOARD */
+.board-wrap{
+  background:var(--board-wood);
+  border-radius:12px;
+  padding:clamp(16px,4vw,28px);
+  box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,0.12),inset 0 -2px 0 rgba(0,0,0,0.25);
+  position:relative;
+}
+.board-wrap::before{
+  content:'';position:absolute;inset:4px;
+  border-radius:10px;
+  background:repeating-linear-gradient(0deg,transparent,transparent 1px,rgba(0,0,0,0.04) 1px,rgba(0,0,0,0.04) 2px),
+             repeating-linear-gradient(90deg,transparent,transparent 1px,rgba(0,0,0,0.04) 1px,rgba(0,0,0,0.04) 2px);
+  pointer-events:none;
+}
+canvas#goBoard{
+  display:block;
+  cursor:crosshair;
+  border-radius:4px;
+}
+
+/* CONTROLS */
+.controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.btn{padding:10px 22px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;box-shadow:var(--soft);transition:all .15s;}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow);}
+.btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-color:transparent;}
+:root[data-theme="dark"] .btn.primary{color:#0a0d12;}
+.btn.danger{border-color:rgba(200,50,50,0.3);color:#c03030;}
+
+/* KOMI */
+.komi-info{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.06em;color:var(--muted);}
+
+/* RULES */
+.rules{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:18px 22px;max-width:560px;width:100%;box-shadow:var(--soft);}
+.rules-title{font-family:'Cinzel',serif;font-size:.78rem;letter-spacing:.10em;text-transform:uppercase;color:var(--brand);margin-bottom:10px;}
+.rules p{font-size:.86rem;line-height:1.7;color:var(--muted);margin-bottom:6px;}
+.rules p:last-child{margin-bottom:0;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="index.html" class="topbar-brand">← AGORÀ</a>
+  <span class="topbar-title">Go</span>
+  <div>
+    <button class="btn-icon" id="themeBtn" title="Toggle theme">
+      <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="page">
+
+  <div class="mode-bar">
+    <button class="mode-btn active" id="modeVsAI">vs AI</button>
+    <button class="mode-btn" id="modeVs2P">2 Players</button>
+  </div>
+
+  <div style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center;align-items:center;">
+    <div id="aiBar" class="ai-bar">
+      <span>AI</span>
+      <select id="aiLevel">
+        <option value="1">Easy</option>
+        <option value="2" selected>Medium</option>
+        <option value="3">Hard</option>
+      </select>
+    </div>
+    <div class="size-bar">
+      <span>Board</span>
+      <select id="boardSize">
+        <option value="9" selected>9×9</option>
+        <option value="13">13×13</option>
+        <option value="19">19×19</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="scoreboard">
+    <div class="score-side">
+      <div class="score-stone black"></div>
+      <div class="score-num" id="scoreBlack">0</div>
+      <div class="score-label" id="labelBlack">Black · You</div>
+      <div class="score-cap" id="capBlack">Captured: 0</div>
+    </div>
+    <div class="score-mid">
+      <div class="turn-label">Turn</div>
+      <div class="turn-stone black" id="turnStone"></div>
+    </div>
+    <div class="score-side">
+      <div class="score-stone white"></div>
+      <div class="score-num" id="scoreWhite">0</div>
+      <div class="score-label" id="labelWhite">White · AI</div>
+      <div class="score-cap" id="capWhite">Captured: 0</div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="statusBar">Black's turn</div>
+
+  <div class="board-wrap">
+    <canvas id="goBoard"></canvas>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" id="restartBtn">New Game</button>
+    <button class="btn" id="passBtn">Pass</button>
+    <button class="btn danger" id="resignBtn">Resign</button>
+  </div>
+  <div class="komi-info">Komi: 6.5 points for White</div>
+
+  <div class="rules">
+    <div class="rules-title">How to play</div>
+    <p><strong>Place stones</strong> on intersections. Surround your opponent's stones to capture them. A group with no <em>liberties</em> (empty adjacent points) is captured.</p>
+    <p><strong>Ko rule:</strong> you cannot recreate the exact previous board position.</p>
+    <p><strong>Scoring (Area):</strong> count your stones on the board plus empty points surrounded only by your colour. White gets 6.5 komi.</p>
+    <p>Press <strong>Pass</strong> twice in a row to end the game.</p>
+  </div>
+
+</main>
+
+<script>
+// ── Theme ──────────────────────────────────────────────────────────
+const THEME_KEY="agora_theme";
+function applyTheme(t){
+  document.documentElement[t==="dark"?"setAttribute":"removeAttribute"]("data-theme","dark");
+  localStorage.setItem(THEME_KEY,t);
+  if(window._goRedraw)window._goRedraw();
+}
+(function(){
+  const s=localStorage.getItem(THEME_KEY);
+  applyTheme((s==="dark"||s==="light")?s:(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"));
+})();
+document.getElementById("themeBtn").addEventListener("click",()=>{
+  applyTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");
+});
+
+// ── Constants ──────────────────────────────────────────────────────
+const BLACK=1,WHITE=2,EMPTY=0,KOMI=6.5;
+
+// ── State ──────────────────────────────────────────────────────────
+let N,board,prevBoard,turn,captured,passes,gameOver,vsAI,aiThinking,hoverPt;
+
+function initGame(){
+  N=+document.getElementById("boardSize").value;
+  board=Array.from({length:N},()=>Array(N).fill(EMPTY));
+  prevBoard=null;
+  turn=BLACK;passes=0;gameOver=false;aiThinking=false;hoverPt=null;
+  captured={black:0,white:0};
+  resizeCanvas();
+  drawBoard();
+  updateUI();
+  setStatus(vsAI?"Your turn — Black":"Black's turn");
+}
+
+// ── Canvas ─────────────────────────────────────────────────────────
+const canvas=document.getElementById("goBoard");
+const ctx=canvas.getContext("2d");
+let CELL,MARGIN,CANVAS_SIZE;
+
+function resizeCanvas(){
+  const maxW=Math.min(560,window.innerWidth-80);
+  CELL=Math.floor(maxW/(N+1));
+  MARGIN=CELL;
+  CANVAS_SIZE=CELL*(N+1);
+  canvas.width=CANVAS_SIZE;
+  canvas.height=CANVAS_SIZE;
+  canvas.style.width=CANVAS_SIZE+"px";
+  canvas.style.height=CANVAS_SIZE+"px";
+}
+
+function isDark(){return document.documentElement.getAttribute("data-theme")==="dark";}
+
+function drawBoard(){
+  const dark=isDark();
+  const woodColor=dark?"#3a2810":"#c8963a";
+  const lineColor=dark?"rgba(200,160,80,0.40)":"rgba(60,30,0,0.55)";
+  const starColor=dark?"rgba(200,160,80,0.80)":"rgba(60,30,0,0.75)";
+
+  ctx.fillStyle=woodColor;
+  ctx.fillRect(0,0,CANVAS_SIZE,CANVAS_SIZE);
+
+  // Grid lines
+  ctx.strokeStyle=lineColor;
+  ctx.lineWidth=1;
+  for(let i=0;i<N;i++){
+    const x=MARGIN+i*CELL,y=MARGIN+i*CELL;
+    ctx.beginPath();ctx.moveTo(x,MARGIN);ctx.lineTo(x,MARGIN+(N-1)*CELL);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(MARGIN,y);ctx.lineTo(MARGIN+(N-1)*CELL,y);ctx.stroke();
+  }
+
+  // Star points
+  const stars=getStarPoints();
+  for(const[r,c]of stars){
+    const x=MARGIN+c*CELL,y=MARGIN+r*CELL;
+    ctx.beginPath();ctx.arc(x,y,CELL*0.13,0,Math.PI*2);
+    ctx.fillStyle=starColor;ctx.fill();
+  }
+
+  // Stones
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    if(board[r][c]!==EMPTY)drawStone(r,c,board[r][c]);
+  }
+
+  // Hover ghost
+  if(hoverPt&&!gameOver&&!aiThinking){
+    const[hr,hc]=hoverPt;
+    if(board[hr][hc]===EMPTY&&isLegalMove(board,hr,hc,turn)){
+      drawStone(hr,hc,turn,0.38);
+    }
+  }
+}
+
+function drawStone(r,c,player,alpha=1){
+  const x=MARGIN+c*CELL,y=MARGIN+r*CELL,rad=CELL*0.44;
+  ctx.save();ctx.globalAlpha=alpha;
+  const grad=ctx.createRadialGradient(x-rad*.28,y-rad*.28,rad*.05,x,y,rad);
+  if(player===BLACK){
+    grad.addColorStop(0,"#777");grad.addColorStop(1,"#0a0a0a");
+  }else{
+    grad.addColorStop(0,"#ffffff");grad.addColorStop(1,"#cccccc");
+  }
+  ctx.beginPath();ctx.arc(x,y,rad,0,Math.PI*2);
+  ctx.fillStyle=grad;ctx.fill();
+  ctx.strokeStyle=player===BLACK?"rgba(255,255,255,0.08)":"rgba(0,0,0,0.20)";
+  ctx.lineWidth=1;ctx.stroke();
+  ctx.restore();
+}
+
+function getStarPoints(){
+  if(N===9)return[[2,2],[2,6],[6,2],[6,6],[4,4]];
+  if(N===13)return[[3,3],[3,9],[9,3],[9,9],[6,6],[3,6],[6,3],[6,9],[9,6]];
+  // 19
+  return[[3,3],[3,9],[3,15],[9,3],[9,9],[9,15],[15,3],[15,9],[15,15]];
+}
+
+function ptFromEvent(e){
+  const rect=canvas.getBoundingClientRect();
+  const scaleX=canvas.width/rect.width;
+  const scaleY=canvas.height/rect.height;
+  const mx=(e.clientX-rect.left)*scaleX;
+  const my=(e.clientY-rect.top)*scaleY;
+  const c=Math.round((mx-MARGIN)/CELL);
+  const r=Math.round((my-MARGIN)/CELL);
+  if(r<0||r>=N||c<0||c>=N)return null;
+  return[r,c];
+}
+
+canvas.addEventListener("mousemove",e=>{
+  if(gameOver||aiThinking)return;
+  if(vsAI&&turn===WHITE)return;
+  hoverPt=ptFromEvent(e);
+  drawBoard();
+});
+canvas.addEventListener("mouseleave",()=>{hoverPt=null;drawBoard();});
+canvas.addEventListener("click",e=>{
+  if(gameOver||aiThinking)return;
+  if(vsAI&&turn===WHITE)return;
+  const pt=ptFromEvent(e);
+  if(!pt)return;
+  tryPlace(pt[0],pt[1]);
+});
+
+// ── Go logic ───────────────────────────────────────────────────────
+function getGroup(b,r,c){
+  const color=b[r][c];if(!color)return{stones:[],liberties:new Set()};
+  const visited=new Set(),libs=new Set(),stack=[[r,c]];
+  while(stack.length){
+    const[cr,cc]=stack.pop(),key=`${cr},${cc}`;
+    if(visited.has(key))continue;
+    visited.add(key);
+    for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
+      const nr=cr+dr,nc=cc+dc;
+      if(nr<0||nr>=N||nc<0||nc>=N)continue;
+      const nk=`${nr},${nc}`;
+      if(b[nr][nc]===EMPTY)libs.add(nk);
+      else if(b[nr][nc]===color&&!visited.has(nk))stack.push([nr,nc]);
+    }
+  }
+  return{stones:[...visited].map(k=>k.split(",").map(Number)),liberties:libs};
+}
+
+function removeDeadGroups(b,player){
+  let cap=0;
+  const opp=player===BLACK?WHITE:BLACK;
+  const checked=new Set();
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    const k=`${r},${c}`;
+    if(b[r][c]!==opp||checked.has(k))continue;
+    const{stones,liberties}=getGroup(b,r,c);
+    stones.forEach(([sr,sc])=>checked.add(`${sr},${sc}`));
+    if(liberties.size===0){
+      stones.forEach(([sr,sc])=>{b[sr][sc]=EMPTY;cap++;});
+    }
+  }
+  return cap;
+}
+
+function isLegalMove(b,r,c,player){
+  if(b[r][c]!==EMPTY)return false;
+  const nb=b.map(row=>[...row]);
+  nb[r][c]=player;
+  // remove opponent captures first
+  removeDeadGroups(nb,player);
+  // suicide check
+  const{liberties}=getGroup(nb,r,c);
+  if(liberties.size===0)return false;
+  // ko: compare with prevBoard
+  if(prevBoard){
+    let same=true;
+    for(let i=0;i<N&&same;i++)for(let j=0;j<N&&same;j++)if(nb[i][j]!==prevBoard[i][j])same=false;
+    if(same)return false;
+  }
+  return true;
+}
+
+function tryPlace(r,c){
+  if(!isLegalMove(board,r,c,turn))return;
+  const nb=board.map(row=>[...row]);
+  prevBoard=board.map(row=>[...row]);
+  nb[r][c]=turn;
+  const cap=removeDeadGroups(nb,turn);
+  if(turn===BLACK)captured.white+=cap;
+  else captured.black+=cap;
+  board=nb;
+  passes=0;
+  const next=turn===BLACK?WHITE:BLACK;
+  turn=next;
+  drawBoard();updateUI();
+  if(vsAI&&turn===WHITE&&!gameOver){
+    aiThinking=true;setStatus("AI is thinking…");
+    setTimeout(doAI,350);
+  }else{
+    setStatus(vsAI?"Your turn — Black":(turn===BLACK?"Black's turn":"White's turn"));
+  }
+}
+
+function doPass(){
+  passes++;
+  if(passes>=2){endGame();return;}
+  const nm=turn===BLACK?"Black":"White";
+  setStatus(`${nm} passed`);
+  turn=turn===BLACK?WHITE:BLACK;
+  updateUI();
+  if(vsAI&&turn===WHITE&&!gameOver){
+    aiThinking=true;
+    setTimeout(()=>{
+      // AI also passes sometimes — for simplicity pass if no good move
+      const move=aiFindMove();
+      aiThinking=false;
+      if(!move){doPass();}else{tryPlace(...move);}
+    },400);
+  }
+}
+
+// ── AI (territory-aware greedy + random) ──────────────────────────
+function aiFindMove(){
+  const level=+document.getElementById("aiLevel").value;
+  const moves=[];
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    if(isLegalMove(board,r,c,WHITE))moves.push([r,c]);
+  }
+  if(!moves.length)return null;
+
+  if(level===1){
+    // random
+    return moves[Math.floor(Math.random()*moves.length)];
+  }
+
+  // score each move
+  function scoreMove(r,c){
+    const nb=board.map(row=>[...row]);
+    nb[r][c]=WHITE;
+    const cap=removeDeadGroups(nb,WHITE);
+    let score=cap*10;
+    // avoid edges early
+    const edge=Math.min(r,c,N-1-r,N-1-c);
+    score+=edge*0.5;
+    // center bonus
+    const mid=(N-1)/2;
+    score-=Math.abs(r-mid)+Math.abs(c-mid);
+    // save own groups
+    const nb2=board.map(row=>[...row]);
+    nb2[r][c]=WHITE;
+    removeDeadGroups(nb2,WHITE);
+    for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){
+      if(Math.abs(dr)+Math.abs(dc)!==1)continue;
+      const nr=r+dr,nc=c+dc;
+      if(nr<0||nr>=N||nc<0||nc>=N)continue;
+      if(board[nr][nc]===WHITE){
+        const{liberties}=getGroup(board,nr,nc);
+        if(liberties.size<=2)score+=8;
+      }
+    }
+    if(level===3){
+      // look-ahead: simulate BLACK best response
+      let bestBlack=-Infinity;
+      for(let br=0;br<N;br+=2)for(let bc=0;bc<N;bc+=2){
+        if(!isLegalMove(nb,br,bc,BLACK))continue;
+        const nb3=nb.map(row=>[...row]);
+        nb3[br][bc]=BLACK;
+        const capB=removeDeadGroups(nb3,BLACK);
+        bestBlack=Math.max(bestBlack,capB);
+      }
+      score-=bestBlack*5;
+    }
+    return score;
+  }
+
+  moves.sort(()=>Math.random()-.5);
+  let best=-Infinity,bestMove=moves[0];
+  for(const[r,c]of moves){
+    const s=scoreMove(r,c);
+    if(s>best){best=s;bestMove=[r,c];}
+  }
+  return bestMove;
+}
+
+function doAI(){
+  const move=aiFindMove();
+  aiThinking=false;
+  if(!move){doPass();return;}
+  tryPlace(...move);
+}
+
+// ── Scoring (Area method) ──────────────────────────────────────────
+function computeScore(){
+  const territory={black:0,white:0,neutral:0};
+  const visited=new Set();
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    if(board[r][c]!==EMPTY||visited.has(`${r},${c}`))continue;
+    // flood fill empty region
+    const region=[],borders=new Set(),stack=[[r,c]];
+    while(stack.length){
+      const[cr,cc]=stack.pop(),k=`${cr},${cc}`;
+      if(visited.has(k))continue;
+      visited.add(k);region.push([cr,cc]);
+      for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
+        const nr=cr+dr,nc=cc+dc;
+        if(nr<0||nr>=N||nc<0||nc>=N)continue;
+        if(board[nr][nc]===EMPTY)stack.push([nr,nc]);
+        else borders.add(board[nr][nc]);
+      }
+    }
+    if(borders.size===1){
+      const owner=[...borders][0];
+      region.forEach(()=>owner===BLACK?territory.black++:territory.white++);
+    }else{
+      region.forEach(()=>territory.neutral++);
+    }
+  }
+  // count stones on board
+  let bStones=0,wStones=0;
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    if(board[r][c]===BLACK)bStones++;
+    else if(board[r][c]===WHITE)wStones++;
+  }
+  return{
+    black:bStones+territory.black,
+    white:wStones+territory.white+KOMI,
+    bStones,wStones,
+    bTerritory:territory.black,
+    wTerritory:territory.white
+  };
+}
+
+function endGame(){
+  gameOver=true;
+  const sc=computeScore();
+  const winner=sc.black>sc.white?"Black":"White";
+  setStatus(`Game over — ${winner} wins! (B: ${sc.black.toFixed(1)} · W: ${sc.white.toFixed(1)})`);
+  drawBoard();
+  document.getElementById("scoreBlack").textContent=sc.black.toFixed(1);
+  document.getElementById("scoreWhite").textContent=sc.white.toFixed(1);
+}
+
+function updateUI(){
+  const ts=document.getElementById("turnStone");
+  ts.className="turn-stone "+(turn===BLACK?"black":"white");
+  document.getElementById("capBlack").textContent=`Captured: ${captured.black}`;
+  document.getElementById("capWhite").textContent=`Captured: ${captured.white}`;
+}
+function setStatus(msg){document.getElementById("statusBar").textContent=msg;}
+
+window._goRedraw=drawBoard;
+
+// ── Controls ───────────────────────────────────────────────────────
+document.getElementById("restartBtn").addEventListener("click",initGame);
+document.getElementById("passBtn").addEventListener("click",()=>{
+  if(gameOver||aiThinking)return;
+  if(vsAI&&turn===WHITE)return;
+  doPass();
+});
+document.getElementById("resignBtn").addEventListener("click",()=>{
+  if(gameOver)return;
+  gameOver=true;
+  const nm=turn===BLACK?"Black":"White";
+  setStatus(`${nm} resigned. ${turn===BLACK?"White":"Black"} wins!`);
+});
+
+vsAI=true;
+document.getElementById("modeVsAI").addEventListener("click",function(){
+  vsAI=true;this.classList.add("active");
+  document.getElementById("modeVs2P").classList.remove("active");
+  document.getElementById("aiBar").style.display="flex";
+  document.getElementById("labelBlack").textContent="Black · You";
+  document.getElementById("labelWhite").textContent="White · AI";
+  initGame();
+});
+document.getElementById("modeVs2P").addEventListener("click",function(){
+  vsAI=false;this.classList.add("active");
+  document.getElementById("modeVsAI").classList.remove("active");
+  document.getElementById("aiBar").style.display="none";
+  document.getElementById("labelBlack").textContent="Black";
+  document.getElementById("labelWhite").textContent="White";
+  initGame();
+});
+document.getElementById("boardSize").addEventListener("change",initGame);
+
+window.addEventListener("resize",()=>{resizeCanvas();drawBoard();});
+
+initGame();
+</script>
+</body>
+</html>

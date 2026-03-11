@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AGORÀ — Gungi</title>
+<link rel="icon" type="image/png" sizes="32x32" href="item/Logoaagora.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #e8e2d5;
+  --panel: #f5f0e8;
+  --panel2: #faf7f2;
+  --text: #1a1008;
+  --muted: #6b5b48;
+  --brand: #571929;
+  --brand2: #8b2239;
+  --gold: #c9932a;
+  --line: rgba(87,25,41,0.12);
+  --shadow: 0 20px 50px rgba(30,10,5,0.25);
+  --soft: 0 8px 24px rgba(30,10,5,0.12);
+  --board-bg: #111009;
+  --board-line: rgba(201,147,42,0.30);
+  --board-star: rgba(201,147,42,0.70);
+  --sq-hover: rgba(201,147,42,0.08);
+  --sq-sel: rgba(201,147,42,0.28);
+  --sq-move: rgba(120,210,120,0.22);
+  --sq-cap: rgba(220,80,80,0.22);
+  --sq-last: rgba(201,147,42,0.18);
+}
+:root[data-theme="dark"] {
+  --bg: #0a0d12;
+  --panel: #12171f;
+  --panel2: #1a2030;
+  --text: #f0e8d8;
+  --muted: rgba(200,220,255,0.55);
+  --brand: #a8ebf6;
+  --brand2: #7dd8e8;
+  --gold: #25acc1;
+  --line: rgba(168,235,246,0.14);
+  --shadow: 0 20px 50px rgba(0,0,0,0.70);
+  --soft: 0 8px 24px rgba(0,0,0,0.50);
+  --board-bg: #090807;
+  --board-line: rgba(168,235,246,0.18);
+  --board-star: rgba(168,235,246,0.60);
+  --sq-hover: rgba(168,235,246,0.07);
+  --sq-sel: rgba(168,235,246,0.22);
+  --sq-move: rgba(100,220,100,0.20);
+  --sq-cap: rgba(255,100,100,0.22);
+  --sq-last: rgba(168,235,246,0.14);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Lora',Georgia,serif;transition:background .25s,color .25s;}
+
+/* TOPBAR */
+.topbar{background:var(--panel);border-bottom:1px solid var(--line);box-shadow:var(--soft);padding:0 24px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:20;}
+.topbar-brand{font-family:'Cinzel',serif;font-size:.85rem;letter-spacing:.14em;color:var(--brand);text-decoration:none;text-transform:uppercase;}
+.topbar-center{display:flex;flex-direction:column;align-items:center;gap:1px;}
+.topbar-title{font-family:'Cinzel',serif;font-size:1.05rem;letter-spacing:.08em;}
+.topbar-sub{font-family:'Lora',serif;font-style:italic;font-size:.68rem;color:var(--muted);}
+.btn-icon{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:transparent;cursor:pointer;display:grid;place-items:center;transition:background .15s;color:var(--text);}
+.btn-icon:hover{background:var(--line);}
+.btn-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* PAGE */
+.page{max-width:720px;margin:0 auto;padding:20px 16px 60px;display:flex;flex-direction:column;align-items:center;gap:16px;}
+
+/* MODE */
+.mode-bar{display:flex;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:5px;box-shadow:var(--soft);}
+.mode-btn{padding:8px 20px;border-radius:999px;border:none;background:transparent;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;color:var(--muted);transition:all .18s;}
+.mode-btn.active{background:var(--brand);color:#fff;box-shadow:0 4px 14px rgba(87,25,41,.28);}
+:root[data-theme="dark"] .mode-btn.active{color:#0a0d12;}
+
+/* AI BAR */
+.ai-bar{display:flex;align-items:center;gap:12px;font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.ai-bar select{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:999px;padding:7px 16px;font-family:inherit;font-size:.75rem;cursor:pointer;}
+
+/* SCOREBOARD */
+.scoreboard{display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:12px 22px;box-shadow:var(--soft);width:100%;max-width:540px;}
+.score-side{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;}
+.score-gyou{font-size:.7rem;font-family:'Cinzel',serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);}
+.score-captured{font-size:.7rem;min-height:1.1em;color:var(--muted);letter-spacing:.04em;}
+.score-label{font-family:'Cinzel',serif;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+.gyou-icon{width:38px;height:38px;display:grid;place-items:center;}
+
+.score-mid{display:flex;flex-direction:column;align-items:center;gap:3px;}
+.turn-icon-wrap{width:28px;height:28px;display:grid;place-items:center;}
+.turn-label{font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);}
+
+/* STATUS */
+.status-bar{font-family:'Cinzel',serif;font-size:.82rem;letter-spacing:.06em;color:var(--muted);min-height:22px;text-align:center;}
+
+/* BOARD */
+.board-outer{
+  background:var(--board-bg);
+  border-radius:14px;
+  padding:clamp(10px,3vw,22px);
+  box-shadow:var(--shadow),inset 0 0 0 1px rgba(201,147,42,0.15);
+  position:relative;
+}
+
+.board-grid-wrap{display:flex;align-items:flex-start;gap:4px;}
+
+.coord-col{
+  display:flex;flex-direction:column;
+  font-family:'Cinzel',serif;font-size:.58rem;
+  color:var(--board-star);letter-spacing:.04em;
+}
+.coord-col span{display:flex;align-items:center;justify-content:center;text-align:center;}
+
+.coord-row{
+  display:flex;
+  font-family:'Cinzel',serif;font-size:.58rem;
+  color:var(--board-star);letter-spacing:.04em;
+  margin-top:3px;
+}
+.coord-row span{display:flex;align-items:center;justify-content:center;}
+
+.board{
+  display:grid;
+  grid-template-columns:repeat(9,1fr);
+  border:1px solid var(--board-line);
+}
+
+.cell{
+  display:flex;align-items:center;justify-content:center;
+  border:1px solid var(--board-line);
+  cursor:pointer;
+  position:relative;
+  transition:background .10s;
+  aspect-ratio:1/1;
+}
+.cell:hover{background:var(--sq-hover);}
+.cell.selected{background:var(--sq-sel)!important;}
+.cell.last-from,.cell.last-to{background:var(--sq-last)!important;}
+
+/* move hints */
+.cell.movable::after{
+  content:'';position:absolute;
+  width:30%;height:30%;border-radius:50%;
+  background:rgba(100,210,100,0.55);
+  pointer-events:none;z-index:2;
+}
+.cell.capture-hint::after{
+  content:'';position:absolute;
+  inset:8%;border-radius:2px;
+  border:2px solid rgba(220,100,100,0.70);
+  pointer-events:none;z-index:2;
+}
+
+/* STAR POINTS */
+.cell.star::before{
+  content:'';position:absolute;
+  width:12%;height:12%;border-radius:50%;
+  background:var(--board-star);
+  pointer-events:none;
+}
+
+/* PIECES — pentagon shapes */
+.piece{
+  width:80%;height:80%;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif;
+  font-size:clamp(.45rem,1.5vw,.75rem);
+  font-weight:700;
+  letter-spacing:-.02em;
+  position:relative;z-index:1;
+  transition:transform .12s;
+  cursor:pointer;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.55));
+  user-select:none;
+}
+.piece:hover{transform:scale(1.10);}
+.piece.w-piece{
+  clip-path:polygon(50% 0%,96% 33%,79% 97%,21% 97%,4% 33%);
+  background:linear-gradient(160deg,#faf5ec,#d8c9b0);
+  color:#571929;
+}
+.piece.b-piece{
+  clip-path:polygon(50% 100%,4% 67%,21% 3%,79% 3%,96% 67%);
+  background:linear-gradient(160deg,#3a3028,#111009);
+  color:#e8d8b8;
+}
+:root[data-theme="dark"] .piece.w-piece{color:#571929;}
+:root[data-theme="dark"] .piece.b-piece{color:#a8ebf6;}
+
+.piece.promoted{
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.55)) drop-shadow(0 0 5px rgba(201,147,42,0.80));
+}
+:root[data-theme="dark"] .piece.promoted{
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.55)) drop-shadow(0 0 5px rgba(168,235,246,0.70));
+}
+
+/* CONTROLS */
+.controls{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+.btn{padding:10px 22px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;box-shadow:var(--soft);transition:all .15s;}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow);}
+.btn.primary{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-color:transparent;}
+:root[data-theme="dark"] .btn.primary{color:#0a0d12;}
+
+/* PIECE LEGEND */
+.legend{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px 18px;width:100%;max-width:560px;box-shadow:var(--soft);}
+.legend-title{font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.10em;text-transform:uppercase;color:var(--brand);margin-bottom:10px;}
+.legend-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:7px;}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:.78rem;color:var(--muted);}
+.leg-piece{width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Cinzel',serif;font-size:.6rem;font-weight:700;}
+.leg-piece.w{clip-path:polygon(50% 0%,96% 33%,79% 97%,21% 97%,4% 33%);background:linear-gradient(160deg,#faf5ec,#d8c9b0);color:#571929;}
+.leg-piece.b{clip-path:polygon(50% 100%,4% 67%,21% 3%,79% 3%,96% 67%);background:linear-gradient(160deg,#3a3028,#111009);color:#e8d8b8;}
+.leg-name{font-family:'Cinzel',serif;font-weight:600;color:var(--text);font-size:.72rem;}
+
+/* RULES */
+.rules{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px 20px;max-width:560px;width:100%;box-shadow:var(--soft);}
+.rules-title{font-family:'Cinzel',serif;font-size:.75rem;letter-spacing:.10em;text-transform:uppercase;color:var(--brand);margin-bottom:8px;}
+.rules p{font-size:.83rem;line-height:1.7;color:var(--muted);margin-bottom:5px;}
+.rules p:last-child{margin-bottom:0;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="index.html" class="topbar-brand">← AGORÀ</a>
+  <div class="topbar-center">
+    <span class="topbar-title">Gungi</span>
+    <span class="topbar-sub">from Hunter × Hunter</span>
+  </div>
+  <div>
+    <button class="btn-icon" id="themeBtn" title="Toggle theme">
+      <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="page">
+
+  <div class="mode-bar">
+    <button class="mode-btn active" id="modeVsAI">vs AI</button>
+    <button class="mode-btn" id="modeVs2P">2 Players</button>
+  </div>
+
+  <div id="aiBar" class="ai-bar">
+    <span>AI</span>
+    <select id="aiLevel">
+      <option value="1">Easy</option>
+      <option value="2" selected>Medium</option>
+      <option value="3">Hard</option>
+    </select>
+  </div>
+
+  <div class="scoreboard">
+    <div class="score-side">
+      <div class="gyou-icon" id="gyouIconW">
+        <svg width="36" height="36" viewBox="0 0 36 36">
+          <polygon points="18,2 34,12.5 28.5,32 7.5,32 2,12.5" fill="url(#wgrad)" stroke="rgba(87,25,41,0.3)" stroke-width="1"/>
+          <defs><linearGradient id="wgrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#faf5ec"/><stop offset="100%" style="stop-color:#d8c9b0"/></linearGradient></defs>
+          <text x="18" y="22" text-anchor="middle" font-family="Cinzel,serif" font-size="10" font-weight="700" fill="#571929">G</text>
+        </svg>
+      </div>
+      <div class="score-label" id="labelWhite">White · You</div>
+      <div class="score-captured" id="capWhite"></div>
+    </div>
+    <div class="score-mid">
+      <div class="turn-label">Turn</div>
+      <div class="turn-icon-wrap" id="turnIcon">
+        <svg width="28" height="28" viewBox="0 0 28 28" id="turnSvg">
+          <polygon id="turnPoly" points="14,2 26,9.5 22,25 6,25 2,9.5"/>
+          <text id="turnTxt" x="14" y="18" text-anchor="middle" font-family="Cinzel,serif" font-size="8" font-weight="700" fill="#571929">G</text>
+        </svg>
+      </div>
+    </div>
+    <div class="score-side">
+      <div class="gyou-icon">
+        <svg width="36" height="36" viewBox="0 0 36 36">
+          <polygon points="18,34 2,23.5 7.5,4 28.5,4 34,23.5" fill="url(#bgrad)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+          <defs><linearGradient id="bgrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#3a3028"/><stop offset="100%" style="stop-color:#111009"/></linearGradient></defs>
+          <text x="18" y="22" text-anchor="middle" font-family="Cinzel,serif" font-size="10" font-weight="700" fill="#e8d8b8">G</text>
+        </svg>
+      </div>
+      <div class="score-label" id="labelBlack">Black · AI</div>
+      <div class="score-captured" id="capBlack"></div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="statusBar">Your turn — White</div>
+
+  <div class="board-outer">
+    <div class="board-grid-wrap">
+      <div class="coord-col" id="coordRanks"></div>
+      <div>
+        <div class="board" id="gungiBoard"></div>
+        <div class="coord-row" id="coordFiles"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" id="restartBtn">New Game</button>
+    <button class="btn" id="flipBtn">Flip Board</button>
+    <button class="btn" id="undoBtn">Undo</button>
+  </div>
+
+  <div class="legend">
+    <div class="legend-title">Pieces</div>
+    <div class="legend-grid" id="legendGrid"></div>
+  </div>
+
+  <div class="rules">
+    <div class="rules-title">Rules</div>
+    <p>White pieces are <strong>pentagons pointing up ▲</strong>; Black pieces point down ▼. Capture the opponent's <strong>Gyou (G)</strong> to win.</p>
+    <p><strong>Fu (F)</strong> moves 1 step forward, captures diagonally forward. Reaches the last rank → promotes to <strong>F+</strong> (moves like Gyou).</p>
+    <p>Green dots = valid moves &nbsp;|&nbsp; Red outline = capture &nbsp;|&nbsp; Gold glow = promoted piece.</p>
+  </div>
+
+</main>
+
+<script>
+// ── Theme ──────────────────────────────────────────────────────────
+const THEME_KEY="agora_theme";
+function applyTheme(t){document.documentElement[t==="dark"?"setAttribute":"removeAttribute"]("data-theme","dark");localStorage.setItem(THEME_KEY,t);}
+(function(){const s=localStorage.getItem(THEME_KEY);applyTheme((s==="dark"||s==="light")?s:(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"));})();
+document.getElementById("themeBtn").addEventListener("click",()=>{applyTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");});
+
+// ── Piece definitions ──────────────────────────────────────────────
+const PIECE_INFO={
+  G:{name:"Gyou",label:"G",desc:"King — 1 step any direction"},
+  S:{name:"Shi",label:"S",desc:"General — slides 1–3 orthogonal, 1 diagonal"},
+  H:{name:"Hisha",label:"H",desc:"Spear — slides any distance orthogonally"},
+  K:{name:"Kaku",label:"K",desc:"Diagonal — slides any distance diagonally"},
+  U:{name:"Uma",label:"U",desc:"Horse — L-shaped jump (like a knight)"},
+  F:{name:"Fu",label:"F",desc:"Infantry — 1 forward, captures diagonally fwd"},
+  "F+":{name:"Fu+",label:"F+",desc:"Promoted Fu — 1 step any direction ✦"},
+};
+const PIECE_VAL={G:10000,S:500,H:400,K:350,U:280,"F+":180,F:100};
+const BACK=[" H","U","K","S","G","S","K","U","H"];
+const SIZE=9;
+
+// Build legend
+(function(){
+  const lg=document.getElementById("legendGrid");
+  for(const [type,info] of Object.entries(PIECE_INFO)){
+    if(type==="F+")continue;
+    const div=document.createElement("div");div.className="legend-item";
+    div.innerHTML=`<div class="leg-piece w">${info.label}</div><div><div class="leg-name">${info.name}</div><div style="font-size:.68rem">${info.desc}</div></div>`;
+    lg.appendChild(div);
+  }
+})();
+
+// ── State ──────────────────────────────────────────────────────────
+let board,turn,selected,selMoves,history,gameOver,vsAI,aiThinking,flipped,capturedW,capturedB;
+
+function mkPiece(color,type){return{color,type};}
+function startPos(){
+  const b=Array.from({length:SIZE},()=>Array(SIZE).fill(null));
+  const back=["H","U","K","S","G","S","K","U","H"];
+  for(let c=0;c<SIZE;c++){b[0][c]=mkPiece("b",back[c]);b[8][c]=mkPiece("w",back[c]);}
+  for(const c of[1,3,5,7]){b[1][c]=mkPiece("b","F");b[7][c]=mkPiece("w","F");}
+  return b;
+}
+function cloneB(b){return b.map(r=>r.map(p=>p?{...p}:null));}
+
+function initGame(){
+  board=startPos();turn="w";selected=null;selMoves=[];
+  history=[];gameOver=false;aiThinking=false;
+  capturedW=[];capturedB=[];
+  renderBoard();updateUI();
+  setStatus(vsAI?"Your turn — White":"White's turn");
+}
+
+// ── Move generation ─────────────────────────────────────────────────
+function inBounds(r,c){return r>=0&&r<SIZE&&c>=0&&c<SIZE;}
+
+function getRawMoves(b,r,c){
+  const p=b[r][c];if(!p)return[];
+  const{color,type}=p,opp=color==="w"?"b":"w";
+  const fwd=color==="w"?-1:1;
+  const promoRow=color==="w"?0:8;
+  const moves=[];
+
+  function tryAdd(tr,tc,extra={}){
+    if(!inBounds(tr,tc))return;
+    if(b[tr][tc]?.color===color)return;
+    moves.push({fr:r,fc:c,tr,tc,...extra});
+  }
+  function slide(dr,dc){
+    let nr=r+dr,nc=c+dc;
+    while(inBounds(nr,nc)){
+      if(b[nr][nc]?.color===color)break;
+      moves.push({fr:r,fc:c,tr:nr,tc:nc});
+      if(b[nr][nc])break;
+      nr+=dr;nc+=dc;
+    }
+  }
+
+  if(type==="G"||type==="F+"){
+    for(const[dr,dc]of[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]])tryAdd(r+dr,c+dc);
+  }
+  else if(type==="S"){
+    for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]]){
+      for(let d=1;d<=3;d++){
+        const nr=r+dr*d,nc=c+dc*d;
+        if(!inBounds(nr,nc))break;
+        if(b[nr][nc]?.color===color)break;
+        moves.push({fr:r,fc:c,tr:nr,tc:nc});
+        if(b[nr][nc])break;
+      }
+    }
+    for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]])tryAdd(r+dr,c+dc);
+  }
+  else if(type==="H"){for(const[dr,dc]of[[-1,0],[1,0],[0,-1],[0,1]])slide(dr,dc);}
+  else if(type==="K"){for(const[dr,dc]of[[-1,-1],[-1,1],[1,-1],[1,1]])slide(dr,dc);}
+  else if(type==="U"){
+    for(const[dr,dc]of[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]])tryAdd(r+dr,c+dc);
+  }
+  else if(type==="F"){
+    // forward move
+    const nr=r+fwd;
+    if(inBounds(nr,c)&&!b[nr][c])moves.push({fr:r,fc:c,tr:nr,tc:c,promo:nr===promoRow});
+    // diagonal captures
+    for(const dc of[-1,1]){
+      const nr2=r+fwd,nc2=c+dc;
+      if(inBounds(nr2,nc2)&&b[nr2][nc2]?.color===opp)
+        moves.push({fr:r,fc:c,tr:nr2,tc:nc2,promo:nr2===promoRow});
+    }
+  }
+  return moves;
+}
+
+function getAllMoves(b,color){
+  const moves=[];
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)
+    if(b[r][c]?.color===color)moves.push(...getRawMoves(b,r,c));
+  return moves;
+}
+
+function applyMove(b,m){
+  const nb=cloneB(b);
+  const captured=nb[m.tr][m.tc];
+  nb[m.tr][m.tc]={...nb[m.fr][m.fc]};
+  nb[m.fr][m.fc]=null;
+  if(m.promo)nb[m.tr][m.tc].type="F+";
+  return{board:nb,captured};
+}
+
+// ── Render ──────────────────────────────────────────────────────────
+function getBoardPx(){return Math.min(522,window.innerWidth-60);}
+function cellPx(){return Math.floor(getBoardPx()/SIZE);}
+
+const STAR_POINTS=new Set(["2,2","2,4","2,6","4,2","4,4","4,6","6,2","6,4","6,6"]);
+const FILES=["a","b","c","d","e","f","g","h","i"];
+
+function renderBoard(){
+  const CP=cellPx();
+  const boardEl=document.getElementById("gungiBoard");
+  boardEl.style.width=(CP*SIZE)+"px";
+  boardEl.innerHTML="";
+
+  const lastM=history.length?history[history.length-1].move:null;
+  const moveSet=new Set(selMoves.map(m=>m.tr+","+m.tc));
+  const capSet=new Set(selMoves.filter(m=>board[m.tr][m.tc]).map(m=>m.tr+","+m.tc));
+
+  for(let ri=0;ri<SIZE;ri++){
+    for(let ci=0;ci<SIZE;ci++){
+      const r=flipped?SIZE-1-ri:ri;
+      const c=flipped?SIZE-1-ci:ci;
+      const cell=document.createElement("div");
+      cell.className="cell";
+      cell.style.width=CP+"px";cell.style.height=CP+"px";
+      const key=`${r},${c}`;
+      if(STAR_POINTS.has(key))cell.classList.add("star");
+      if(lastM&&lastM.fr===r&&lastM.fc===c)cell.classList.add("last-from");
+      if(lastM&&lastM.tr===r&&lastM.tc===c)cell.classList.add("last-to");
+      if(selected&&selected[0]===r&&selected[1]===c)cell.classList.add("selected");
+      if(selected&&moveSet.has(key)){
+        if(capSet.has(key))cell.classList.add("capture-hint");
+        else cell.classList.add("movable");
+      }
+
+      const p=board[r][c];
+      if(p){
+        const div=document.createElement("div");
+        const isW=p.color==="w";
+        div.className="piece "+(isW?"w-piece":"b-piece")+(p.type==="F+"?" promoted":"");
+        div.style.width=div.style.height=Math.round(CP*0.80)+"px";
+        div.style.fontSize=Math.round(CP*0.22)+"px";
+        div.textContent=PIECE_INFO[p.type]?.label||p.type;
+        cell.appendChild(div);
+      }
+
+      cell.addEventListener("click",()=>handleClick(r,c));
+      boardEl.appendChild(cell);
+    }
+  }
+
+  // Coordinates
+  const ranks=document.getElementById("coordRanks");
+  ranks.innerHTML="";
+  for(let ri=0;ri<SIZE;ri++){
+    const r=flipped?ri:SIZE-1-ri;
+    const s=document.createElement("span");
+    s.textContent=r+1;
+    s.style.width="14px";s.style.height=CP+"px";s.style.lineHeight=CP+"px";
+    ranks.appendChild(s);
+  }
+  const filesEl=document.getElementById("coordFiles");
+  filesEl.innerHTML="";
+  for(let ci=0;ci<SIZE;ci++){
+    const c=flipped?SIZE-1-ci:ci;
+    const s=document.createElement("span");
+    s.textContent=FILES[c];
+    s.style.width=CP+"px";s.style.height="14px";s.style.lineHeight="14px";
+    filesEl.appendChild(s);
+  }
+}
+
+function updateUI(){
+  // turn icon
+  const poly=document.getElementById("turnPoly");
+  const txt=document.getElementById("turnTxt");
+  if(turn==="w"){
+    poly.setAttribute("points","14,2 26,9.5 22,25 6,25 2,9.5");
+    poly.setAttribute("fill","url(#wgrad2)");
+    txt.setAttribute("fill","#571929");
+    if(!document.getElementById("wgrad2")){
+      const svg=document.getElementById("turnSvg");
+      const defs=document.createElementNS("http://www.w3.org/2000/svg","defs");
+      const g=document.createElementNS("http://www.w3.org/2000/svg","linearGradient");
+      g.id="wgrad2";g.setAttribute("x1","0%");g.setAttribute("y1","0%");g.setAttribute("x2","100%");g.setAttribute("y2","100%");
+      const s1=document.createElementNS("http://www.w3.org/2000/svg","stop");s1.setAttribute("offset","0%");s1.setAttribute("style","stop-color:#faf5ec");
+      const s2=document.createElementNS("http://www.w3.org/2000/svg","stop");s2.setAttribute("offset","100%");s2.setAttribute("style","stop-color:#d8c9b0");
+      g.appendChild(s1);g.appendChild(s2);defs.appendChild(g);svg.insertBefore(defs,svg.firstChild);
+    }
+  }else{
+    poly.setAttribute("points","14,26 2,18.5 6,3 22,3 26,18.5");
+    poly.setAttribute("fill","url(#bgrad2)");
+    txt.setAttribute("fill","#e8d8b8");
+    if(!document.getElementById("bgrad2")){
+      const svg=document.getElementById("turnSvg");
+      const defs=document.createElementNS("http://www.w3.org/2000/svg","defs");
+      const g=document.createElementNS("http://www.w3.org/2000/svg","linearGradient");
+      g.id="bgrad2";g.setAttribute("x1","0%");g.setAttribute("y1","0%");g.setAttribute("x2","100%");g.setAttribute("y2","100%");
+      const s1=document.createElementNS("http://www.w3.org/2000/svg","stop");s1.setAttribute("offset","0%");s1.setAttribute("style","stop-color:#3a3028");
+      const s2=document.createElementNS("http://www.w3.org/2000/svg","stop");s2.setAttribute("offset","100%");s2.setAttribute("style","stop-color:#111009");
+      g.appendChild(s1);g.appendChild(s2);defs.appendChild(g);svg.insertBefore(defs,svg.firstChild);
+    }
+  }
+  txt.textContent="G";
+  // captured
+  document.getElementById("capWhite").textContent=capturedW.length?capturedW.map(t=>PIECE_INFO[t]?.label||t).join(" "):"—";
+  document.getElementById("capBlack").textContent=capturedB.length?capturedB.map(t=>PIECE_INFO[t]?.label||t).join(" "):"—";
+}
+
+function setStatus(msg){document.getElementById("statusBar").textContent=msg;}
+
+// ── Interaction ──────────────────────────────────────────────────────
+function handleClick(r,c){
+  if(gameOver||aiThinking)return;
+  if(vsAI&&turn==="b")return;
+
+  if(selected){
+    const m=selMoves.find(m=>m.tr===r&&m.tc===c);
+    if(m){executeMove(m);return;}
+    if(board[r][c]?.color===turn){
+      selected=[r,c];
+      selMoves=getRawMoves(board,r,c);
+      renderBoard();return;
+    }
+    selected=null;selMoves=[];renderBoard();return;
+  }
+  if(board[r][c]?.color===turn){
+    selected=[r,c];
+    selMoves=getRawMoves(board,r,c);
+    renderBoard();
+  }
+}
+
+function executeMove(m,isAI=false){
+  const{board:nb,captured}=applyMove(board,m);
+  if(captured){
+    if(turn==="w")capturedW.push(captured.type);
+    else capturedB.push(captured.type);
+  }
+  history.push({move:m,board:cloneB(board),capturedW:[...capturedW],capturedB:[...capturedB]});
+  board=nb;selected=null;selMoves=[];
+  const prevTurn=turn;turn=turn==="w"?"b":"w";
+  renderBoard();updateUI();
+
+  if(captured?.type==="G"){
+    gameOver=true;
+    setStatus(`${prevTurn==="w"?"White":"Black"} captures the Gyou — wins!`);
+    return;
+  }
+
+  if(vsAI&&turn==="b"&&!gameOver){
+    aiThinking=true;
+    setStatus("AI is thinking…");
+    setTimeout(doAI,380);
+  }else{
+    setStatus(vsAI?"Your turn — White":(turn==="w"?"White's turn":"Black's turn"));
+  }
+}
+
+// ── AI (minimax + alpha-beta + PST) ────────────────────────────────
+const CENTER_BONUS=[
+  [0,0,0,0,0,0,0,0,0],
+  [0,1,1,1,1,1,1,1,0],
+  [0,1,2,2,2,2,2,1,0],
+  [0,1,2,3,3,3,2,1,0],
+  [0,1,2,3,4,3,2,1,0],
+  [0,1,2,3,3,3,2,1,0],
+  [0,1,2,2,2,2,2,1,0],
+  [0,1,1,1,1,1,1,1,0],
+  [0,0,0,0,0,0,0,0,0],
+];
+
+function evalBoard(b){
+  let score=0;
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    const p=b[r][c];if(!p)continue;
+    const v=PIECE_VAL[p.type]||0;
+    const cb=CENTER_BONUS[r][c]*4;
+    let adv=0;
+    if(p.type==="F"){adv=p.color==="b"?r*6:(8-r)*6;}
+    score+=(p.color==="b"?1:-1)*(v+cb+adv);
+  }
+  return score;
+}
+
+function minimax(b,depth,alpha,beta,maxi){
+  const color=maxi?"b":"w";
+  const moves=getAllMoves(b,color);
+  if(!moves.length||depth===0)return evalBoard(b);
+
+  // move ordering: captures first
+  moves.sort((a,z)=>{
+    const av=b[a.tr][a.tc]?PIECE_VAL[b[a.tr][a.tc].type]||0:0;
+    const zv=b[z.tr][z.tc]?PIECE_VAL[b[z.tr][z.tc].type]||0:0;
+    return zv-av;
+  });
+
+  if(maxi){
+    let best=-Infinity;
+    for(const m of moves){
+      const{board:nb,captured}=applyMove(b,m);
+      if(captured?.type==="G")return 10000+depth;
+      best=Math.max(best,minimax(nb,depth-1,alpha,beta,false));
+      alpha=Math.max(alpha,best);if(beta<=alpha)break;
+    }
+    return best;
+  }else{
+    let best=Infinity;
+    for(const m of moves){
+      const{board:nb,captured}=applyMove(b,m);
+      if(captured?.type==="G")return-10000-depth;
+      best=Math.min(best,minimax(nb,depth-1,alpha,beta,true));
+      beta=Math.min(beta,best);if(beta<=alpha)break;
+    }
+    return best;
+  }
+}
+
+function doAI(){
+  const level=+document.getElementById("aiLevel").value;
+  const depth=level===1?1:level===2?2:3;
+  const moves=getAllMoves(board,"b");
+  if(!moves.length){aiThinking=false;return;}
+  moves.sort(()=>Math.random()-.5);
+
+  let best=-Infinity,bestMove=moves[0];
+  for(const m of moves){
+    const{board:nb,captured}=applyMove(board,m);
+    if(captured?.type==="G"){bestMove=m;break;}
+    const v=minimax(nb,depth-1,-Infinity,Infinity,false);
+    if(v>best){best=v;bestMove=m;}
+  }
+  aiThinking=false;
+  executeMove(bestMove,true);
+}
+
+// ── Controls ─────────────────────────────────────────────────────────
+document.getElementById("restartBtn").addEventListener("click",initGame);
+document.getElementById("flipBtn").addEventListener("click",()=>{flipped=!flipped;renderBoard();});
+document.getElementById("undoBtn").addEventListener("click",()=>{
+  if(!history.length||aiThinking)return;
+  const steps=vsAI&&history.length>=2?2:1;
+  for(let i=0;i<steps;i++){
+    const h=history.pop();if(!h)break;
+    board=h.board;
+    capturedW=h.capturedW;capturedB=h.capturedB;
+    turn=turn==="w"?"b":"w";
+  }
+  selected=null;selMoves=[];gameOver=false;
+  renderBoard();updateUI();
+  setStatus(vsAI?"Your turn — White":(turn==="w"?"White's turn":"Black's turn"));
+});
+
+vsAI=true;flipped=false;
+document.getElementById("modeVsAI").addEventListener("click",function(){
+  vsAI=true;this.classList.add("active");
+  document.getElementById("modeVs2P").classList.remove("active");
+  document.getElementById("aiBar").style.display="flex";
+  document.getElementById("labelWhite").textContent="White · You";
+  document.getElementById("labelBlack").textContent="Black · AI";
+  flipped=false;initGame();
+});
+document.getElementById("modeVs2P").addEventListener("click",function(){
+  vsAI=false;this.classList.add("active");
+  document.getElementById("modeVsAI").classList.remove("active");
+  document.getElementById("aiBar").style.display="none";
+  document.getElementById("labelWhite").textContent="White";
+  document.getElementById("labelBlack").textContent="Black";
+  initGame();
+});
+
+window.addEventListener("resize",()=>renderBoard());
+initGame();
+</script>
+</body>
+</html>
