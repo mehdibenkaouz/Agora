@@ -832,21 +832,24 @@ function buildPOIPopup(el){
 async function loadPOI(){
   if(!poiVisible||poiLoading)return;
   const bounds=map.getBounds();
-  // Non ricaricare se i bounds sono quasi uguali
   if(poiLastBounds&&poiLastBounds.contains(bounds)&&bounds.contains(poiLastBounds.pad(-0.1)))return;
   poiLoading=true;
-  poiLastBounds=bounds.pad(0.05);
+  poiLastBounds=bounds.pad(0.08);
   const{_southWest:sw,_northEast:ne}=poiLastBounds;
 
-  // Overpass query: tutti i POI rilevanti nel bbox
-  const query=`[out:json][timeout:15];
+  // Query pulita: solo luoghi rilevanti per lo studio, tutti i tipi OSM (node/way/relation)
+  const query=`[out:json][timeout:25];
 (
-  node["amenity"~"university|library|college|cafe|bar|community_centre"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-  node["leisure"~"park|garden"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-  way["amenity"~"university|library|college"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-  way["leisure"~"park|garden"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
-)->.all;
-out center 120;`;
+  node["amenity"~"^(university|library|college|community_centre)$"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+  way["amenity"~"^(university|library|college|community_centre)$"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+  relation["amenity"~"^(university|library|college|community_centre)$"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+  node["leisure"~"^(park|garden)$"]["name"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+  way["leisure"~"^(park|garden)$"]["name"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+  relation["leisure"~"^(park|garden)$"]["name"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+  node["building"~"^(university|college)$"]["name"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+  way["building"~"^(university|college)$"]["name"](${sw.lat},${sw.lng},${ne.lat},${ne.lng});
+);
+out center 300;`;
 
   try{
     const res=await fetch("https://overpass-api.de/api/interpreter",{
@@ -859,7 +862,7 @@ out center 120;`;
       const lng=el.lon||(el.center&&el.center.lon);
       if(!lat||!lng)return;
       const tags=el.tags||{};
-      if(!tags.name&&!tags["name:it"])return; // salta luoghi senza nome
+      if(!tags.name)return;
       const m=L.marker([lat,lng],{icon:makePOIIcon(tags),zIndexOffset:-100})
         .addTo(map)
         .bindPopup(buildPOIPopup(el),{maxWidth:240});
@@ -870,6 +873,7 @@ out center 120;`;
   }finally{
     poiLoading=false;
   }
+  
 }
 
 function clearPOI(){
