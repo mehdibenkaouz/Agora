@@ -1586,8 +1586,7 @@
             </label>
 
             <div class="profile-actions">
-              <button id="profileSaveBtn" class="primary-btn" type="submit">Save profile</button>
-              <div id="profileStatus" class="profile-status"></div>
+              <button id="profileSaveBtn" class="primary-btn" type="button">Save profile</button>              <div id="profileStatus" class="profile-status"></div>
             </div>
           </form>
         </div>
@@ -1776,22 +1775,25 @@ const ACCOUNT_ICON_SVG = `
     <circle cx="12" cy="8" r="4"></circle>
   </svg>
 `;
-
 const profileForm = document.getElementById("profileForm");
 const profileDisplayNameInput = document.getElementById("profileDisplayNameInput");
 const profilePictureUrlInput = document.getElementById("profilePictureUrlInput");
 const profileAvatarPreview = document.getElementById("profileAvatarPreview");
 const profilePickAvatarBtn = document.getElementById("profilePickAvatarBtn");
 const profileAvatarFileInput = document.getElementById("profileAvatarFileInput");
+
 const profileStatus = document.getElementById("profileStatus");
 
+const profileSaveBtn = document.getElementById("profileSaveBtn");
 function escapeHtml(s){
   return String(s || "")
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
+
     .replace(/'/g, "&#039;");
+
 }
 
 function syncAccountAvatar(){
@@ -2412,49 +2414,61 @@ if (profileAvatarFileInput){
   });
 }
 
+async function saveProfileManually(){
+  if (!getToken()){
+    openModal();
+    return;
+  }
+
+  const display_name = (profileDisplayNameInput?.value || "").trim();
+  const picture_url = (profilePictureUrlInput?.value || "").trim() || (CURRENT_USER?.picture_url || "");
+
+  if (!display_name){
+    if (profileStatus) profileStatus.textContent = "Display name required.";
+    return;
+  }
+
+  try{
+    if (profileStatus) profileStatus.textContent = "Saving...";
+    const out = await api("/api/profile", {
+      method: "POST",
+      body: JSON.stringify({ display_name, picture_url })
+    });
+
+    const u = out && out.user ? out.user : {};
+    CURRENT_USER = {
+      id: u.id || CURRENT_USER?.id || "",
+      email: u.email || CURRENT_USER?.email || "",
+      display_name: u.display_name || "",
+      picture_url: u.picture_url || ""
+    };
+
+    syncAccountAvatar();
+    fillProfileForm();
+
+    if (accountMenuSub) {
+      accountMenuSub.textContent = CURRENT_USER.display_name || CURRENT_USER.email || "Logged in";
+    }
+
+    if (profileStatus) profileStatus.textContent = "Profile saved.";
+  } catch (err){
+    console.error(err);
+    if (profileStatus) profileStatus.textContent = "Save failed.";
+  }
+}
+
+if (profileSaveBtn){
+  profileSaveBtn.addEventListener("click", saveProfileManually);
+}
+
 if (profileForm){
-  profileForm.addEventListener("submit", async (e)=>{
+  profileForm.addEventListener("submit", (e)=>{
     e.preventDefault();
+  });
 
-    if (!getToken()){
-      openModal();
-      return;
-    }
-
-    const display_name = (profileDisplayNameInput?.value || "").trim();
-    const picture_url = (profilePictureUrlInput?.value || "").trim() || (CURRENT_USER?.picture_url || "");
-
-    if (!display_name){
-      if (profileStatus) profileStatus.textContent = "Display name required.";
-      return;
-    }
-
-    try{
-      if (profileStatus) profileStatus.textContent = "Saving...";
-      const out = await api("/api/profile", {
-        method: "POST",
-        body: JSON.stringify({ display_name, picture_url })
-      });
-
-      const u = out && out.user ? out.user : {};
-      CURRENT_USER = {
-        id: u.id || CURRENT_USER?.id || "",
-        email: u.email || CURRENT_USER?.email || "",
-        display_name: u.display_name || "",
-        picture_url: u.picture_url || ""
-      };
-
-      syncAccountAvatar();
-      fillProfileForm();
-
-      if (accountMenuSub) {
-        accountMenuSub.textContent = CURRENT_USER.display_name || CURRENT_USER.email || "Logged in";
-      }
-
-      if (profileStatus) profileStatus.textContent = "Profile saved.";
-    } catch (err){
-      console.error(err);
-      if (profileStatus) profileStatus.textContent = "Save failed.";
+  profileForm.addEventListener("keydown", (e)=>{
+    if (e.key === "Enter") {
+      e.preventDefault();
     }
   });
 }
