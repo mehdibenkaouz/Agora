@@ -3,71 +3,125 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AGORA — Principles</title>
+  <title>AGORÀ — Manifesto</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="item/Logoaagora.png">
+  <link rel="apple-touch-icon" href="item/Logoagora.png">
   <style>
-    :root{
-  --bg:#f5f1e8;
-  --panel:#fffdf8;
-  --text:#111;
-  --muted:#444;
-  --brand:#571929;
+    :root {
+      --bg: #f5f1e8;
+      --panel: #fffdf8;
+      --text: #111111;
+      --muted: #444444;
+      --brand: #571929;
+      --line: rgba(0,0,0,0.08);
+      --shadow: 0 10px 30px rgba(0,0,0,0.08);
     }
-    :root[data-theme="dark"]{
-      --bg:#0f1115;
-      --panel:#151821;
-      --text:#f2f2f2;
-      --muted:rgba(255,255,255,0.70);
-      --brand:#571929;
+    :root[data-theme="dark"] {
+      --bg: #0f1115;
+      --panel: #151821;
+      --text: #f2f2f2;
+      --muted: rgba(255,255,255,0.62);
+      --brand: #a8ebf6;
+      --line: rgba(255,255,255,0.10);
+      --shadow: 0 10px 30px rgba(0,0,0,0.40);
     }
-    body {
+
+    * { box-sizing: border-box; }
+
+    html, body {
       margin: 0;
       font-family: Inter, Arial, sans-serif;
-      background: #f5f1e8;
-      color: #111;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background .2s, color .2s;
     }
+
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { opacity: .75; }
+
     .wrap {
       width: min(calc(100% - 32px), 980px);
       margin: 0 auto;
       padding: 40px 0 80px;
     }
-    a { color: #571929; text-decoration: none; }
+
+    .back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .95rem;
+      font-weight: 600;
+      margin-bottom: 28px;
+      color: var(--brand);
+    }
+
     .card {
-      background: #fffdf8;
+      background: var(--panel);
+      border: 1px solid var(--line);
       border-radius: 28px;
-      padding: 28px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      padding: 36px 40px;
+      box-shadow: var(--shadow);
     }
+
     h1 {
-      margin: 0 0 18px;
-      font-size: clamp(2rem, 5vw, 3.5rem);
+      margin: 0 0 24px;
+      font-size: clamp(2rem, 5vw, 3.2rem);
       font-weight: 700;
+      color: var(--text);
+      line-height: 1.1;
     }
-    ul {
-      line-height: 1.8;
-      color: #444;
-      padding-left: 20px;
+
+    h1 span {
+      color: var(--brand);
+    }
+
+    p {
+      margin: 0 0 16px;
+      line-height: 1.75;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    p:last-child { margin-bottom: 0; }
+
+    .divider {
+      border: none;
+      border-top: 1px solid var(--line);
+      margin: 28px 0;
     }
   </style>
+  <script>
+    // Applica tema PRIMA del render per evitare flash
+    (function(){
+      const k = "agora_theme";
+      const saved = localStorage.getItem(k);
+      const theme = (saved === "dark" || saved === "light") ? saved
+        : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      if (theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    })();
+  </script>
 </head>
 <body>
   <div class="wrap">
-    <p><a href="index.html">← Back to Home</a></p>
+    <a class="back" href="index.html">← Back to Home</a>
     <div class="card">
-      <h1>Principles</h1>
-      <ul>
-        <li>Equal standing between users.</li>
-        <li>Dialogue before spectacle.</li>
-        <li>Shared culture over empty metrics.</li>
-        <li>Clarity, context, and civil disagreement.</li>
-      </ul>
+      <h1>The <span>Manifesto</span></h1>
+
+      <p>AGORÀ is built on a simple conviction: the internet deserves spaces where ideas matter more than impressions, where depth is rewarded over noise, and where every voice carries the same weight.</p>
+
+      <hr class="divider">
+
+      <p>We reject the attention economy. We reject the algorithmic amplification of outrage. We reject the reduction of human thought to a number of likes.</p>
+
+      <p>Instead, we offer a place to think out loud — with care, with context, and with the respect that real dialogue demands.</p>
+
+      <hr class="divider">
+
+      <p>AGORÀ takes its name from the ancient Greek gathering place: a public square where citizens met to debate, to share knowledge, and to shape the world around them. That is what we are building — not a platform, but a place.</p>
+
+      <p>You are welcome here. Bring your ideas.</p>
     </div>
   </div>
-  <script>
-  const THEME_KEY="agora_theme";
-  const saved = localStorage.getItem(THEME_KEY);
-  const theme = (saved==="dark"||saved==="light") ? saved :
-    (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  if (theme==="dark") document.documentElement.setAttribute("data-theme","dark");
-</script>
 </body>
 </html>

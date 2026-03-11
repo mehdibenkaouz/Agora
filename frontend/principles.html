@@ -3,72 +3,155 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AGORA — Principles</title>
+  <title>AGORÀ — Principles</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="item/Logoaagora.png">
+  <link rel="apple-touch-icon" href="item/Logoagora.png">
   <style>
-    :root{
-  --bg:#f5f1e8;
-  --panel:#fffdf8;
-  --text:#111;
-  --muted:#444;
-  --brand:#571929;
+    :root {
+      --bg: #f5f1e8;
+      --panel: #fffdf8;
+      --text: #111111;
+      --muted: #444444;
+      --brand: #571929;
+      --line: rgba(0,0,0,0.08);
+      --shadow: 0 10px 30px rgba(0,0,0,0.08);
     }
-    :root[data-theme="dark"]{
-      --bg:#0f1115;
-      --panel:#151821;
-      --text:#f2f2f2;
-      --muted:rgba(255,255,255,0.70);
-      --brand:#571929;
+    :root[data-theme="dark"] {
+      --bg: #0f1115;
+      --panel: #151821;
+      --text: #f2f2f2;
+      --muted: rgba(255,255,255,0.62);
+      --brand: #a8ebf6;
+      --line: rgba(255,255,255,0.10);
+      --shadow: 0 10px 30px rgba(0,0,0,0.40);
     }
-    body {
+
+    * { box-sizing: border-box; }
+
+    html, body {
       margin: 0;
       font-family: Inter, Arial, sans-serif;
-      background: #f5f1e8;
-      color: #111;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      transition: background .2s, color .2s;
     }
+
+    a { color: var(--brand); text-decoration: none; }
+    a:hover { opacity: .75; }
+
     .wrap {
       width: min(calc(100% - 32px), 980px);
       margin: 0 auto;
       padding: 40px 0 80px;
     }
-    a { color: #571929; text-decoration: none; }
+
+    .back {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: .95rem;
+      font-weight: 600;
+      margin-bottom: 28px;
+      color: var(--brand);
+    }
+
     .card {
-      background: #fffdf8;
+      background: var(--panel);
+      border: 1px solid var(--line);
       border-radius: 28px;
-      padding: 28px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      padding: 36px 40px;
+      box-shadow: var(--shadow);
     }
+
     h1 {
-      margin: 0 0 18px;
-      font-size: clamp(2rem, 5vw, 3.5rem);
+      margin: 0 0 28px;
+      font-size: clamp(2rem, 5vw, 3.2rem);
       font-weight: 700;
+      color: var(--text);
+      line-height: 1.1;
     }
-    ul {
-      line-height: 1.8;
-      color: #444;
-      padding-left: 20px;
+
+    h1 span { color: var(--brand); }
+
+    .principles {
+      display: grid;
+      gap: 14px;
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .principles li {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      padding: 16px 18px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(255,255,255,0.04);
+      line-height: 1.6;
+      color: var(--muted);
+      font-size: 1.05rem;
+    }
+
+    :root[data-theme="dark"] .principles li {
+      background: rgba(255,255,255,0.03);
+    }
+
+    .principles li .num {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--brand);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: .8rem;
+      font-weight: 800;
+      margin-top: 1px;
+    }
+
+    :root[data-theme="dark"] .principles li .num {
+      color: #0f1115;
     }
   </style>
+  <script>
+    // Applica tema PRIMA del render per evitare flash
+    (function(){
+      const k = "agora_theme";
+      const saved = localStorage.getItem(k);
+      const theme = (saved === "dark" || saved === "light") ? saved
+        : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      if (theme === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    })();
+  </script>
 </head>
 <body>
   <div class="wrap">
-    <p><a href="index.html">← Back to Home</a></p>
+    <a class="back" href="index.html">← Back to Home</a>
     <div class="card">
-      <h1>Principles</h1>
-      <ul>
-        <li>Equal standing between users.</li>
-        <li>Dialogue before spectacle.</li>
-        <li>Shared culture over empty metrics.</li>
-        <li>Clarity, context, and civil disagreement.</li>
-      </ul>
+      <h1>Our <span>Principles</span></h1>
+      <ol class="principles">
+        <li>
+          <span class="num">1</span>
+          <span>Equal standing between users. No verification badges, no algorithmic boosts — every voice starts from the same place.</span>
+        </li>
+        <li>
+          <span class="num">2</span>
+          <span>Dialogue before spectacle. We value the exchange of ideas over the performance of them.</span>
+        </li>
+        <li>
+          <span class="num">3</span>
+          <span>Shared culture over empty metrics. What matters is the quality of thought, not the quantity of reactions.</span>
+        </li>
+        <li>
+          <span class="num">4</span>
+          <span>Clarity, context, and civil disagreement. Disagree freely — but with reasons, not noise.</span>
+        </li>
+      </ol>
     </div>
   </div>
-  <script>
-  const THEME_KEY="agora_theme";
-  const saved = localStorage.getItem(THEME_KEY);
-  const theme = (saved==="dark"||saved==="light") ? saved :
-    (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  if (theme==="dark") document.documentElement.setAttribute("data-theme","dark");
-</script>
-
 </body>
 </html>
