@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AGORÀ — Othello</title>
+<link rel="icon" type="image/png" sizes="32x32" href="item/Logoaagora.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #e8e2d5;
+  --panel: #f5f0e8;
+  --panel2: #faf7f2;
+  --text: #1a1008;
+  --muted: #6b5b48;
+  --brand: #571929;
+  --brand2: #8b2239;
+  --gold: #c9932a;
+  --line: rgba(87,25,41,0.12);
+  --shadow: 0 20px 50px rgba(30,10,5,0.25);
+  --soft: 0 8px 24px rgba(30,10,5,0.12);
+  --board-bg: #2d6a2d;
+  --board-line: rgba(0,0,0,0.35);
+  --cell-hover: rgba(255,255,255,0.15);
+  --hint: rgba(255,255,255,0.25);
+}
+:root[data-theme="dark"] {
+  --bg: #0a0d12;
+  --panel: #12171f;
+  --panel2: #1a2030;
+  --text: #f0e8d8;
+  --muted: rgba(200,220,255,0.55);
+  --brand: #a8ebf6;
+  --brand2: #7dd8e8;
+  --gold: #25acc1;
+  --line: rgba(168,235,246,0.14);
+  --shadow: 0 20px 50px rgba(0,0,0,0.70);
+  --soft: 0 8px 24px rgba(0,0,0,0.50);
+  --board-bg: #1a3d1a;
+  --board-line: rgba(255,255,255,0.20);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{
+  min-height:100vh;
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Lora',Georgia,serif;
+  transition:background .25s,color .25s;
+}
+
+/* TOPBAR */
+.topbar{
+  background:var(--panel);
+  border-bottom:1px solid var(--line);
+  box-shadow:var(--soft);
+  padding:0 24px;
+  height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:20;
+}
+.topbar-brand{
+  font-family:'Cinzel',serif;
+  font-size:.85rem;
+  letter-spacing:.14em;
+  color:var(--brand);
+  text-decoration:none;
+  text-transform:uppercase;
+}
+.topbar-title{
+  font-family:'Cinzel',serif;
+  font-size:1.05rem;
+  letter-spacing:.08em;
+  color:var(--text);
+}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.btn-icon{
+  width:38px;height:38px;border-radius:50%;
+  border:1px solid var(--line);
+  background:transparent;cursor:pointer;
+  display:grid;place-items:center;
+  transition:background .15s;color:var(--text);
+}
+.btn-icon:hover{background:var(--line);}
+.btn-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* MAIN */
+.page{
+  max-width:960px;margin:0 auto;
+  padding:32px 16px 60px;
+  display:flex;flex-direction:column;align-items:center;gap:24px;
+}
+
+/* MODE SELECTOR */
+.mode-bar{
+  display:flex;gap:10px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:999px;
+  padding:6px;
+  box-shadow:var(--soft);
+}
+.mode-btn{
+  padding:9px 22px;
+  border-radius:999px;
+  border:none;
+  background:transparent;
+  font-family:'Cinzel',serif;
+  font-size:.78rem;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  cursor:pointer;
+  color:var(--muted);
+  transition:all .18s;
+}
+.mode-btn.active{
+  background:var(--brand);
+  color:#fff;
+  box-shadow:0 4px 14px rgba(87,25,41,.30);
+}
+:root[data-theme="dark"] .mode-btn.active{color:#0a0d12;}
+
+/* SCOREBOARD */
+.scoreboard{
+  display:flex;align-items:center;gap:20px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:16px 28px;
+  box-shadow:var(--soft);
+  width:100%;max-width:520px;
+}
+.score-side{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.score-disc{
+  width:44px;height:44px;border-radius:50%;
+  box-shadow:0 4px 12px rgba(0,0,0,0.30);
+  border:3px solid rgba(255,255,255,0.15);
+}
+.score-disc.black{background:radial-gradient(circle at 35% 35%,#555,#111);}
+.score-disc.white{background:radial-gradient(circle at 35% 35%,#fff,#ccc);}
+.score-num{
+  font-family:'Cinzel',serif;
+  font-size:1.8rem;font-weight:700;
+  color:var(--text);
+}
+.score-label{
+  font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);font-family:'Cinzel',serif;
+}
+.score-mid{
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.turn-indicator{
+  font-family:'Cinzel',serif;font-size:.72rem;
+  letter-spacing:.10em;text-transform:uppercase;
+  color:var(--muted);
+}
+.turn-disc{
+  width:22px;height:22px;border-radius:50%;
+  box-shadow:0 2px 8px rgba(0,0,0,0.35);
+  transition:background .3s;
+  border:2px solid rgba(255,255,255,0.15);
+}
+.turn-disc.black{background:radial-gradient(circle at 35% 35%,#555,#111);}
+.turn-disc.white{background:radial-gradient(circle at 35% 35%,#fff,#ccc);}
+
+/* STATUS */
+.status-bar{
+  font-family:'Cinzel',serif;font-size:.82rem;
+  letter-spacing:.06em;color:var(--muted);
+  height:24px;display:flex;align-items:center;
+}
+
+/* BOARD CONTAINER */
+.board-wrap{
+  position:relative;
+  background:var(--board-bg);
+  border-radius:12px;
+  box-shadow: var(--shadow),
+    inset 0 0 0 3px rgba(255,255,255,0.06),
+    inset 0 0 40px rgba(0,0,0,0.25);
+  padding:8px;
+}
+.board{
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  gap:2px;
+  width:min(480px, calc(100vw - 48px));
+  height:min(480px, calc(100vw - 48px));
+}
+.cell{
+  background:var(--board-bg);
+  border:1px solid var(--board-line);
+  border-radius:3px;
+  display:grid;place-items:center;
+  cursor:pointer;
+  transition:background .12s;
+  position:relative;
+}
+.cell:hover{background:var(--cell-hover);}
+.cell.hint::after{
+  content:'';
+  width:30%;height:30%;
+  border-radius:50%;
+  background:var(--hint);
+  pointer-events:none;
+}
+.disc{
+  width:82%;height:82%;
+  border-radius:50%;
+  transition:transform .18s cubic-bezier(.34,1.56,.64,1);
+  pointer-events:none;
+  border:2px solid rgba(255,255,255,0.10);
+}
+.disc.black{background:radial-gradient(circle at 35% 35%,#555,#0a0a0a);}
+.disc.white{background:radial-gradient(circle at 35% 35%,#ffffff,#cccccc);}
+.disc.new{animation:plop .25s cubic-bezier(.34,1.56,.64,1);}
+.disc.flipped{animation:flip .22s ease;}
+@keyframes plop{from{transform:scale(0);}to{transform:scale(1);}}
+@keyframes flip{0%{transform:scaleX(1);}50%{transform:scaleX(0);}100%{transform:scaleX(1);}}
+
+/* CONTROLS */
+.controls{
+  display:flex;gap:12px;flex-wrap:wrap;justify-content:center;
+}
+.btn{
+  padding:11px 24px;
+  border-radius:999px;
+  border:1px solid var(--line);
+  background:var(--panel);
+  color:var(--text);
+  font-family:'Cinzel',serif;
+  font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;
+  cursor:pointer;
+  box-shadow:var(--soft);
+  transition:all .15s;
+}
+.btn:hover{transform:translateY(-1px);box-shadow:var(--shadow);}
+.btn.primary{
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  color:#fff;border-color:transparent;
+}
+:root[data-theme="dark"] .btn.primary{color:#0a0d12;}
+
+/* AI LEVEL */
+.ai-bar{
+  display:flex;align-items:center;gap:12px;
+  font-family:'Cinzel',serif;font-size:.75rem;
+  letter-spacing:.08em;text-transform:uppercase;color:var(--muted);
+}
+.ai-bar select{
+  background:var(--panel);color:var(--text);
+  border:1px solid var(--line);border-radius:999px;
+  padding:7px 16px;font-family:inherit;font-size:.75rem;
+  letter-spacing:.06em;cursor:pointer;
+}
+
+/* RULES */
+.rules{
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:20px;padding:20px 24px;
+  max-width:520px;width:100%;
+  box-shadow:var(--soft);
+}
+.rules-title{
+  font-family:'Cinzel',serif;font-size:.8rem;
+  letter-spacing:.10em;text-transform:uppercase;
+  color:var(--brand);margin-bottom:10px;
+}
+.rules p{font-size:.88rem;line-height:1.7;color:var(--muted);}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="index.html" class="topbar-brand">← AGORÀ</a>
+  <span class="topbar-title">Othello</span>
+  <div class="topbar-right">
+    <button class="btn-icon" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">
+      <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</header>
+
+<main class="page">
+
+  <div class="mode-bar">
+    <button class="mode-btn active" id="modeVsAI">vs AI</button>
+    <button class="mode-btn" id="modeVs2P">2 Players</button>
+  </div>
+
+  <div id="aiBar" class="ai-bar">
+    <span>AI Difficulty</span>
+    <select id="aiLevel">
+      <option value="1">Easy</option>
+      <option value="3" selected>Medium</option>
+      <option value="5">Hard</option>
+    </select>
+  </div>
+
+  <div class="scoreboard">
+    <div class="score-side">
+      <div class="score-disc black"></div>
+      <div class="score-num" id="scoreBlack">2</div>
+      <div class="score-label" id="labelBlack">Black</div>
+    </div>
+    <div class="score-mid">
+      <div class="turn-indicator">Turn</div>
+      <div class="turn-disc black" id="turnDisc"></div>
+    </div>
+    <div class="score-side">
+      <div class="score-disc white"></div>
+      <div class="score-num" id="scoreWhite">2</div>
+      <div class="score-label" id="labelWhite">White · AI</div>
+    </div>
+  </div>
+
+  <div class="status-bar" id="statusBar">Your turn — Black</div>
+
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" id="restartBtn">New Game</button>
+    <button class="btn" id="hintToggle">Hints: ON</button>
+  </div>
+
+  <div class="rules">
+    <div class="rules-title">How to play</div>
+    <p>Place a disc to outflank your opponent's discs in any direction (horizontal, vertical, diagonal). All outflanked discs are flipped to your colour. The player with the most discs when the board is full wins.</p>
+  </div>
+
+</main>
+
+<script>
+// ── Theme ──────────────────────────────────────────────────────────
+const THEME_KEY = "agora_theme";
+function applyTheme(t){
+  document.documentElement[t==="dark"?"setAttribute":"removeAttribute"]("data-theme","dark");
+  localStorage.setItem(THEME_KEY,t);
+}
+(function(){
+  const s=localStorage.getItem(THEME_KEY);
+  const t=(s==="dark"||s==="light")?s:(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
+  applyTheme(t);
+})();
+document.getElementById("themeBtn").addEventListener("click",()=>{
+  applyTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");
+});
+
+// ── Game constants ─────────────────────────────────────────────────
+const EMPTY=0,BLACK=1,WHITE=2;
+const DIRS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const SIZE=8;
+
+// ── State ──────────────────────────────────────────────────────────
+let board=[],turn=BLACK,vsAI=true,hintsOn=true,gameOver=false,aiThinking=false;
+
+function initBoard(){
+  board=Array.from({length:SIZE},()=>Array(SIZE).fill(EMPTY));
+  board[3][3]=WHITE; board[3][4]=BLACK;
+  board[4][3]=BLACK; board[4][4]=WHITE;
+  turn=BLACK; gameOver=false; aiThinking=false;
+}
+
+// ── Logic ──────────────────────────────────────────────────────────
+function inBounds(r,c){return r>=0&&r<SIZE&&c>=0&&c<SIZE;}
+
+function getFlips(b,r,c,player){
+  if(b[r][c]!==EMPTY)return[];
+  const opp=player===BLACK?WHITE:BLACK;
+  const flips=[];
+  for(const[dr,dc]of DIRS){
+    const line=[];
+    let nr=r+dr,nc=c+dc;
+    while(inBounds(nr,nc)&&b[nr][nc]===opp){line.push([nr,nc]);nr+=dr;nc+=dc;}
+    if(line.length&&inBounds(nr,nc)&&b[nr][nc]===player)flips.push(...line);
+  }
+  return flips;
+}
+
+function validMoves(b,player){
+  const moves=[];
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)
+    if(getFlips(b,r,c,player).length)moves.push([r,c]);
+  return moves;
+}
+
+function applyMove(b,r,c,player){
+  const nb=b.map(row=>[...row]);
+  const flips=getFlips(nb,r,c,player);
+  nb[r][c]=player;
+  flips.forEach(([fr,fc])=>nb[fr][fc]=player);
+  return{board:nb,flips};
+}
+
+function countDiscs(b){
+  let bk=0,wh=0;
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    if(b[r][c]===BLACK)bk++;else if(b[r][c]===WHITE)wh++;
+  }
+  return{black:bk,white:wh};
+}
+
+// ── AI (minimax + alpha-beta) ──────────────────────────────────────
+const WEIGHTS=[
+  [100,-20,10,5,5,10,-20,100],
+  [-20,-50,-2,-2,-2,-2,-50,-20],
+  [10,-2,4,2,2,4,-2,10],
+  [5,-2,2,1,1,2,-2,5],
+  [5,-2,2,1,1,2,-2,5],
+  [10,-2,4,2,2,4,-2,10],
+  [-20,-50,-2,-2,-2,-2,-50,-20],
+  [100,-20,10,5,5,10,-20,100]
+];
+
+function evalBoard(b){
+  let score=0;
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){
+    if(b[r][c]===WHITE)score+=WEIGHTS[r][c];
+    else if(b[r][c]===BLACK)score-=WEIGHTS[r][c];
+  }
+  return score;
+}
+
+function minimax(b,depth,alpha,beta,maximizing){
+  const player=maximizing?WHITE:BLACK;
+  const moves=validMoves(b,player);
+  if(depth===0||moves.length===0){
+    const opp=maximizing?BLACK:WHITE;
+    if(moves.length===0&&validMoves(b,opp).length===0){
+      const{black,white}=countDiscs(b);
+      return white>black?Infinity:black>white?-Infinity:0;
+    }
+    return evalBoard(b);
+  }
+  if(moves.length===0)return minimax(b,depth,alpha,beta,!maximizing);
+  if(maximizing){
+    let best=-Infinity;
+    for(const[r,c]of moves){
+      const{board:nb}=applyMove(b,r,c,WHITE);
+      best=Math.max(best,minimax(nb,depth-1,alpha,beta,false));
+      alpha=Math.max(alpha,best);
+      if(beta<=alpha)break;
+    }
+    return best;
+  }else{
+    let best=Infinity;
+    for(const[r,c]of moves){
+      const{board:nb}=applyMove(b,r,c,BLACK);
+      best=Math.min(best,minimax(nb,depth-1,alpha,beta,true));
+      beta=Math.min(beta,best);
+      if(beta<=alpha)break;
+    }
+    return best;
+  }
+}
+
+function getBestMove(b,depth){
+  const moves=validMoves(b,WHITE);
+  if(!moves.length)return null;
+  let best=-Infinity,bestMove=moves[0];
+  for(const[r,c]of moves){
+    const{board:nb}=applyMove(b,r,c,WHITE);
+    const v=minimax(nb,depth-1,-Infinity,Infinity,false);
+    if(v>best){best=v;bestMove=[r,c];}
+  }
+  return bestMove;
+}
+
+// ── Render ─────────────────────────────────────────────────────────
+function renderBoard(flipCells=[]){
+  const boardEl=document.getElementById("board");
+  const hints=hintsOn&&!gameOver?validMoves(board,turn):[];
+  const hintSet=new Set(hints.map(([r,c])=>`${r},${c}`));
+  const flipSet=new Set(flipCells.map(([r,c])=>`${r},${c}`));
+
+  boardEl.innerHTML="";
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      const cell=document.createElement("div");
+      cell.className="cell"+(hintSet.has(`${r},${c}`)?" hint":"");
+      cell.dataset.r=r;cell.dataset.c=c;
+      if(board[r][c]!==EMPTY){
+        const disc=document.createElement("div");
+        disc.className="disc "+(board[r][c]===BLACK?"black":"white");
+        if(flipSet.has(`${r},${c}`))disc.classList.add("flipped");
+        cell.appendChild(disc);
+        cell.classList.remove("hint");
+      }
+      cell.addEventListener("click",handleClick);
+      boardEl.appendChild(cell);
+    }
+  }
+  updateScores();
+}
+
+function updateScores(){
+  const{black,white}=countDiscs(board);
+  document.getElementById("scoreBlack").textContent=black;
+  document.getElementById("scoreWhite").textContent=white;
+  const td=document.getElementById("turnDisc");
+  td.className="turn-disc "+(turn===BLACK?"black":"white");
+}
+
+function setStatus(msg){document.getElementById("statusBar").textContent=msg;}
+
+// ── Game flow ──────────────────────────────────────────────────────
+function handleClick(e){
+  if(gameOver||aiThinking)return;
+  if(vsAI&&turn===WHITE)return;
+  const r=+e.currentTarget.dataset.r,c=+e.currentTarget.dataset.c;
+  const flips=getFlips(board,r,c,turn);
+  if(!flips.length)return;
+  playMove(r,c,flips);
+}
+
+function playMove(r,c,flips){
+  const{board:nb}=applyMove(board,r,c,turn);
+  board=nb;
+  renderBoard(flips);
+  const next=turn===BLACK?WHITE:BLACK;
+  const hasCurrent=validMoves(board,next).length>0;
+  const hasTurn=validMoves(board,turn).length>0;
+
+  if(!hasCurrent&&!hasTurn){
+    endGame();return;
+  }
+  if(!hasCurrent){
+    const name=next===BLACK?"Black":"White";
+    setStatus(`${name} has no moves — ${turn===BLACK?"Black":"White"} plays again`);
+    if(vsAI&&turn===WHITE){setTimeout(doAI,600);}
+    return;
+  }
+  turn=next;
+  afterTurnUpdate();
+}
+
+function afterTurnUpdate(){
+  if(gameOver)return;
+  const name=turn===BLACK?"Black":"White";
+  if(vsAI&&turn===WHITE){
+    setStatus("AI is thinking…");
+    aiThinking=true;
+    setTimeout(doAI,400);
+  }else{
+    setStatus(`${name}'s turn`);
+  }
+}
+
+function doAI(){
+  const depth=+document.getElementById("aiLevel").value;
+  const move=getBestMove(board,depth);
+  aiThinking=false;
+  if(!move){
+    turn=BLACK;afterTurnUpdate();return;
+  }
+  const[r,c]=move;
+  const flips=getFlips(board,r,c,WHITE);
+  playMove(r,c,flips);
+}
+
+function endGame(){
+  gameOver=true;
+  const{black,white}=countDiscs(board);
+  let msg;
+  if(black>white)msg=`Black wins! ${black}–${white}`;
+  else if(white>black)msg=`White wins! ${white}–${black}`;
+  else msg=`Draw! ${black}–${white}`;
+  setStatus(msg);
+  renderBoard();
+}
+
+function newGame(){
+  initBoard();
+  renderBoard();
+  if(vsAI){
+    setStatus("Your turn — Black");
+  }else{
+    setStatus("Black's turn");
+  }
+}
+
+// ── Controls ───────────────────────────────────────────────────────
+document.getElementById("restartBtn").addEventListener("click",newGame);
+
+document.getElementById("hintToggle").addEventListener("click",function(){
+  hintsOn=!hintsOn;
+  this.textContent="Hints: "+(hintsOn?"ON":"OFF");
+  renderBoard();
+});
+
+document.getElementById("modeVsAI").addEventListener("click",function(){
+  vsAI=true;
+  this.classList.add("active");
+  document.getElementById("modeVs2P").classList.remove("active");
+  document.getElementById("aiBar").style.display="flex";
+  document.getElementById("labelWhite").textContent="White · AI";
+  newGame();
+});
+
+document.getElementById("modeVs2P").addEventListener("click",function(){
+  vsAI=false;
+  this.classList.add("active");
+  document.getElementById("modeVsAI").classList.remove("active");
+  document.getElementById("aiBar").style.display="none";
+  document.getElementById("labelWhite").textContent="White";
+  newGame();
+});
+
+// ── Start ──────────────────────────────────────────────────────────
+newGame();
+</script>
+</body>
+</html>
