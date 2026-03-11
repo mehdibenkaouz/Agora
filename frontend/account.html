@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AGORÀ • Your Book</title>
+  <title>AGORÀ • Your Books</title>
 
   <link rel="icon" type="image/png" sizes="32x32" href="item/Logoaagora.png">
   <link rel="apple-touch-icon" href="item/Logoagora.png">
@@ -1540,8 +1540,7 @@
       <div class="panel" style="margin-top: 18px;">
         <div class="account-head">
           <div>
-            <div class="h-title">Your Book</div>
-            <div id="bookSub" class="h-sub">Two pages per spread — navigate with arrows or keys ← →</div>
+            <div class="h-title">Your Books</div>
           </div>
           <div class="h-actions">
             <button id="refreshBtn" class="file-btn" type="button" title="Refresh">Refresh</button>
@@ -1590,6 +1589,96 @@
 
         </div>
       </section>
+
+
+      <div class="h-title">Book of posts</div>
+      <div id="bookStage" class="book-stage" aria-label="Book viewer">
+
+        <!-- Spine decoration -->
+        <div class="book-stage-spine" aria-hidden="true"></div>
+
+        <!-- Index button -->
+        <button id="openIndexBtn" class="file-btn book-index-btn" type="button">Index</button>
+
+        <!-- THE BOOK -->
+        <div class="book-shell" id="bookShell" tabindex="0" aria-label="Book pages">
+          <div class="book-spread" id="bookSpread">
+
+            <!-- LEFT PAGE -->
+            <div class="book-page left" aria-label="Left page">
+              <div class="page-inner">
+                <div class="page-top">
+                  <div id="leftLabel" class="page-label">—</div>
+                  <div id="leftDate" class="page-date"></div>
+                </div>
+                <div id="leftContent" class="page-content"></div>
+                <div class="page-bottom">
+                  <span id="leftNum" class="pnum"></span>
+                  <span id="leftId" style="opacity:.55; font-style:italic; font-size:0.68rem;"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- GUTTER -->
+            <div class="book-gutter" aria-hidden="true"></div>
+
+            <!-- RIGHT PAGE -->
+            <div class="book-page right" aria-label="Right page">
+              <div class="page-inner">
+                <div class="page-top">
+                  <div id="rightLabel" class="page-label">—</div>
+                  <div id="rightDate" class="page-date"></div>
+                </div>
+                <div id="rightContent" class="page-content"></div>
+                <div class="page-bottom">
+                  <span id="rightNum" class="pnum"></span>
+                  <span id="rightId" style="opacity:.55; font-style:italic; font-size:0.68rem;"></span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- FLIP BUTTONS -->
+        <button id="prevSpreadBtn" class="flip-btn prev" type="button" aria-label="Previous pages" title="Previous (←)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"></path></svg>
+        </button>
+        <button id="nextSpreadBtn" class="flip-btn next" type="button" aria-label="Next pages" title="Next (→)">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>
+        </button>
+
+        <!-- FOOTER META -->
+        <div class="book-footer">
+          <div id="spreadMeta" class="book-meta-chip">—</div>
+        </div>
+
+        <!-- EMPTY STATE -->
+        <div id="emptyState" class="empty-state" style="display:none;">
+          <div class="empty-title" id="emptyTitle">Loading…</div>
+          <div class="empty-sub" id="emptySub">If you're not logged in, open the account menu → Login.</div>
+        </div>
+
+        <!-- INDEX PANEL -->
+        <div id="indexPanel" class="index-panel" aria-hidden="true">
+          <div class="index-head">
+            <span>Index</span>
+            <button id="closeIndexBtn" class="icon-btn" type="button" title="Close">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12"></path><path d="M18 6L6 18"></path>
+              </svg>
+            </button>
+          </div>
+          <div class="index-body">
+            <label class="field" style="margin:0;">
+              <span>Search</span>
+              <input id="indexSearch" type="text" placeholder="Search entries…" autocomplete="off" />
+            </label>
+            <div id="indexList" class="index-list"></div>
+          </div>
+        </div>
+
+      </div><!-- /bookStage posts -->
 
       <div id="bookStage" class="book-stage" aria-label="Book viewer">
 
@@ -1677,7 +1766,9 @@
           </div>
         </div>
 
-      </div><!-- /bookStage -->
+      </div><!-- /bookStage saved -->
+
+
     </div>
   </section>
 </main>
