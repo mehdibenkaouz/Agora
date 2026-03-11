@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AGORÀ — Games</title>
+<link rel="icon" type="image/png" sizes="32x32" href="item/Logoaagora.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Lora:ital,wght@0,400;0,600;1,400;1,600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #e8e2d5;
+  --panel: #f5f0e8;
+  --panel2: #faf7f2;
+  --text: #1a1008;
+  --muted: #6b5b48;
+  --brand: #571929;
+  --brand2: #8b2239;
+  --gold: #c9932a;
+  --gold2: #e8b84b;
+  --line: rgba(87,25,41,0.12);
+  --shadow: 0 24px 60px rgba(30,10,5,0.22);
+  --soft: 0 8px 24px rgba(30,10,5,0.10);
+  --card-h: rgba(87,25,41,0.06);
+}
+:root[data-theme="dark"] {
+  --bg: #0a0d12;
+  --panel: #12171f;
+  --panel2: #1a2030;
+  --text: #f0e8d8;
+  --muted: rgba(200,220,255,0.50);
+  --brand: #a8ebf6;
+  --brand2: #7dd8e8;
+  --gold: #25acc1;
+  --gold2: #5dcfe0;
+  --line: rgba(168,235,246,0.13);
+  --shadow: 0 24px 60px rgba(0,0,0,0.65);
+  --soft: 0 8px 24px rgba(0,0,0,0.45);
+  --card-h: rgba(168,235,246,0.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'Lora',Georgia,serif;transition:background .3s,color .3s;overflow-x:hidden;}
+
+/* ── TOPBAR ── */
+.topbar{
+  background:var(--panel);
+  border-bottom:1px solid var(--line);
+  box-shadow:var(--soft);
+  padding:0 28px;height:64px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:30;
+}
+.topbar-brand{
+  font-family:'Cinzel',serif;font-size:.88rem;
+  letter-spacing:.16em;color:var(--brand);
+  text-decoration:none;text-transform:uppercase;
+}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.btn-icon{
+  width:38px;height:38px;border-radius:50%;
+  border:1px solid var(--line);background:transparent;
+  cursor:pointer;display:grid;place-items:center;
+  transition:background .15s;color:var(--text);
+}
+.btn-icon:hover{background:var(--line);}
+.btn-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ── HERO ── */
+.hero{
+  position:relative;
+  text-align:center;
+  padding:80px 24px 60px;
+  overflow:hidden;
+}
+.hero-bg{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 0%, rgba(87,25,41,0.13) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 20% 80%, rgba(201,147,42,0.09) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 80% 60%, rgba(87,25,41,0.07) 0%, transparent 60%);
+  pointer-events:none;
+}
+:root[data-theme="dark"] .hero-bg{
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 0%, rgba(168,235,246,0.10) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 20% 80%, rgba(37,172,193,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 40% at 80% 60%, rgba(168,235,246,0.06) 0%, transparent 60%);
+}
+.hero-eyebrow{
+  font-family:'Cinzel',serif;
+  font-size:.72rem;letter-spacing:.25em;
+  text-transform:uppercase;color:var(--brand);
+  margin-bottom:18px;
+  animation:fadeUp .6s ease both;
+}
+.hero-title{
+  font-family:'Cinzel',serif;
+  font-size:clamp(2.4rem,7vw,5rem);
+  font-weight:900;
+  letter-spacing:.04em;
+  line-height:1.05;
+  color:var(--text);
+  margin-bottom:12px;
+  animation:fadeUp .6s .08s ease both;
+}
+.hero-title span{color:var(--brand);}
+.hero-sub{
+  font-family:'Lora',serif;font-style:italic;
+  font-size:clamp(.95rem,2vw,1.2rem);
+  color:var(--muted);
+  max-width:480px;margin:0 auto 32px;
+  animation:fadeUp .6s .16s ease both;
+}
+.hero-rule{
+  width:60px;height:2px;
+  background:linear-gradient(90deg,transparent,var(--brand),transparent);
+  margin:0 auto;
+  animation:fadeUp .6s .22s ease both;
+}
+
+/* ── GRID ── */
+.games-section{
+  max-width:1060px;margin:0 auto;
+  padding:48px 20px 80px;
+}
+.games-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
+  gap:22px;
+}
+
+/* ── CARD ── */
+.card{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:0;
+  overflow:hidden;
+  box-shadow:var(--soft);
+  text-decoration:none;
+  color:var(--text);
+  display:flex;flex-direction:column;
+  transition:transform .22s cubic-bezier(.34,1.3,.64,1), box-shadow .22s, border-color .22s;
+  animation:fadeUp .55s ease both;
+  position:relative;
+}
+.card:hover{
+  transform:translateY(-6px) scale(1.015);
+  box-shadow:var(--shadow);
+  border-color:var(--brand);
+  background:var(--panel2);
+}
+.card:hover .card-arrow{opacity:1;transform:translateX(0);}
+.card:hover .card-board{transform:scale(1.04);}
+
+/* Stagger */
+.card:nth-child(1){animation-delay:.05s;}
+.card:nth-child(2){animation-delay:.10s;}
+.card:nth-child(3){animation-delay:.15s;}
+.card:nth-child(4){animation-delay:.20s;}
+.card:nth-child(5){animation-delay:.25s;}
+
+/* ── CARD VISUAL ── */
+.card-visual{
+  height:170px;
+  position:relative;
+  overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.card-board{
+  transition:transform .3s cubic-bezier(.34,1.2,.64,1);
+}
+
+/* ── CARD BODY ── */
+.card-body{
+  padding:20px 22px 22px;
+  display:flex;flex-direction:column;gap:8px;
+  flex:1;
+}
+.card-tag{
+  font-family:'Cinzel',serif;font-size:.62rem;
+  letter-spacing:.18em;text-transform:uppercase;
+  color:var(--brand);display:flex;align-items:center;gap:6px;
+}
+.card-tag::before{content:'';display:inline-block;width:16px;height:1px;background:var(--brand);}
+.card-title{
+  font-family:'Cinzel',serif;
+  font-size:1.35rem;font-weight:700;
+  letter-spacing:.04em;
+  line-height:1.1;
+}
+.card-origin{
+  font-family:'Lora',serif;font-style:italic;
+  font-size:.8rem;color:var(--muted);
+}
+.card-desc{
+  font-size:.85rem;line-height:1.65;
+  color:var(--muted);
+  flex:1;
+}
+.card-footer{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:4px;
+  padding-top:14px;
+  border-top:1px solid var(--line);
+}
+.card-features{display:flex;gap:6px;flex-wrap:wrap;}
+.feat{
+  font-family:'Cinzel',serif;font-size:.58rem;
+  letter-spacing:.08em;text-transform:uppercase;
+  padding:4px 9px;border-radius:999px;
+  background:var(--bg);
+  border:1px solid var(--line);
+  color:var(--muted);
+}
+.card-arrow{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--brand);
+  display:grid;place-items:center;flex-shrink:0;
+  opacity:0;transform:translateX(-6px);
+  transition:opacity .2s,transform .2s;
+}
+.card-arrow svg{width:14px;height:14px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round;}
+:root[data-theme="dark"] .card-arrow svg{stroke:#0a0d12;}
+
+/* ── VISUAL BOARDS ── */
+
+/* OTHELLO */
+.v-othello{
+  background:radial-gradient(ellipse at 40% 40%,#3a8a3a,#1a4a1a);
+  width:100%;height:100%;
+  display:grid;grid-template-columns:repeat(8,1fr);
+  gap:1px;padding:12px;
+}
+.v-othello-cell{border-radius:2px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;}
+.v-disc{border-radius:50%;width:72%;height:72%;}
+.v-disc.dk{background:radial-gradient(circle at 35% 35%,#555,#0a0a0a);box-shadow:0 2px 5px rgba(0,0,0,0.5);}
+.v-disc.wh{background:radial-gradient(circle at 35% 35%,#fff,#ccc);box-shadow:0 2px 5px rgba(0,0,0,0.3);}
+
+/* TRIS */
+.v-tris{
+  background:var(--bg);
+  padding:10px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:5px;
+}
+.v-mini{
+  background:var(--panel2);border:1px solid var(--line);border-radius:5px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:1px;padding:3px;
+}
+.v-tcell{font-size:.6rem;font-weight:800;display:flex;align-items:center;justify-content:center;aspect-ratio:1;}
+
+/* GO */
+.v-go{
+  background:linear-gradient(135deg,#c8963a,#a87828);
+  width:100%;height:100%;
+  position:relative;display:flex;align-items:center;justify-content:center;
+}
+.v-go-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:0;
+  width:78%;aspect-ratio:1;position:relative;
+}
+.v-go-line-h{position:absolute;top:0;left:0;right:0;bottom:0;pointer-events:none;}
+.v-go-stone{
+  border-radius:50%;
+  width:80%;height:80%;
+  align-self:center;justify-self:center;
+  position:relative;z-index:2;
+}
+.v-go-stone.bk{background:radial-gradient(circle at 35% 35%,#555,#0a0a0a);}
+.v-go-stone.wh{background:radial-gradient(circle at 35% 35%,#fff,#ccc);}
+.v-go-empty{width:100%;aspect-ratio:1;}
+
+/* CHESS */
+.v-chess{
+  display:grid;grid-template-columns:repeat(8,1fr);
+  width:100%;height:100%;
+}
+.v-sq{display:flex;align-items:center;justify-content:center;font-size:1.2rem;aspect-ratio:1;}
+.v-sq.l{background:#f0d9b5;}
+.v-sq.d{background:#b58863;}
+:root[data-theme="dark"] .v-sq.l{background:#4a6741;}
+:root[data-theme="dark"] .v-sq.d{background:#2d4a26;}
+
+/* GUNGI */
+.v-gungi{
+  background:#111009;
+  width:100%;height:100%;
+  display:flex;align-items:center;justify-content:center;
+  position:relative;
+}
+.v-gungi-grid{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:2px;
+  width:80%;aspect-ratio:1;
+}
+.v-gungi-cell{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  border:1px solid rgba(201,147,42,0.18);border-radius:1px;
+}
+.v-gpiece{
+  width:80%;height:80%;display:flex;align-items:center;justify-content:center;
+  font-family:'Cinzel',serif;font-size:.5rem;font-weight:700;
+}
+.v-gpiece.w{clip-path:polygon(50% 0%,96% 33%,79% 97%,21% 97%,4% 33%);background:linear-gradient(160deg,#faf5ec,#d8c9b0);color:#571929;}
+.v-gpiece.b{clip-path:polygon(50% 100%,4% 67%,21% 3%,79% 3%,96% 67%);background:linear-gradient(160deg,#3a3028,#111009);color:#e8d8b8;}
+
+/* ── FOOTER ── */
+.hub-footer{
+  text-align:center;
+  padding:32px 20px 48px;
+  font-family:'Cinzel',serif;font-size:.72rem;
+  letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);
+  border-top:1px solid var(--line);
+}
+.hub-footer span{color:var(--brand);}
+
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(22px);}
+  to{opacity:1;transform:translateY(0);}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a href="index.html" class="topbar-brand">← AGORÀ</a>
+  <div class="topbar-right">
+    <button class="btn-icon" id="themeBtn" title="Toggle theme">
+      <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-eyebrow">AGORÀ · Strategy Games</div>
+  <h1 class="hero-title">The <span>Ludotheca</span></h1>
+  <p class="hero-sub">Five great games of the human mind — from ancient stones to fictional courts</p>
+  <div class="hero-rule"></div>
+</section>
+
+<!-- GAMES GRID -->
+<section class="games-section">
+  <div class="games-grid">
+
+    <!-- OTHELLO -->
+    <a class="card" href="othello.html">
+      <div class="card-visual">
+        <div class="card-board">
+          <!-- Mini Othello board 8x8, just center portion visually -->
+          <div class="v-othello" id="othelloVis" style="width:170px;height:170px;"></div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-tag">Board Game</div>
+        <div class="card-title">Othello</div>
+        <div class="card-origin">Reversi · England, 1883</div>
+        <div class="card-desc">Outflank your opponent's discs to flip them to your colour. A deceptively simple game that rewards long-term strategic thinking.</div>
+        <div class="card-footer">
+          <div class="card-features">
+            <span class="feat">vs AI</span>
+            <span class="feat">2 Players</span>
+            <span class="feat">Hints</span>
+          </div>
+          <div class="card-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+      </div>
+    </a>
+
+    <!-- TRIS x9 -->
+    <a class="card" href="tris9.html">
+      <div class="card-visual">
+        <div class="card-board" style="width:154px;padding:6px;background:var(--panel);border-radius:10px;border:1px solid var(--line);">
+          <div class="v-tris" id="trisVis"></div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-tag">Board Game</div>
+        <div class="card-title">Tris ×9</div>
+        <div class="card-origin">Ultimate Tic-Tac-Toe · Modern</div>
+        <div class="card-desc">Nine Tic-Tac-Toe boards nested into one. Your move decides where your opponent must play next — control is everything.</div>
+        <div class="card-footer">
+          <div class="card-features">
+            <span class="feat">vs AI</span>
+            <span class="feat">2 Players</span>
+            <span class="feat">Minimax</span>
+          </div>
+          <div class="card-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+      </div>
+    </a>
+
+    <!-- GO -->
+    <a class="card" href="go.html">
+      <div class="card-visual">
+        <div class="card-board" style="position:relative;">
+          <div class="v-go" style="width:170px;height:170px;border-radius:8px;">
+            <div class="v-go-grid" id="goVis"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-tag">Ancient Game</div>
+        <div class="card-title">Go</div>
+        <div class="card-origin">Wéiqí · China, ~2500 BC</div>
+        <div class="card-desc">The oldest board game still widely played. Surround territory and capture stones on a 9×9, 13×13 or 19×19 board. Simple rules, infinite depth.</div>
+        <div class="card-footer">
+          <div class="card-features">
+            <span class="feat">vs AI</span>
+            <span class="feat">3 Board Sizes</span>
+            <span class="feat">Ko Rule</span>
+          </div>
+          <div class="card-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+      </div>
+    </a>
+
+    <!-- CHESS -->
+    <a class="card" href="chess.html">
+      <div class="card-visual">
+        <div class="card-board">
+          <div class="v-chess" style="width:170px;height:170px;" id="chessVis"></div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-tag">Classic Game</div>
+        <div class="card-title">Chess</div>
+        <div class="card-origin">Chaturanga · India, ~600 AD</div>
+        <div class="card-desc">The game of kings. Full rules including castling, en passant and pawn promotion. Face an AI with piece-square table evaluation.</div>
+        <div class="card-footer">
+          <div class="card-features">
+            <span class="feat">vs AI</span>
+            <span class="feat">Full Rules</span>
+            <span class="feat">Move Log</span>
+          </div>
+          <div class="card-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+      </div>
+    </a>
+
+    <!-- GUNGI -->
+    <a class="card" href="gungi.html">
+      <div class="card-visual" style="background:#111009;">
+        <div class="card-board">
+          <div class="v-gungi-grid" id="gungiVis" style="width:154px;padding:4px;"></div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="card-tag">Fictional Game</div>
+        <div class="card-title">Gungi</div>
+        <div class="card-origin">Hunter × Hunter · Yoshihiro Togashi</div>
+        <div class="card-desc">The legendary game from the manga Hunter × Hunter. Pentagon-shaped pieces, a 9×9 board, and unique movement rules. Capture the Gyou to win.</div>
+        <div class="card-footer">
+          <div class="card-features">
+            <span class="feat">vs AI</span>
+            <span class="feat">Promotion</span>
+            <span class="feat">Flip Board</span>
+          </div>
+          <div class="card-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </div>
+      </div>
+    </a>
+
+  </div>
+</section>
+
+<footer class="hub-footer">
+  <span>AGORÀ</span> · Strategy Games Collection
+</footer>
+
+<script>
+// ── Theme ──────────────────────────────────────────────────────────
+const THEME_KEY="agora_theme";
+function applyTheme(t){
+  document.documentElement[t==="dark"?"setAttribute":"removeAttribute"]("data-theme","dark");
+  localStorage.setItem(THEME_KEY,t);
+  buildVisuals();
+}
+(function(){
+  const s=localStorage.getItem(THEME_KEY);
+  applyTheme((s==="dark"||s==="light")?s:(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"));
+})();
+document.getElementById("themeBtn").addEventListener("click",()=>{
+  applyTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");
+});
+
+// ── Visual Boards ──────────────────────────────────────────────────
+function buildVisuals(){
+  buildOthello();
+  buildTris();
+  buildGo();
+  buildChess();
+  buildGungi();
+}
+
+// OTHELLO
+function buildOthello(){
+  const el=document.getElementById("othelloVis");
+  el.innerHTML="";
+  const pattern=[
+    [0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0],
+    [0,0,1,2,2,0,0,0],
+    [0,0,2,2,1,2,0,0],
+    [0,0,1,1,2,1,0,0],
+    [0,0,0,2,1,1,0,0],
+    [0,0,0,0,0,0,0,0],
+    [0,0,0,0,0,0,0,0],
+  ];
+  pattern.forEach(row=>{row.forEach(v=>{
+    const d=document.createElement("div");d.className="v-othello-cell";
+    if(v){const disc=document.createElement("div");disc.className="v-disc "+(v===1?"dk":"wh");d.appendChild(disc);}
+    el.appendChild(d);
+  });});
+}
+
+// TRIS x9
+function buildTris(){
+  const el=document.getElementById("trisVis");el.innerHTML="";
+  const boards=[
+    {cells:[1,2,1,2,1,2,2,1,0],won:"X"},
+    {cells:[2,1,2,1,2,1,0,2,1],won:"O"},
+    {cells:[1,2,0,0,1,2,0,1,2],won:null},
+    {cells:[2,0,1,1,2,0,2,1,0],won:null},
+    {cells:[1,1,2,2,2,1,1,2,1],won:"O"},
+    {cells:[0,2,1,2,1,0,1,0,2],won:null},
+    {cells:[2,1,2,1,2,1,1,2,0],won:null},
+    {cells:[1,2,1,0,1,2,2,0,1],won:"X"},
+    {cells:[2,1,0,1,2,0,0,2,1],won:null},
+  ];
+  const dark=document.documentElement.getAttribute("data-theme")==="dark";
+  boards.forEach(({cells,won})=>{
+    const mini=document.createElement("div");mini.className="v-mini";
+    if(won)mini.style.background=won==="X"?(dark?"rgba(232,143,160,0.18)":"rgba(87,25,41,0.15)"):(dark?"rgba(125,216,232,0.18)":"rgba(45,106,143,0.15)");
+    cells.forEach(v=>{
+      const c=document.createElement("div");c.className="v-tcell";
+      if(v)c.textContent=v===1?"✕":"○";
+      if(v===1)c.style.color="var(--brand)";
+      if(v===2)c.style.color="var(--gold)";
+      mini.appendChild(c);
+    });
+    el.appendChild(mini);
+  });
+}
+
+// GO
+function buildGo(){
+  const el=document.getElementById("goVis");el.innerHTML="";
+  const pattern=[
+    [0,0,0,2,0,0,0],
+    [0,1,0,0,0,2,0],
+    [0,0,1,2,0,0,0],
+    [2,0,2,1,2,0,1],
+    [0,0,0,2,1,0,0],
+    [0,1,0,0,0,1,0],
+    [0,0,0,1,0,0,0],
+  ];
+  pattern.forEach(row=>{row.forEach(v=>{
+    const d=document.createElement("div");
+    if(v){
+      d.className="v-go-stone "+(v===1?"bk":"wh");
+    }else{
+      d.className="v-go-empty";
+    }
+    el.appendChild(d);
+  });});
+}
+
+// CHESS
+function buildChess(){
+  const el=document.getElementById("chessVis");el.innerHTML="";
+  const GLYPHS={wK:"♔",wQ:"♕",wR:"♖",wB:"♗",wN:"♘",wP:"♙",bK:"♚",bQ:"♛",bR:"♜",bB:"♝",bN:"♞",bP:"♟"};
+  const layout=[
+    ["bR","bN","bB","bQ","bK","bB","bN","bR"],
+    ["bP","bP","bP","bP","bP","bP","bP","bP"],
+    [null,null,null,null,null,null,null,null],
+    [null,null,null,null,null,null,null,null],
+    [null,null,null,null,null,null,null,null],
+    [null,null,null,null,null,null,null,null],
+    ["wP","wP","wP","wP","wP","wP","wP","wP"],
+    ["wR","wN","wB","wQ","wK","wB","wN","wR"],
+  ];
+  layout.forEach((row,r)=>{row.forEach((p,c)=>{
+    const sq=document.createElement("div");
+    sq.className="v-sq "+((r+c)%2===0?"l":"d");
+    sq.style.fontSize="1.1rem";
+    if(p)sq.textContent=GLYPHS[p];
+    el.appendChild(sq);
+  });});
+}
+
+// GUNGI
+function buildGungi(){
+  const el=document.getElementById("gungiVis");el.innerHTML="";
+  const pattern=[
+    ["H",null,null,"G",null,null,"H"],
+    [null,"F",null,"S",null,"F",null],
+    [null,null,"K",null,"K",null,null],
+    [null,null,null,null,null,null,null],
+    [null,null,"k",null,"k",null,null],
+    [null,"f",null,"s",null,"f",null],
+    ["h",null,null,"g",null,null,"h"],
+  ];
+  pattern.forEach(row=>{row.forEach(v=>{
+    const d=document.createElement("div");d.className="v-gungi-cell";
+    if(v){
+      const isW=v===v.toUpperCase();
+      const gp=document.createElement("div");
+      gp.className="v-gpiece "+(isW?"w":"b");
+      gp.textContent=v.toUpperCase();
+      d.appendChild(gp);
+    }
+    el.appendChild(d);
+  });});
+}
+
+buildVisuals();
+</script>
+</body>
+</html>
