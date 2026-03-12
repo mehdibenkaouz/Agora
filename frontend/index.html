@@ -1659,6 +1659,7 @@
 
           <p id="feedHint">Login, then publish your first post.</p>
           <div id="feed" class="feed-list" style="margin-top:14px;"></div>
+          <div id="feedSentinel" style="height:40px; display:none;"></div>
       </div>
 
       <aside class="right-column">
@@ -3151,8 +3152,10 @@
       });
     }
     function renderPosts(posts, savedIds = new Set()) {
+      if (!append) {
       feed.innerHTML = "";
       postByKey.clear();
+      }
 
       const canInteract = !!getToken();
 
@@ -3327,18 +3330,48 @@
     }
 
 
-    async function loadFeed() {
-      const data = await api("/api/posts", { method: "GET" });
-      // Se loggato, carica anche i post salvati per inizializzare lo stato
-      let savedIds = new Set();
-      if (getToken()) {
+let feedOffset = 0;
+const FEED_PAGE_SIZE = 20;
+let feedLoading = false;
+let feedExhausted = false;
+
+async function loadFeed(append = false) {
+  if (feedLoading) return;
+  if (append && feedExhausted) return;
+
+  feedLoading = true;
+
+  if (!append) {
+    feedOffset = 0;
+    feedExhausted = false;
+  }
+
+  try {
+    const data = await api(`/api/posts?limit=${FEED_PAGE_SIZE}&offset=${feedOffset}`, { method: "GET" });
+
+    let savedIds = new Set();
+    if (getToken()) {
         try {
           const saved = await api("/api/saved", { method: "GET" });
           (saved.posts || []).forEach(p => savedIds.add(p.id));
         } catch (_) {}
       }
-      renderPosts(data.posts || [], savedIds);
+
+      const posts = data.posts || [];
+      renderPosts(posts, savedIds, append);
+      feedOffset += posts.length;
+
+      if (posts.length < FEED_PAGE_SIZE) {
+        feedExhausted = true;
+        document.getElementById("feedSentinel").style.display = "none";
+      } else {
+        document.getElementById("feedSentinel").style.display = "block";
+      }
+
+    } finally {
+      feedLoading = false;
     }
+  }
     
     // Thread interactions (frontend-only for now)
     threadSendBtn?.addEventListener("click", trySendThreadComment);
@@ -4268,6 +4301,11 @@
     })();
     hideThreadPanel();
     updatePostCounterAndPublish();
+    const sentinel = document.getElementById("feedSentinel");
+    const scrollObserver = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) loadFeed(true);
+    }, { rootMargin: "200px" });
+    scrollObserver.observe(sentinel);
 
     
   </script>
