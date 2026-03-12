@@ -3079,7 +3079,7 @@
         CURRENT_USER = null;
         accountMenuSub.textContent = "Not logged in";
         menuPrimaryAction.textContent = "Login";
-        f
+        feedHint.textContent = "Session expired. Please log in again.";
         syncAccountAvatar();
         feedHint.textContent = "";
       }
@@ -3151,7 +3151,7 @@
         document.addEventListener("keydown", onKey);
       });
     }
-    function renderPosts(posts, savedIds = new Set()) {
+    function renderPosts(posts, savedIds = new Set(), append = false) {
       if (!append) {
       feed.innerHTML = "";
       postByKey.clear();
