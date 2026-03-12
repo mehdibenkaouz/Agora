@@ -1659,6 +1659,7 @@
 
           <p id="feedHint">Login, then publish your first post.</p>
           <div id="feed" class="feed-list" style="margin-top:14px;"></div>
+          <div id="feedSentinel" style="height:40px; display:none;"></div>
       </div>
 
       <aside class="right-column">
@@ -3150,9 +3151,11 @@
         document.addEventListener("keydown", onKey);
       });
     }
-    function renderPosts(posts, savedIds = new Set()) {
-      feed.innerHTML = "";
-      postByKey.clear();
+    function renderPosts(posts, savedIds = new Set(), append = false) {
+      if (!append) {
+        feed.innerHTML = "";
+        postByKey.clear();
+      }
 
       const canInteract = !!getToken();
 
@@ -3327,17 +3330,49 @@
     }
 
 
-    async function loadFeed() {
-      const data = await api("/api/posts", { method: "GET" });
-      // Se loggato, carica anche i post salvati per inizializzare lo stato
-      let savedIds = new Set();
-      if (getToken()) {
-        try {
-          const saved = await api("/api/saved", { method: "GET" });
-          (saved.posts || []).forEach(p => savedIds.add(p.id));
-        } catch (_) {}
+    // --- Pagination state ---
+    let feedOffset = 0;
+    const FEED_PAGE_SIZE = 20;
+    let feedLoading = false;
+    let feedExhausted = false;
+
+    async function loadFeed(append = false) {
+      if (feedLoading) return;
+      if (append && feedExhausted) return;
+
+      feedLoading = true;
+
+      if (!append) {
+        feedOffset = 0;
+        feedExhausted = false;
       }
-      renderPosts(data.posts || [], savedIds);
+
+      try {
+        const data = await api(`/api/posts?limit=${FEED_PAGE_SIZE}&offset=${feedOffset}`, { method: "GET" });
+
+        let savedIds = new Set();
+        if (getToken()) {
+          try {
+            const saved = await api("/api/saved", { method: "GET" });
+            (saved.posts || []).forEach(p => savedIds.add(p.id));
+          } catch (_) {}
+        }
+
+        const posts = data.posts || [];
+        renderPosts(posts, savedIds, append);
+        feedOffset += posts.length;
+
+        const sentinel = document.getElementById("feedSentinel");
+        if (posts.length < FEED_PAGE_SIZE) {
+          feedExhausted = true;
+          if (sentinel) sentinel.style.display = "none";
+        } else {
+          if (sentinel) sentinel.style.display = "block";
+        }
+
+      } finally {
+        feedLoading = false;
+      }
     }
     
     // Thread interactions (frontend-only for now)
@@ -3990,13 +4025,134 @@
       r.setEndAfter(spacer);
       sel.addRange(r);
     });
-    // Submit create post
+    // ============================================================
+    // ANTI-SPAM ENGINE — 8-cycle hierarchical pattern detector
+    // Axiom: bots are precise, humans are not.
+    // Each cycle k analyses a higher order of temporal repetition.
+    // ============================================================
+
+    const SPAM_TS_KEY       = "agora_post_ts";
+    const SPAM_BLOCKED_KEY  = "agora_spam_block";
+    const MAX_TS_TRACKED    = 64;
+    const BOT_CYCLES        = 8;
+    const PRECISION_MS      = 2000;
+    const BLOCK_DURATION_MS = 30 * 60 * 1000;
+
+    function spamGetTs() {
+      try { return JSON.parse(localStorage.getItem(SPAM_TS_KEY) || "[]"); }
+      catch { return []; }
+    }
+
+    function spamSaveTs(ts) {
+      let arr = spamGetTs();
+      arr.push(ts);
+      if (arr.length > MAX_TS_TRACKED) arr = arr.slice(-MAX_TS_TRACKED);
+      localStorage.setItem(SPAM_TS_KEY, JSON.stringify(arr));
+    }
+
+    function spamIsBlocked() {
+      const until = Number(localStorage.getItem(SPAM_BLOCKED_KEY) || 0);
+      return Date.now() < until;
+    }
+
+    function spamBlock() {
+      localStorage.setItem(SPAM_BLOCKED_KEY, String(Date.now() + BLOCK_DURATION_MS));
+    }
+
+    function detectBotPattern(timestamps) {
+      if (timestamps.length < 3) return { isBot: false, score: 0, reasons: [] };
+
+      // Level 0: raw intervals between consecutive posts
+      const intervals = [];
+      for (let i = 1; i < timestamps.length; i++) {
+        intervals.push(timestamps[i] - timestamps[i - 1]);
+      }
+
+      let score = 0;
+      const reasons = [];
+
+      for (let cycle = 1; cycle <= BOT_CYCLES; cycle++) {
+
+        // L1: 3 consecutive intervals nearly equal → constant-cadence bot
+        if (cycle === 1) {
+          const tail = intervals.slice(-3);
+          if (tail.length === 3) {
+            const avg = tail.reduce((a, b) => a + b, 0) / tail.length;
+            const variance = tail.reduce((s, v) => s + (v - avg) ** 2, 0) / tail.length;
+            if (variance < PRECISION_MS ** 2 && avg < 120_000) {
+              score += 6;
+              reasons.push(`[L1] Constant cadence: 3 posts ~${Math.round(avg / 1000)}s apart (σ²=${Math.round(variance)})`);
+            }
+          }
+        }
+
+        // Lk (k≥2): sliding window of k intervals — do consecutive windows match?
+        const wSize = cycle;
+        if (intervals.length < wSize * 2) continue;
+
+        let levelHits = 0;
+
+        for (let w = 0; w <= intervals.length - wSize * 2; w++) {
+          const winA = intervals.slice(w,         w + wSize);
+          const winB = intervals.slice(w + wSize, w + wSize * 2);
+
+          let matchCount = 0;
+          for (let j = 0; j < wSize; j++) {
+            if (Math.abs(winA[j] - winB[j]) < PRECISION_MS) matchCount++;
+          }
+
+          if (matchCount / wSize >= 0.80) levelHits++;
+        }
+
+        if (levelHits > 0) {
+          score += cycle * levelHits;
+          reasons.push(`[L${cycle}] Repeating ${wSize}-interval pattern: ${levelHits} hit(s), +${cycle * levelHits} pts`);
+        }
+
+        // L8: foundational — if global variance is inhuman AND score already high, confirm
+        if (cycle === BOT_CYCLES && intervals.length >= 4) {
+          const globalAvg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+          const globalVar = intervals.reduce((s, v) => s + (v - globalAvg) ** 2, 0) / intervals.length;
+          if (globalVar < (PRECISION_MS * 1.5) ** 2 && score >= 6) {
+            score += 10;
+            reasons.push(`[L8] Foundational: global variance inhuman (σ²=${Math.round(globalVar)}), verdict confirmed`);
+          }
+        }
+      }
+
+      return { isBot: score >= 8, score, reasons };
+    }
+
+    // ── Publish gate ─────────────────────────────────────────────────────────
     createPostForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       if (!getToken()) {
         alert("Please login first.");
         openModal();
+        return;
+      }
+
+      // Anti-spam check
+      if (spamIsBlocked()) {
+        const until = new Date(Number(localStorage.getItem(SPAM_BLOCKED_KEY)));
+        alert(
+          `⚠️ Your account has been temporarily blocked for suspicious posting activity.\n` +
+          `You can try again after ${until.toLocaleTimeString()}.\n\n` +
+          `If you believe this is a mistake, please contact support.`
+        );
+        return;
+      }
+
+      const { isBot, score, reasons } = detectBotPattern(spamGetTs());
+      if (isBot) {
+        console.warn("[SPAM DETECTOR] Bot pattern detected:", { score, reasons });
+        spamBlock();
+        alert(
+          `⚠️ Suspicious posting pattern detected (score: ${score}/8 cycles).\n` +
+          `Your account has been temporarily suspended pending verification.\n\n` +
+          `Reason: ${reasons[0] || "Abnormal post cadence"}`
+        );
         return;
       }
 
@@ -4019,11 +4175,14 @@
         await api("/api/posts", {
           method: "POST",
           body: JSON.stringify({
-            content: contentText,   
+            content: contentText,
             content_html: contentHtml,
             content_text: contentText
           })
         });
+
+        // Registra timestamp solo su publish riuscito
+        spamSaveTs(Date.now());
 
         createPostContent.innerHTML = "";
         closeCreatePostModal();
@@ -4146,6 +4305,12 @@
     })();
     hideThreadPanel();
     updatePostCounterAndPublish();
+
+    // Infinite scroll — load older posts as user scrolls down
+    const scrollObserver = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) loadFeed(true);
+    }, { rootMargin: "200px" });
+    scrollObserver.observe(document.getElementById("feedSentinel"));
 
     
   </script>
