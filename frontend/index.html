@@ -81,7 +81,7 @@
       border-color: rgba(255,255,255,0.10);
     }
     :root[data-theme="dark"] .comment-bubble.theirs{
-      background: rgba(255,255,255,0.09);
+      background: rgba(255,255,255,0.10);
       color: rgba(255,255,255,0.92);
     }
     :root[data-theme="dark"] .comment-bubble.mine{
@@ -90,7 +90,7 @@
     }
     :root[data-theme="dark"] .comment-row .comment-name,
     :root[data-theme="dark"] .comment-row .comment-time{
-      color: rgba(255,255,255,0.45);
+      color: rgba(255,255,255,0.40);
     }
 
     * { box-sizing: border-box; }
@@ -154,41 +154,63 @@
 
     .layout {
       display: grid;
-      grid-template-columns: 90px minmax(0, 1fr) 6px var(--right-col-width, 270px);
+      grid-template-columns: 90px minmax(0, 1fr) 10px var(--right-col-width, 270px);
       gap: 0;
       align-items: start;
-      column-gap: 0;
     }
-    /* add horizontal gaps back between rail/center/resizer/right via padding */
     .left-rail   { padding-right: 22px; }
-    .center-col  { padding-right: 10px; }
-    .right-column{ padding-left: 10px; }
+    .center-col  { padding-right: 0; }
+    .right-column{ padding-left: 0; }
 
-    /* ── Resize divider ─────────────────────────────────────── */
+    /* ── Column resizer ──────────────────────────────── */
     #resizeDivider{
-      width: 6px;
-      cursor: col-resize;
       align-self: stretch;
+      width: 10px;
+      cursor: col-resize;
       position: relative;
-      z-index: 10;
+      z-index: 20;
       display: flex;
       align-items: center;
       justify-content: center;
-      opacity: 0;
-      transition: opacity .18s;
-    }
-    #resizeDivider:hover,
-    #resizeDivider.dragging{
-      opacity: 1;
+      min-height: 100%;
     }
     #resizeDivider::after{
       content: "";
-      display: block;
+      position: absolute;
+      top: 0; bottom: 0; left: 50%;
+      transform: translateX(-50%);
       width: 3px;
-      height: 60px;
       border-radius: 99px;
+      background: var(--line);
+      opacity: .40;
+      transition: background .15s, opacity .15s, width .15s;
+    }
+    #resizeDivider:hover::after,
+    #resizeDivider.dragging::after{
       background: var(--brand);
-      opacity: .55;
+      opacity: .80;
+      width: 4px;
+    }
+    #resizeDivider .drag-dots{
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity .15s;
+      pointer-events: none;
+    }
+    #resizeDivider:hover .drag-dots,
+    #resizeDivider.dragging .drag-dots{
+      opacity: 1;
+    }
+    #resizeDivider .drag-dots span{
+      display: block;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--brand);
     }
 
     .left-rail {
@@ -608,7 +630,7 @@
     /* Responsive */
     @media (max-width: 1080px) {
       .layout { 
-        grid-template-columns: 76px minmax(0, 1fr) 6px clamp(200px, var(--right-col-width, 260px), 340px);
+        grid-template-columns: 76px minmax(0, 1fr) 10px clamp(200px, var(--right-col-width, 260px), 340px);
         gap: 0;
       }
       .action-btn{ width: 60px; height: 60px; }
@@ -617,7 +639,11 @@
         padding: 14px 14px 16px;
       }
     }
-
+    @media (max-width: 980px) {
+      .layout{
+        grid-template-columns: 76px minmax(0, 1fr) 10px clamp(200px, var(--right-col-width, 240px), 300px);
+      }
+    }
     @media (max-width: 760px) {
       .topbar-inner { flex-wrap: wrap; justify-content: space-between; }
       .top-links {
@@ -635,12 +661,6 @@
       .action-btn { width: 60px; height: 60px; }
       .composer-card, .comments-card { min-height: auto; }
       .media-zone p { max-width: 100%; }
-    }
-
-    @media (max-width: 980px) {
-      .layout{
-        grid-template-columns: 76px minmax(0, 1fr) 6px clamp(200px, var(--right-col-width, 240px), 300px);
-      }
     }
     /* --- Create Post: media dropzone + preview --- */
     .dropzone{
@@ -1185,7 +1205,7 @@
       padding: 8px 2px;
     }
 
-    /* ── WhatsApp-style chat bubbles ────────────────────────── */
+    /* ── WhatsApp-style chat bubbles ──────────────────── */
     .thread-comments{
       display: flex;
       flex-direction: column;
@@ -1194,7 +1214,6 @@
       overflow-y: auto;
       scroll-behavior: smooth;
     }
-
     .comment-row{
       display: flex;
       flex-direction: column;
@@ -1209,30 +1228,29 @@
       align-self: flex-start;
       align-items: flex-start;
     }
-
     .comment-who{
       display: flex;
       align-items: center;
       gap: 6px;
+      margin-bottom: 2px;
     }
     .comment-avatar{
-      width: 22px;
-      height: 22px;
+      width: 20px;
+      height: 20px;
       border-radius: 50%;
       object-fit: cover;
       flex-shrink: 0;
     }
     .comment-name{
-      font-size: .80rem;
+      font-size: .78rem;
       font-weight: 700;
       color: rgba(0,0,0,0.45);
     }
     .comment-row.mine .comment-name{ display: none; }
-
     .comment-bubble{
-      padding: 9px 13px;
+      padding: 8px 13px;
       border-radius: 18px;
-      font-size: .95rem;
+      font-size: .93rem;
       line-height: 1.4;
       white-space: pre-wrap;
       word-break: break-word;
@@ -1243,14 +1261,13 @@
       border-bottom-right-radius: 5px;
     }
     .comment-bubble.theirs{
-      background: rgba(0,0,0,0.06);
+      background: rgba(0,0,0,0.07);
       color: #111;
       border-bottom-left-radius: 5px;
     }
-
     .comment-time{
-      font-size: .74rem;
-      color: rgba(0,0,0,0.38);
+      font-size: .72rem;
+      color: rgba(0,0,0,0.35);
       padding: 0 4px;
     }
 
@@ -1743,12 +1760,16 @@
 
       <div class="main-column center-col">
 
-
           <p id="feedHint">Login, then publish your first post.</p>
           <div id="feed" class="feed-list" style="margin-top:14px;"></div>
+          <div id="feedSentinel" style="height:40px; display:none;"></div>
       </div>
 
-      <div id="resizeDivider" aria-hidden="true"></div>
+      <div id="resizeDivider" aria-hidden="true">
+        <div class="drag-dots">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+      </div>
 
       <aside class="right-column">
         <section class="comments-card" id="threadPanel">
@@ -3030,13 +3051,12 @@
           const myEmail = getCurrentUserEmail();
           inner = comments.map(c => {
             const who    = escapeHtml(c.author_display_name || c.author_email || "anon");
-            const when   = escapeHtml(new Date(c.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+            const when   = new Date(c.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
             const text   = escapeHtml(c.content || "");
             const avatar = escapeHtml(c.author_picture_url || '/avatar-default.png');
             const isMine = myEmail && myEmail === String(c.author_email || "").trim().toLowerCase();
             const side   = isMine ? "mine" : "theirs";
-
-          return `
+            return `
             <div class="comment-row ${side}">
               ${!isMine ? `<div class="comment-who">
                 <img class="comment-avatar" src="${avatar}" />
@@ -3044,17 +3064,13 @@
               </div>` : ''}
               <div class="comment-bubble ${side}">${text}</div>
               <span class="comment-time">${when}</span>
-            </div>
-          `;
+            </div>`;
           }).join("");
         }
 
         if (threadComments) {
           threadComments.innerHTML = inner;
-          // Scroll to latest message
-          requestAnimationFrame(() => {
-            threadComments.scrollTop = threadComments.scrollHeight;
-          });
+          requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
         }
         bumpFeedCountsForKey(currentKey);
 
@@ -3249,9 +3265,11 @@
         document.addEventListener("keydown", onKey);
       });
     }
-    function renderPosts(posts, savedIds = new Set()) {
-      feed.innerHTML = "";
-      postByKey.clear();
+    function renderPosts(posts, savedIds = new Set(), append = false) {
+      if (!append) {
+        feed.innerHTML = "";
+        postByKey.clear();
+      }
 
       const canInteract = !!getToken();
 
@@ -3426,17 +3444,38 @@
     }
 
 
-    async function loadFeed() {
-      const data = await api("/api/posts", { method: "GET" });
-      // Se loggato, carica anche i post salvati per inizializzare lo stato
-      let savedIds = new Set();
-      if (getToken()) {
-        try {
-          const saved = await api("/api/saved", { method: "GET" });
-          (saved.posts || []).forEach(p => savedIds.add(p.id));
-        } catch (_) {}
+    let feedOffset = 0;
+    const FEED_PAGE_SIZE = 20;
+    let feedLoading = false;
+    let feedExhausted = false;
+
+    async function loadFeed(append = false) {
+      if (feedLoading) return;
+      if (append && feedExhausted) return;
+      feedLoading = true;
+      if (!append) { feedOffset = 0; feedExhausted = false; }
+      try {
+        const data = await api(`/api/posts?limit=${FEED_PAGE_SIZE}&offset=${feedOffset}`, { method: "GET" });
+        let savedIds = new Set();
+        if (getToken()) {
+          try {
+            const saved = await api("/api/saved", { method: "GET" });
+            (saved.posts || []).forEach(p => savedIds.add(p.id));
+          } catch (_) {}
+        }
+        const posts = data.posts || [];
+        renderPosts(posts, savedIds, append);
+        feedOffset += posts.length;
+        const sentinel = document.getElementById("feedSentinel");
+        if (posts.length < FEED_PAGE_SIZE) {
+          feedExhausted = true;
+          if (sentinel) sentinel.style.display = "none";
+        } else {
+          if (sentinel) sentinel.style.display = "block";
+        }
+      } finally {
+        feedLoading = false;
       }
-      renderPosts(data.posts || [], savedIds);
     }
     
     // Thread interactions (frontend-only for now)
@@ -4089,18 +4128,64 @@
       r.setEndAfter(spacer);
       sel.addRange(r);
     });
-    // Submit create post
+    // ── Anti-spam engine (8-cycle) ──────────────────────────
+    const SPAM_TS_KEY       = "agora_post_ts";
+    const SPAM_BLOCKED_KEY  = "agora_spam_block";
+    const MAX_TS_TRACKED    = 64;
+    const PRECISION_MS      = 2000;
+    const BLOCK_DURATION_MS = 30 * 60 * 1000;
+
+    function spamGetTs()   { try { return JSON.parse(localStorage.getItem(SPAM_TS_KEY) || "[]"); } catch { return []; } }
+    function spamSaveTs(t) { let a = spamGetTs(); a.push(t); if (a.length > MAX_TS_TRACKED) a = a.slice(-MAX_TS_TRACKED); localStorage.setItem(SPAM_TS_KEY, JSON.stringify(a)); }
+    function spamIsBlocked(){ return Date.now() < Number(localStorage.getItem(SPAM_BLOCKED_KEY) || 0); }
+    function spamBlock()   { localStorage.setItem(SPAM_BLOCKED_KEY, String(Date.now() + BLOCK_DURATION_MS)); }
+
+    function detectBotPattern(ts) {
+      if (ts.length < 3) return { isBot: false, score: 0 };
+      const iv = ts.slice(1).map((v,i) => v - ts[i]);
+      let score = 0;
+      for (let cycle = 1; cycle <= 8; cycle++) {
+        if (cycle === 1) {
+          const t = iv.slice(-3);
+          if (t.length === 3) {
+            const avg = t.reduce((a,b)=>a+b,0)/3;
+            const vari = t.reduce((s,v)=>s+(v-avg)**2,0)/3;
+            if (vari < PRECISION_MS**2 && avg < 120000) score += 6;
+          }
+        }
+        const w = cycle;
+        if (iv.length < w*2) continue;
+        let hits = 0;
+        for (let i = 0; i <= iv.length - w*2; i++) {
+          const a = iv.slice(i, i+w), b = iv.slice(i+w, i+w*2);
+          const match = a.filter((_,j) => Math.abs(a[j]-b[j]) < PRECISION_MS).length;
+          if (match/w >= 0.80) hits++;
+        }
+        if (hits > 0) score += cycle * hits;
+        if (cycle === 8 && iv.length >= 4) {
+          const avg = iv.reduce((a,b)=>a+b,0)/iv.length;
+          const vari = iv.reduce((s,v)=>s+(v-avg)**2,0)/iv.length;
+          if (vari < (PRECISION_MS*1.5)**2 && score >= 6) score += 10;
+        }
+      }
+      return { isBot: score >= 8, score };
+    }
+
     createPostForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
-      if (!getToken()) {
-        alert("Please login first.");
-        openModal();
+      if (!getToken()) { alert("Please login first."); openModal(); return; }
+
+      if (spamIsBlocked()) {
+        const until = new Date(Number(localStorage.getItem(SPAM_BLOCKED_KEY)));
+        alert(`⚠️ Account temporarily suspended for suspicious activity.
+Try again after ${until.toLocaleTimeString()}.`);
         return;
       }
+      const { isBot } = detectBotPattern(spamGetTs());
+      if (isBot) { spamBlock(); alert("⚠️ Suspicious posting pattern detected. Account temporarily suspended."); return; }
 
       hardTruncateToLimit(POST_MAX_LENGTH);
-
       const contentText = getPostPlainText().trim();
       const hasAnything = !!contentText || selectedImages.length > 0;
       if (!hasAnything) return;
@@ -4108,27 +4193,17 @@
       createPostPublishBtn.disabled = true;
 
       try {
-        // 1) upload immagini + swap src nel DOM editor (da blob: a /media/..)
         await uploadAllSelectedImagesAndSwapSrc();
-
-        // 2) ora l'HTML contiene già img con URL pubblici + formattazioni
         const contentHtml = createPostContent.innerHTML;
-
-        // 3) invio al backend
         await api("/api/posts", {
           method: "POST",
-          body: JSON.stringify({
-            content: contentText,   
-            content_html: contentHtml,
-            content_text: contentText
-          })
+          body: JSON.stringify({ content: contentText, content_html: contentHtml, content_text: contentText })
         });
-
+        spamSaveTs(Date.now());
         createPostContent.innerHTML = "";
         closeCreatePostModal();
         clearImages();
         await loadFeed();
-
       } catch (err) {
         console.error("Publish failed:", err);
         alert("Publish failed: " + (err?.message || "unknown error"));
@@ -4246,90 +4321,76 @@
     hideThreadPanel();
     updatePostCounterAndPublish();
 
-    // ── Infinite scroll sentinel ──────────────────────────────
-    const _sentinel = document.getElementById("feedSentinel");
-    if (_sentinel) {
-      const scrollObserver = new IntersectionObserver((entries) => {
-        if (entries[0].isIntersecting) loadFeed(true);
-      }, { rootMargin: "200px" });
-      scrollObserver.observe(_sentinel);
-    }
+    // Infinite scroll sentinel
+    (function(){
+      const s = document.getElementById("feedSentinel");
+      if (!s) return;
+      new IntersectionObserver(entries => { if (entries[0].isIntersecting) loadFeed(true); }, { rootMargin:"200px" }).observe(s);
+    })();
 
     // ── Column resizer ────────────────────────────────────────
     (function initResizer() {
-      const divider  = document.getElementById("resizeDivider");
-      const layout   = document.querySelector(".layout");
+      const divider = document.getElementById("resizeDivider");
+      const layout  = document.querySelector(".layout");
       if (!divider || !layout) return;
 
-      const MIN_W = 200;   // px
-      const MAX_W = 520;   // px
-      const STORE_KEY = "agora_right_col_w";
+      const MIN_W   = 200;
+      const MAX_W   = 560;
+      const STORE   = "agora_right_col_w";
 
       function applyWidth(w) {
         w = Math.max(MIN_W, Math.min(MAX_W, w));
         layout.style.setProperty("--right-col-width", w + "px");
+        return w;
       }
 
-      // Restore saved width
-      const saved = parseInt(localStorage.getItem(STORE_KEY));
+      const saved = parseInt(localStorage.getItem(STORE));
       if (!isNaN(saved)) applyWidth(saved);
 
-      let dragging = false;
-      let startX   = 0;
-      let startW   = 0;
+      let dragging = false, startX = 0, startW = 0;
 
-      divider.addEventListener("mousedown", (e) => {
+      function getW() {
+        return parseInt(getComputedStyle(layout).getPropertyValue("--right-col-width")) || 270;
+      }
+
+      divider.addEventListener("mousedown", e => {
         e.preventDefault();
-        dragging = true;
-        startX   = e.clientX;
-        startW   = parseInt(getComputedStyle(layout).getPropertyValue("--right-col-width")) || 270;
+        dragging = true; startX = e.clientX; startW = getW();
         divider.classList.add("dragging");
-        document.body.style.userSelect = "none";
-        document.body.style.cursor     = "col-resize";
+        document.body.style.cssText += ";user-select:none;cursor:col-resize";
       });
-
-      document.addEventListener("mousemove", (e) => {
+      document.addEventListener("mousemove", e => {
         if (!dragging) return;
-        // Moving left = enlarging right column, moving right = shrinking it
-        const delta = startX - e.clientX;
-        applyWidth(startW + delta);
+        applyWidth(startW + (startX - e.clientX));
       });
-
       document.addEventListener("mouseup", () => {
         if (!dragging) return;
         dragging = false;
         divider.classList.remove("dragging");
         document.body.style.userSelect = "";
-        document.body.style.cursor     = "";
-        const cur = parseInt(getComputedStyle(layout).getPropertyValue("--right-col-width")) || 270;
-        localStorage.setItem(STORE_KEY, cur);
+        document.body.style.cursor = "";
+        localStorage.setItem(STORE, getW());
       });
 
-      // Touch support
-      divider.addEventListener("touchstart", (e) => {
-        const t = e.touches[0];
-        dragging = true;
-        startX   = t.clientX;
-        startW   = parseInt(getComputedStyle(layout).getPropertyValue("--right-col-width")) || 270;
+      // Touch
+      divider.addEventListener("touchstart", e => {
+        dragging = true; startX = e.touches[0].clientX; startW = getW();
         divider.classList.add("dragging");
-      }, { passive: true });
-
-      document.addEventListener("touchmove", (e) => {
+      }, { passive:true });
+      document.addEventListener("touchmove", e => {
         if (!dragging) return;
-        const t     = e.touches[0];
-        const delta = startX - t.clientX;
-        applyWidth(startW + delta);
-      }, { passive: true });
-
+        applyWidth(startW + (startX - e.touches[0].clientX));
+      }, { passive:true });
       document.addEventListener("touchend", () => {
         if (!dragging) return;
         dragging = false;
         divider.classList.remove("dragging");
-        const cur = parseInt(getComputedStyle(layout).getPropertyValue("--right-col-width")) || 270;
-        localStorage.setItem(STORE_KEY, cur);
+        localStorage.setItem(STORE, getW());
       });
     })();
-</script>
+
+  </script>
+
   <div id="confirmModal" class="confirm-modal" aria-hidden="true">
     <div class="confirm-backdrop"></div>
     <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
@@ -4341,7 +4402,6 @@
       </div>
     </div>
   </div>
-
 
 </body>
 </html>
