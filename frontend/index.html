@@ -80,6 +80,18 @@
       background: rgba(255,255,255,0.03);
       border-color: rgba(255,255,255,0.10);
     }
+    :root[data-theme="dark"] .comment-bubble.theirs{
+      background: rgba(255,255,255,0.09);
+      color: rgba(255,255,255,0.92);
+    }
+    :root[data-theme="dark"] .comment-bubble.mine{
+      background: var(--brand);
+      color: #fff;
+    }
+    :root[data-theme="dark"] .comment-row .comment-name,
+    :root[data-theme="dark"] .comment-row .comment-time{
+      color: rgba(255,255,255,0.45);
+    }
 
     * { box-sizing: border-box; }
 
@@ -142,9 +154,41 @@
 
     .layout {
       display: grid;
-      grid-template-columns: 90px minmax(0, 1fr) 270px;
-      gap: 22px;
+      grid-template-columns: 90px minmax(0, 1fr) 6px var(--right-col-width, 270px);
+      gap: 0;
       align-items: start;
+      column-gap: 0;
+    }
+    /* add horizontal gaps back between rail/center/resizer/right via padding */
+    .left-rail   { padding-right: 22px; }
+    .center-col  { padding-right: 10px; }
+    .right-column{ padding-left: 10px; }
+
+    /* ── Resize divider ─────────────────────────────────────── */
+    #resizeDivider{
+      width: 6px;
+      cursor: col-resize;
+      align-self: stretch;
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity .18s;
+    }
+    #resizeDivider:hover,
+    #resizeDivider.dragging{
+      opacity: 1;
+    }
+    #resizeDivider::after{
+      content: "";
+      display: block;
+      width: 3px;
+      height: 60px;
+      border-radius: 99px;
+      background: var(--brand);
+      opacity: .55;
     }
 
     .left-rail {
@@ -564,11 +608,9 @@
     /* Responsive */
     @media (max-width: 1080px) {
       .layout { 
-        grid-template-columns: 76px minmax(0, 1fr) minmax(240px, 320px);
-        gap: 16px;
+        grid-template-columns: 76px minmax(0, 1fr) 6px clamp(200px, var(--right-col-width, 260px), 340px);
+        gap: 0;
       }
-
-      /* stringiamo un po’ per stare bene a metà schermo */
       .action-btn{ width: 60px; height: 60px; }
       .comments-card{
         border-radius: 32px;
@@ -585,19 +627,19 @@
         gap: 14px;
         font-size: 0.9rem;
       }
-
       .layout { grid-template-columns: 1fr; }
-      .left-rail { flex-direction: row; padding-top: 0; gap: 14px; }
+      #resizeDivider { display: none; }
+      .left-rail { flex-direction: row; padding-top: 0; gap: 14px; padding-right: 0; }
+      .center-col { padding-right: 0; }
+      .right-column { padding-left: 0; }
       .action-btn { width: 60px; height: 60px; }
       .composer-card, .comments-card { min-height: auto; }
       .media-zone p { max-width: 100%; }
     }
 
-
     @media (max-width: 980px) {
-      /* stringe ancora un filo la colonna commenti senza andare sotto */
       .layout{
-        grid-template-columns: 76px minmax(0, 1fr) minmax(220px, 280px);
+        grid-template-columns: 76px minmax(0, 1fr) 6px clamp(200px, var(--right-col-width, 240px), 300px);
       }
     }
     /* --- Create Post: media dropzone + preview --- */
@@ -1143,28 +1185,73 @@
       padding: 8px 2px;
     }
 
-    .comment-item{
-      border: 1px solid rgba(0,0,0,0.08);
-      background: rgba(252,251,248,0.92);
+    /* ── WhatsApp-style chat bubbles ────────────────────────── */
+    .thread-comments{
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 14px 12px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+    }
+
+    .comment-row{
+      display: flex;
+      flex-direction: column;
+      max-width: 82%;
+      gap: 2px;
+    }
+    .comment-row.mine{
+      align-self: flex-end;
+      align-items: flex-end;
+    }
+    .comment-row.theirs{
+      align-self: flex-start;
+      align-items: flex-start;
+    }
+
+    .comment-who{
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .comment-avatar{
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .comment-name{
+      font-size: .80rem;
+      font-weight: 700;
+      color: rgba(0,0,0,0.45);
+    }
+    .comment-row.mine .comment-name{ display: none; }
+
+    .comment-bubble{
+      padding: 9px 13px;
       border-radius: 18px;
-      padding: 10px 12px;
-    }
-    .comment-meta{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      color: rgba(0,0,0,0.55);
-      font-size: .85rem;
-      font-weight: 750;
-      margin-bottom: 6px;
-    }
-    .comment-text{
-      color: #111;
-      font-size: .98rem;
-      line-height: 1.35;
+      font-size: .95rem;
+      line-height: 1.4;
       white-space: pre-wrap;
       word-break: break-word;
+    }
+    .comment-bubble.mine{
+      background: var(--brand);
+      color: #fff;
+      border-bottom-right-radius: 5px;
+    }
+    .comment-bubble.theirs{
+      background: rgba(0,0,0,0.06);
+      color: #111;
+      border-bottom-left-radius: 5px;
+    }
+
+    .comment-time{
+      font-size: .74rem;
+      color: rgba(0,0,0,0.38);
+      padding: 0 4px;
     }
 
     .thread-compose{
@@ -1654,13 +1741,14 @@
         </a>
       </aside>
 
-      <div class="main-column">
+      <div class="main-column center-col">
 
 
           <p id="feedHint">Login, then publish your first post.</p>
           <div id="feed" class="feed-list" style="margin-top:14px;"></div>
-          <div id="feedSentinel" style="height:40px; display:none;"></div>
       </div>
+
+      <div id="resizeDivider" aria-hidden="true"></div>
 
       <aside class="right-column">
         <section class="comments-card" id="threadPanel">
@@ -2939,25 +3027,35 @@
         if (!comments.length) {
           inner = `<div class="thread-empty">No comments yet. Add the first one.</div>`;
         } else {
+          const myEmail = getCurrentUserEmail();
           inner = comments.map(c => {
-            const who = escapeHtml(c.author_display_name || c.author_email || "anon");
-            const when = escapeHtml(new Date(c.created_at).toLocaleString());
-            const text = escapeHtml(c.content || "");
+            const who    = escapeHtml(c.author_display_name || c.author_email || "anon");
+            const when   = escapeHtml(new Date(c.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}));
+            const text   = escapeHtml(c.content || "");
+            const avatar = escapeHtml(c.author_picture_url || '/avatar-default.png');
+            const isMine = myEmail && myEmail === String(c.author_email || "").trim().toLowerCase();
+            const side   = isMine ? "mine" : "theirs";
 
           return `
-            <div class="comment-item">
-              <div class="comment-meta">
-                <img class="comment-avatar" src="${escapeHtml(c.author_picture_url || '/avatar-default.png')}" />
-                <span>${who}</span>
-                <span>${when}</span>
-              </div>
-              <div class="comment-text">${text}</div>
+            <div class="comment-row ${side}">
+              ${!isMine ? `<div class="comment-who">
+                <img class="comment-avatar" src="${avatar}" />
+                <span class="comment-name">${who}</span>
+              </div>` : ''}
+              <div class="comment-bubble ${side}">${text}</div>
+              <span class="comment-time">${when}</span>
             </div>
           `;
           }).join("");
         }
 
-        if (threadComments) threadComments.innerHTML = inner;
+        if (threadComments) {
+          threadComments.innerHTML = inner;
+          // Scroll to latest message
+          requestAnimationFrame(() => {
+            threadComments.scrollTop = threadComments.scrollHeight;
+          });
+        }
         bumpFeedCountsForKey(currentKey);
 
       } catch (err) {
@@ -3151,11 +3249,9 @@
         document.addEventListener("keydown", onKey);
       });
     }
-    function renderPosts(posts, savedIds = new Set(), append = false) {
-      if (!append) {
-        feed.innerHTML = "";
-        postByKey.clear();
-      }
+    function renderPosts(posts, savedIds = new Set()) {
+      feed.innerHTML = "";
+      postByKey.clear();
 
       const canInteract = !!getToken();
 
@@ -3330,49 +3426,17 @@
     }
 
 
-    // --- Pagination state ---
-    let feedOffset = 0;
-    const FEED_PAGE_SIZE = 20;
-    let feedLoading = false;
-    let feedExhausted = false;
-
-    async function loadFeed(append = false) {
-      if (feedLoading) return;
-      if (append && feedExhausted) return;
-
-      feedLoading = true;
-
-      if (!append) {
-        feedOffset = 0;
-        feedExhausted = false;
+    async function loadFeed() {
+      const data = await api("/api/posts", { method: "GET" });
+      // Se loggato, carica anche i post salvati per inizializzare lo stato
+      let savedIds = new Set();
+      if (getToken()) {
+        try {
+          const saved = await api("/api/saved", { method: "GET" });
+          (saved.posts || []).forEach(p => savedIds.add(p.id));
+        } catch (_) {}
       }
-
-      try {
-        const data = await api(`/api/posts?limit=${FEED_PAGE_SIZE}&offset=${feedOffset}`, { method: "GET" });
-
-        let savedIds = new Set();
-        if (getToken()) {
-          try {
-            const saved = await api("/api/saved", { method: "GET" });
-            (saved.posts || []).forEach(p => savedIds.add(p.id));
-          } catch (_) {}
-        }
-
-        const posts = data.posts || [];
-        renderPosts(posts, savedIds, append);
-        feedOffset += posts.length;
-
-        const sentinel = document.getElementById("feedSentinel");
-        if (posts.length < FEED_PAGE_SIZE) {
-          feedExhausted = true;
-          if (sentinel) sentinel.style.display = "none";
-        } else {
-          if (sentinel) sentinel.style.display = "block";
-        }
-
-      } finally {
-        feedLoading = false;
-      }
+      renderPosts(data.posts || [], savedIds);
     }
     
     // Thread interactions (frontend-only for now)
@@ -4025,134 +4089,13 @@
       r.setEndAfter(spacer);
       sel.addRange(r);
     });
-    // ============================================================
-    // ANTI-SPAM ENGINE — 8-cycle hierarchical pattern detector
-    // Axiom: bots are precise, humans are not.
-    // Each cycle k analyses a higher order of temporal repetition.
-    // ============================================================
-
-    const SPAM_TS_KEY       = "agora_post_ts";
-    const SPAM_BLOCKED_KEY  = "agora_spam_block";
-    const MAX_TS_TRACKED    = 64;
-    const BOT_CYCLES        = 8;
-    const PRECISION_MS      = 2000;
-    const BLOCK_DURATION_MS = 30 * 60 * 1000;
-
-    function spamGetTs() {
-      try { return JSON.parse(localStorage.getItem(SPAM_TS_KEY) || "[]"); }
-      catch { return []; }
-    }
-
-    function spamSaveTs(ts) {
-      let arr = spamGetTs();
-      arr.push(ts);
-      if (arr.length > MAX_TS_TRACKED) arr = arr.slice(-MAX_TS_TRACKED);
-      localStorage.setItem(SPAM_TS_KEY, JSON.stringify(arr));
-    }
-
-    function spamIsBlocked() {
-      const until = Number(localStorage.getItem(SPAM_BLOCKED_KEY) || 0);
-      return Date.now() < until;
-    }
-
-    function spamBlock() {
-      localStorage.setItem(SPAM_BLOCKED_KEY, String(Date.now() + BLOCK_DURATION_MS));
-    }
-
-    function detectBotPattern(timestamps) {
-      if (timestamps.length < 3) return { isBot: false, score: 0, reasons: [] };
-
-      // Level 0: raw intervals between consecutive posts
-      const intervals = [];
-      for (let i = 1; i < timestamps.length; i++) {
-        intervals.push(timestamps[i] - timestamps[i - 1]);
-      }
-
-      let score = 0;
-      const reasons = [];
-
-      for (let cycle = 1; cycle <= BOT_CYCLES; cycle++) {
-
-        // L1: 3 consecutive intervals nearly equal → constant-cadence bot
-        if (cycle === 1) {
-          const tail = intervals.slice(-3);
-          if (tail.length === 3) {
-            const avg = tail.reduce((a, b) => a + b, 0) / tail.length;
-            const variance = tail.reduce((s, v) => s + (v - avg) ** 2, 0) / tail.length;
-            if (variance < PRECISION_MS ** 2 && avg < 120_000) {
-              score += 6;
-              reasons.push(`[L1] Constant cadence: 3 posts ~${Math.round(avg / 1000)}s apart (σ²=${Math.round(variance)})`);
-            }
-          }
-        }
-
-        // Lk (k≥2): sliding window of k intervals — do consecutive windows match?
-        const wSize = cycle;
-        if (intervals.length < wSize * 2) continue;
-
-        let levelHits = 0;
-
-        for (let w = 0; w <= intervals.length - wSize * 2; w++) {
-          const winA = intervals.slice(w,         w + wSize);
-          const winB = intervals.slice(w + wSize, w + wSize * 2);
-
-          let matchCount = 0;
-          for (let j = 0; j < wSize; j++) {
-            if (Math.abs(winA[j] - winB[j]) < PRECISION_MS) matchCount++;
-          }
-
-          if (matchCount / wSize >= 0.80) levelHits++;
-        }
-
-        if (levelHits > 0) {
-          score += cycle * levelHits;
-          reasons.push(`[L${cycle}] Repeating ${wSize}-interval pattern: ${levelHits} hit(s), +${cycle * levelHits} pts`);
-        }
-
-        // L8: foundational — if global variance is inhuman AND score already high, confirm
-        if (cycle === BOT_CYCLES && intervals.length >= 4) {
-          const globalAvg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-          const globalVar = intervals.reduce((s, v) => s + (v - globalAvg) ** 2, 0) / intervals.length;
-          if (globalVar < (PRECISION_MS * 1.5) ** 2 && score >= 6) {
-            score += 10;
-            reasons.push(`[L8] Foundational: global variance inhuman (σ²=${Math.round(globalVar)}), verdict confirmed`);
-          }
-        }
-      }
-
-      return { isBot: score >= 8, score, reasons };
-    }
-
-    // ── Publish gate ─────────────────────────────────────────────────────────
+    // Submit create post
     createPostForm.addEventListener("submit", async (e) => {
       e.preventDefault();
 
       if (!getToken()) {
         alert("Please login first.");
         openModal();
-        return;
-      }
-
-      // Anti-spam check
-      if (spamIsBlocked()) {
-        const until = new Date(Number(localStorage.getItem(SPAM_BLOCKED_KEY)));
-        alert(
-          `⚠️ Your account has been temporarily blocked for suspicious posting activity.\n` +
-          `You can try again after ${until.toLocaleTimeString()}.\n\n` +
-          `If you believe this is a mistake, please contact support.`
-        );
-        return;
-      }
-
-      const { isBot, score, reasons } = detectBotPattern(spamGetTs());
-      if (isBot) {
-        console.warn("[SPAM DETECTOR] Bot pattern detected:", { score, reasons });
-        spamBlock();
-        alert(
-          `⚠️ Suspicious posting pattern detected (score: ${score}/8 cycles).\n` +
-          `Your account has been temporarily suspended pending verification.\n\n` +
-          `Reason: ${reasons[0] || "Abnormal post cadence"}`
-        );
         return;
       }
 
@@ -4175,14 +4118,11 @@
         await api("/api/posts", {
           method: "POST",
           body: JSON.stringify({
-            content: contentText,
+            content: contentText,   
             content_html: contentHtml,
             content_text: contentText
           })
         });
-
-        // Registra timestamp solo su publish riuscito
-        spamSaveTs(Date.now());
 
         createPostContent.innerHTML = "";
         closeCreatePostModal();
@@ -4306,15 +4246,90 @@
     hideThreadPanel();
     updatePostCounterAndPublish();
 
-    // Infinite scroll — load older posts as user scrolls down
-    const scrollObserver = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) loadFeed(true);
-    }, { rootMargin: "200px" });
-    scrollObserver.observe(document.getElementById("feedSentinel"));
+    // ── Infinite scroll sentinel ──────────────────────────────
+    const _sentinel = document.getElementById("feedSentinel");
+    if (_sentinel) {
+      const scrollObserver = new IntersectionObserver((entries) => {
+        if (entries[0].isIntersecting) loadFeed(true);
+      }, { rootMargin: "200px" });
+      scrollObserver.observe(_sentinel);
+    }
 
-    
-  </script>
+    // ── Column resizer ────────────────────────────────────────
+    (function initResizer() {
+      const divider  = document.getElementById("resizeDivider");
+      const layout   = document.querySelector(".layout");
+      if (!divider || !layout) return;
 
+      const MIN_W = 200;   // px
+      const MAX_W = 520;   // px
+      const STORE_KEY = "agora_right_col_w";
+
+      function applyWidth(w) {
+        w = Math.max(MIN_W, Math.min(MAX_W, w));
+        layout.style.setProperty("--right-col-width", w + "px");
+      }
+
+      // Restore saved width
+      const saved = parseInt(localStorage.getItem(STORE_KEY));
+      if (!isNaN(saved)) applyWidth(saved);
+
+      let dragging = false;
+      let startX   = 0;
+      let startW   = 0;
+
+      divider.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        dragging = true;
+        startX   = e.clientX;
+        startW   = parseInt(getComputedStyle(layout).getPropertyValue("--right-col-width")) || 270;
+        divider.classList.add("dragging");
+        document.body.style.userSelect = "none";
+        document.body.style.cursor     = "col-resize";
+      });
+
+      document.addEventListener("mousemove", (e) => {
+        if (!dragging) return;
+        // Moving left = enlarging right column, moving right = shrinking it
+        const delta = startX - e.clientX;
+        applyWidth(startW + delta);
+      });
+
+      document.addEventListener("mouseup", () => {
+        if (!dragging) return;
+        dragging = false;
+        divider.classList.remove("dragging");
+        document.body.style.userSelect = "";
+        document.body.style.cursor     = "";
+        const cur = parseInt(getComputedStyle(layout).getPropertyValue("--right-col-width")) || 270;
+        localStorage.setItem(STORE_KEY, cur);
+      });
+
+      // Touch support
+      divider.addEventListener("touchstart", (e) => {
+        const t = e.touches[0];
+        dragging = true;
+        startX   = t.clientX;
+        startW   = parseInt(getComputedStyle(layout).getPropertyValue("--right-col-width")) || 270;
+        divider.classList.add("dragging");
+      }, { passive: true });
+
+      document.addEventListener("touchmove", (e) => {
+        if (!dragging) return;
+        const t     = e.touches[0];
+        const delta = startX - t.clientX;
+        applyWidth(startW + delta);
+      }, { passive: true });
+
+      document.addEventListener("touchend", () => {
+        if (!dragging) return;
+        dragging = false;
+        divider.classList.remove("dragging");
+        const cur = parseInt(getComputedStyle(layout).getPropertyValue("--right-col-width")) || 270;
+        localStorage.setItem(STORE_KEY, cur);
+      });
+    })();
+</script>
   <div id="confirmModal" class="confirm-modal" aria-hidden="true">
     <div class="confirm-backdrop"></div>
     <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
@@ -4326,6 +4341,7 @@
       </div>
     </div>
   </div>
+
 
 </body>
 </html>
