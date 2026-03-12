@@ -3990,53 +3990,175 @@
       r.setEndAfter(spacer);
       sel.addRange(r);
     });
+
+
+    // ============================================================
+    // ANTI-SPAM ENGINE — 8-cycle hierarchical pattern detector
+    // ============================================================
+
+    const SPAM_TS_KEY       = "agora_post_ts";
+    const SPAM_BLOCKED_KEY  = "agora_spam_block";
+    const MAX_TS_TRACKED    = 64;
+    const BOT_CYCLES        = 8;
+    const PRECISION_MS      = 2000;
+    const BLOCK_DURATION_MS = 30 * 60 * 1000;
+
+    function spamGetTs() {
+      try { return JSON.parse(localStorage.getItem(SPAM_TS_KEY) || "[]"); }
+      catch { return []; }
+    }
+
+    function spamSaveTs(ts) {
+      let arr = spamGetTs();
+      arr.push(ts);
+      if (arr.length > MAX_TS_TRACKED) arr = arr.slice(-MAX_TS_TRACKED);
+      localStorage.setItem(SPAM_TS_KEY, JSON.stringify(arr));
+    }
+
+    function spamIsBlocked() {
+      const until = Number(localStorage.getItem(SPAM_BLOCKED_KEY) || 0);
+      return Date.now() < until;
+    }
+
+    function spamBlock() {
+      localStorage.setItem(SPAM_BLOCKED_KEY, String(Date.now() + BLOCK_DURATION_MS));
+    }
+
+    function detectBotPattern(timestamps) {
+      if (timestamps.length < 3) return { isBot: false, score: 0, reasons: [] };
+
+      const intervals = [];
+      for (let i = 1; i < timestamps.length; i++) {
+        intervals.push(timestamps[i] - timestamps[i - 1]);
+      }
+
+      let score = 0;
+      const reasons = [];
+
+      for (let cycle = 1; cycle <= BOT_CYCLES; cycle++) {
+
+        if (cycle === 1) {
+          const tail = intervals.slice(-3);
+          if (tail.length === 3) {
+            const avg = tail.reduce((a, b) => a + b, 0) / tail.length;
+            const variance = tail.reduce((s, v) => s + (v - avg) ** 2, 0) / tail.length;
+            if (variance < PRECISION_MS ** 2 && avg < 120_000) {
+              score += 6;
+              reasons.push(`[L1] Constant cadence: 3 posts ~${Math.round(avg / 1000)}s apart (σ²=${Math.round(variance)})`);
+            }
+          }
+        }
+
+        const wSize = cycle;
+        if (intervals.length < wSize * 2) continue;
+
+        let levelHits = 0;
+
+        for (let w = 0; w <= intervals.length - wSize * 2; w++) {
+          const winA = intervals.slice(w,         w + wSize);
+          const winB = intervals.slice(w + wSize, w + wSize * 2);
+
+          let matchCount = 0;
+          for (let j = 0; j < wSize; j++) {
+            if (Math.abs(winA[j] - winB[j]) < PRECISION_MS) matchCount++;
+          }
+
+          if (matchCount / wSize >= 0.80) levelHits++;
+        }
+
+        if (levelHits > 0) {
+          score += cycle * levelHits;
+          reasons.push(`[L${cycle}] Repeating ${wSize}-interval pattern: ${levelHits} hit(s), +${cycle * levelHits} pts`);
+        }
+
+        if (cycle === BOT_CYCLES && intervals.length >= 4) {
+          const globalAvg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+          const globalVar = intervals.reduce((s, v) => s + (v - globalAvg) ** 2, 0) / intervals.length;
+          if (globalVar < (PRECISION_MS * 1.5) ** 2 && score >= 6) {
+            score += 10;
+            reasons.push(`[L8] Foundational: global variance inhuman (σ²=${Math.round(globalVar)}), verdict confirmed`);
+          }
+        }
+      }
+
+      return { isBot: score >= 8, score, reasons };
+    }
     // Submit create post
     createPostForm.addEventListener("submit", async (e) => {
-      e.preventDefault();
+    e.preventDefault();
 
-      if (!getToken()) {
-        alert("Please login first.");
-        openModal();
-        return;
-      }
+    if (!getToken()) {
+      alert("Please login first.");
+      openModal();
+      return;
+    }
 
-      hardTruncateToLimit(POST_MAX_LENGTH);
+    // ── Anti-spam check ──────────────────────────────────────────
+    if (spamIsBlocked()) {
+      const until = new Date(Number(localStorage.getItem(SPAM_BLOCKED_KEY)));
+      alert(
+        `⚠️ Your account has been temporarily blocked for suspicious posting activity.\n` +
+        `You can try again after ${until.toLocaleTimeString()}.\n\n` +
+        `If you believe this is a mistake, please contact support.`
+      );
+      return;
+    }
 
-      const contentText = getPostPlainText().trim();
-      const hasAnything = !!contentText || selectedImages.length > 0;
-      if (!hasAnything) return;
+    const timestamps = spamGetTs();
+    const { isBot, score, reasons } = detectBotPattern(timestamps);
 
-      createPostPublishBtn.disabled = true;
+    if (isBot) {
+      console.warn("[SPAM DETECTOR] Bot pattern detected:", { score, reasons });
+      spamBlock();
+      alert(
+        `⚠️ Suspicious posting pattern detected (score: ${score}/8 cycles).\n` +
+        `Your account has been temporarily suspended pending verification.\n\n` +
+        `Reason: ${reasons[0] || "Abnormal post cadence"}`
+      );
+      return;
+    }
+    // ── Fine anti-spam ────────────────────────────────────────────
 
-      try {
-        // 1) upload immagini + swap src nel DOM editor (da blob: a /media/..)
-        await uploadAllSelectedImagesAndSwapSrc();
+    hardTruncateToLimit(POST_MAX_LENGTH);
 
-        // 2) ora l'HTML contiene già img con URL pubblici + formattazioni
-        const contentHtml = createPostContent.innerHTML;
+    const contentText = getPostPlainText().trim();
+    const hasAnything = !!contentText || selectedImages.length > 0;
+    if (!hasAnything) return;
 
-        // 3) invio al backend
-        await api("/api/posts", {
-          method: "POST",
-          body: JSON.stringify({
-            content: contentText,   
-            content_html: contentHtml,
-            content_text: contentText
-          })
-        });
+    createPostPublishBtn.disabled = true;
 
-        createPostContent.innerHTML = "";
-        closeCreatePostModal();
-        clearImages();
-        await loadFeed();
+    try {
+      // 1) upload immagini + swap src nel DOM editor (da blob: a /media/..)
+      await uploadAllSelectedImagesAndSwapSrc();
 
-      } catch (err) {
-        console.error("Publish failed:", err);
-        alert("Publish failed: " + (err?.message || "unknown error"));
-      } finally {
-        updatePostCounterAndPublish();
-      }
-    });
+      // 2) ora l'HTML contiene già img con URL pubblici + formattazioni
+      const contentHtml = createPostContent.innerHTML;
+
+      // 3) invio al backend
+      await api("/api/posts", {
+        method: "POST",
+        body: JSON.stringify({
+          content: contentText,
+          content_html: contentHtml,
+          content_text: contentText
+        })
+      });
+
+      // Registra timestamp solo su publish riuscito
+      spamSaveTs(Date.now());
+
+      createPostContent.innerHTML = "";
+      closeCreatePostModal();
+      clearImages();
+      await loadFeed();
+
+    } catch (err) {
+      console.error("Publish failed:", err);
+      alert("Publish failed: " + (err?.message || "unknown error"));
+    } finally {
+      updatePostCounterAndPublish();
+    }
+  });
 
     // Blocca digitazione oltre 1000 (ma permette backspace/delete/navigation)
     createPostContent.addEventListener("beforeinput", (e) => {
