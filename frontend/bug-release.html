@@ -1052,6 +1052,11 @@
     applyTheme(getPreferredTheme());
     syncThemeUi();
     refreshMe();
+
+    setInterval(() => {
+      loadBugsFromApi();
+      loadReleases();
+    }, 30000); // ogni 30 secondi
   </script>
 </body>
 </html>
