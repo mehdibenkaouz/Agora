@@ -302,6 +302,89 @@
     .badge-active  { background: rgba(0,229,160,0.10); color: var(--accent); border: 1px solid rgba(0,229,160,0.25); }
     .badge-post    { background: rgba(77,166,255,0.12); color: var(--blue); border: 1px solid rgba(77,166,255,0.3); }
     .badge-comment { background: rgba(255,209,102,0.10); color: var(--accent3); border: 1px solid rgba(255,209,102,0.25); }
+    /* bug status badges */
+    .badge-confirmed  { background: rgba(77,166,255,0.12); color: var(--blue); border: 1px solid rgba(77,166,255,0.3); }
+    .badge-in_progress{ background: rgba(255,160,60,0.12); color: #ffa03c; border: 1px solid rgba(255,160,60,0.3); }
+    .badge-wontfix    { background: rgba(90,96,112,0.15); color: var(--muted); border: 1px solid var(--border2); }
+    /* release type badges */
+    .badge-feature  { background: rgba(77,166,255,0.12); color: var(--blue); border: 1px solid rgba(77,166,255,0.3); }
+    .badge-fix      { background: rgba(0,229,160,0.10); color: var(--accent); border: 1px solid rgba(0,229,160,0.25); }
+    .badge-breaking { background: rgba(255,77,109,0.15); color: var(--accent2); border: 1px solid rgba(255,77,109,0.3); }
+    .badge-update   { background: rgba(255,209,102,0.10); color: var(--accent3); border: 1px solid rgba(255,209,102,0.25); }
+
+    /* ── RELEASE FORM ── */
+    .release-form {
+      background: var(--card);
+      border: 1px solid var(--border2);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .release-form-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+    .release-form-field { display: flex; flex-direction: column; gap: 6px; }
+    .release-form-field label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); }
+    .release-form-field input,
+    .release-form-field select,
+    .release-form-field textarea {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 8px 12px;
+      outline: none;
+      resize: vertical;
+      transition: border-color .2s;
+    }
+    .release-form-field input:focus,
+    .release-form-field select:focus,
+    .release-form-field textarea:focus { border-color: var(--accent); }
+    .release-form-field select option { background: var(--surface); }
+    .action-btn.accent { border-color: var(--accent); color: var(--accent); }
+    .action-btn.accent:hover { background: rgba(0,229,160,0.08); }
+
+    /* ── RELEASE CARD ── */
+    .release-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .release-card-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .release-version { font-size: 13px; font-weight: 700; color: var(--accent); font-family: var(--font-mono); }
+    .release-title-text { font-size: 13px; color: var(--text); flex: 1; }
+    .release-date { font-size: 10px; color: var(--muted); margin-left: auto; }
+    .release-content { font-size: 12px; color: rgba(232,234,240,0.7); line-height: 1.7; white-space: pre-wrap; border-left: 2px solid var(--border2); padding-left: 12px; }
+    .release-actions { display: flex; justify-content: flex-end; margin-top: 4px; }
+
+    /* ── BUG DESCRIPTION ── */
+    .bug-desc {
+      font-size: 11px;
+      color: rgba(232,234,240,0.6);
+      max-width: 280px;
+      line-height: 1.5;
+      max-height: 60px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .bug-note-input {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 8px;
+      width: 160px;
+      outline: none;
+    }
+    .bug-note-input:focus { border-color: var(--accent); }
 
     /* ── ACTION BUTTONS ── */
     .action-btn {
@@ -518,6 +601,12 @@
     <button class="tab-btn" data-tab="complaints">
       ✉ Reclami <span class="tab-count" id="cnt-complaints">0</span>
     </button>
+    <button class="tab-btn" data-tab="bugs">
+      ⬡ Bug <span class="tab-count" id="cnt-bugs">0</span>
+    </button>
+    <button class="tab-btn" data-tab="releases">
+      ◎ Release
+    </button>
   </div>
 
   <!-- SPAM TAB -->
@@ -611,6 +700,71 @@
       </tbody>
     </table>
   </div>
+
+  <!-- BUGS TAB -->
+  <div class="tab-panel" id="tab-bugs">
+    <div class="section-header">
+      <div class="section-title">Bug Reports <span id="bugs-subtitle" style="color:var(--muted);font-size:12px"></span></div>
+      <button class="refresh-btn" onclick="loadBugs()">↻ Aggiorna</button>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Reporter</th>
+          <th>Titolo</th>
+          <th>Pagina</th>
+          <th>Descrizione</th>
+          <th>Data</th>
+          <th>Stato</th>
+          <th>Nota admin</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody id="bugs-tbody">
+        <tr class="loading-row"><td colspan="8">CARICAMENTO...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- RELEASES TAB -->
+  <div class="tab-panel" id="tab-releases">
+    <div class="section-header">
+      <div class="section-title">Release Notes</div>
+      <button class="refresh-btn" onclick="loadReleases()">↻ Aggiorna</button>
+    </div>
+    <div class="release-form">
+      <div class="release-form-title">◎ Pubblica nuovo update</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">
+        <div class="release-form-field" style="flex:0 0 120px">
+          <label>Versione</label>
+          <input type="text" id="rf-version" placeholder="es. 1.4.2" />
+        </div>
+        <div class="release-form-field" style="flex:0 0 140px">
+          <label>Tipo</label>
+          <select id="rf-type">
+            <option value="update">update</option>
+            <option value="feature">feature</option>
+            <option value="fix">fix</option>
+            <option value="breaking">breaking</option>
+          </select>
+        </div>
+        <div class="release-form-field" style="flex:1;min-width:200px">
+          <label>Titolo</label>
+          <input type="text" id="rf-title" placeholder="Breve titolo della release..." />
+        </div>
+      </div>
+      <div class="release-form-field">
+        <label>Contenuto (changelog, modifiche)</label>
+        <textarea id="rf-content" rows="5" placeholder="Descrivi le modifiche di questa versione..."></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px">
+        <button class="action-btn" onclick="clearReleaseForm()">Cancella</button>
+        <button class="action-btn accent" onclick="publishRelease()">▶ Pubblica</button>
+      </div>
+    </div>
+    <div id="releases-list" style="display:flex;flex-direction:column;gap:12px;margin-top:4px"></div>
+  </div>
+
 </div>
 
 <!-- ── CONFIRM OVERLAY ──────────────────────────────────── -->
@@ -742,7 +896,7 @@
 
   // ── LOAD ALL ────────────────────────────────────────────
   async function loadAll() {
-    await Promise.all([loadSpam(), loadUsers(), loadComplaints()]);
+    await Promise.all([loadSpam(), loadUsers(), loadComplaints(), loadBugs(), loadReleases()]);
   }
 
   // ── FORMAT ──────────────────────────────────────────────
@@ -969,6 +1123,137 @@
     });
     if (data.ok) { showToast(`Reclamo ${label}.`); loadComplaints(); }
     else showToast("Errore: " + data.error, true);
+  }
+
+  // ════════════════════════════════════════════════════════
+  // ── BUGS ────────────────────────────────────────────────
+  // ════════════════════════════════════════════════════════
+  const BUG_STATUS_LABELS = {
+    pending: "pending", confirmed: "confirmed",
+    in_progress: "in progress", resolved: "resolved", wontfix: "wontfix"
+  };
+  const BUG_STATUS_OPTS = ["pending","confirmed","in_progress","resolved","wontfix"];
+
+  async function loadBugs() {
+    document.getElementById("bugs-tbody").innerHTML = `<tr class="loading-row"><td colspan="8">CARICAMENTO...</td></tr>`;
+    try {
+      const data = await adminApi("/api/admin/bugs");
+      if (!data.ok) { handleAdminError(data); return; }
+      const bugs = data.bugs || [];
+      const open = bugs.filter(b => b.status === "pending" || b.status === "confirmed" || b.status === "in_progress").length;
+      document.getElementById("cnt-bugs").textContent = open;
+      document.getElementById("bugs-subtitle").textContent = `· ${bugs.length} totali, ${open} aperti`;
+
+      if (!bugs.length) {
+        document.getElementById("bugs-tbody").innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">⬡</div>Nessun bug segnalato</div></td></tr>`;
+        return;
+      }
+      document.getElementById("bugs-tbody").innerHTML = bugs.map(b => `
+        <tr>
+          <td>
+            <div class="user-cell">
+              ${avatarHtml(b.reporter_picture, b.reporter_name)}
+              <div>
+                <div class="user-name">${esc(b.reporter_name)}</div>
+                <div class="user-email">${esc(b.reporter_email)}</div>
+              </div>
+            </div>
+          </td>
+          <td style="font-size:12px;color:var(--text);max-width:160px">${esc(b.title)}</td>
+          <td style="color:var(--muted);font-size:11px">${b.page ? esc(b.page) : '—'}</td>
+          <td><div class="bug-desc">${esc(b.description)}</div></td>
+          <td style="color:var(--muted);font-size:11px">${fmtDate(b.created_at)}</td>
+          <td><span class="badge badge-${b.status}">${BUG_STATUS_LABELS[b.status] || b.status}</span></td>
+          <td>
+            <input class="bug-note-input" id="note-${b.id}" type="text" value="${esc(b.admin_note || '')}" placeholder="Nota..." />
+          </td>
+          <td>
+            <select style="background:var(--surface);border:1px solid var(--border2);color:var(--muted);font-family:var(--font-mono);font-size:10px;padding:3px 6px;outline:none" id="sel-${b.id}">
+              ${BUG_STATUS_OPTS.map(s => `<option value="${s}" ${s===b.status?'selected':''}>${s}</option>`).join('')}
+            </select>
+            <button class="action-btn" style="margin-top:4px" onclick="setBugStatus('${b.id}')">Salva</button>
+          </td>
+        </tr>
+      `).join("");
+    } catch(e) {
+      document.getElementById("bugs-tbody").innerHTML = `<tr class="loading-row"><td colspan="8">Errore caricamento</td></tr>`;
+    }
+  }
+
+  async function setBugStatus(id) {
+    const status = document.getElementById("sel-" + id)?.value;
+    const note   = document.getElementById("note-" + id)?.value || "";
+    const data = await adminApi(`/api/admin/bugs/${id}/status`, {
+      method: "POST",
+      body: JSON.stringify({ status, admin_note: note })
+    });
+    if (data.ok) { showToast("Bug aggiornato."); loadBugs(); }
+    else showToast("Errore: " + data.error, true);
+  }
+
+  // ════════════════════════════════════════════════════════
+  // ── RELEASES ────────────────────────────────────────────
+  // ════════════════════════════════════════════════════════
+  async function loadReleases() {
+    document.getElementById("releases-list").innerHTML = `<div style="color:var(--muted);font-size:12px;padding:12px 0">CARICAMENTO...</div>`;
+    try {
+      const data = await adminApi("/api/releases");
+      if (!data.ok) { handleAdminError(data); return; }
+      const releases = data.releases || [];
+      if (!releases.length) {
+        document.getElementById("releases-list").innerHTML = `<div class="empty-state" style="margin-top:0"><div class="empty-icon">◎</div>Nessuna release pubblicata</div>`;
+        return;
+      }
+      document.getElementById("releases-list").innerHTML = releases.map(r => `
+        <div class="release-card">
+          <div class="release-card-header">
+            <span class="release-version">v${esc(r.version)}</span>
+            <span class="badge badge-${r.type}">${r.type}</span>
+            <span class="release-title-text">${esc(r.title)}</span>
+            <span class="release-date">${fmtDate(r.created_at)}</span>
+          </div>
+          <div class="release-content">${esc(r.content)}</div>
+          <div class="release-actions">
+            <button class="action-btn danger" onclick="deleteRelease('${r.id}', '${esc(r.title)}')">✕ Elimina</button>
+          </div>
+        </div>
+      `).join("");
+    } catch(e) {
+      document.getElementById("releases-list").innerHTML = `<div style="color:var(--accent2);font-size:12px">Errore caricamento</div>`;
+    }
+  }
+
+  async function publishRelease() {
+    const version = document.getElementById("rf-version").value.trim();
+    const type    = document.getElementById("rf-type").value;
+    const title   = document.getElementById("rf-title").value.trim();
+    const content = document.getElementById("rf-content").value.trim();
+    if (!version || !title || !content) { showToast("Compila tutti i campi.", true); return; }
+    const data = await adminApi("/api/admin/releases", {
+      method: "POST",
+      body: JSON.stringify({ version, type, title, content })
+    });
+    if (data.ok) { showToast("Release pubblicata!"); clearReleaseForm(); loadReleases(); }
+    else showToast("Errore: " + data.error, true);
+  }
+
+  function clearReleaseForm() {
+    document.getElementById("rf-version").value = "";
+    document.getElementById("rf-title").value   = "";
+    document.getElementById("rf-content").value = "";
+    document.getElementById("rf-type").value    = "update";
+  }
+
+  function deleteRelease(id, title) {
+    openConfirm(
+      "Elimina release",
+      `Eliminare la release "${title}"? L'operazione è irreversibile.`,
+      async () => {
+        const data = await adminApi(`/api/admin/releases/${id}`, { method: "DELETE" });
+        if (data.ok) { showToast("Release eliminata."); loadReleases(); }
+        else showToast("Errore: " + data.error, true);
+      }
+    );
   }
 
   // ── ERROR HANDLER ────────────────────────────────────────
