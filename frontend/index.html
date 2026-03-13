@@ -3233,13 +3233,17 @@
             threadComments.querySelectorAll(".comment-menu.open").forEach(m => m.classList.remove("open"));
           }, { once: true });
         }
+          // Avvia polling real-time
+        if (COMMENT_POLL_INTERVAL) clearInterval(COMMENT_POLL_INTERVAL);
+        THREAD_LAST_TS = comments.length ? comments[comments.length - 1].created_at : null;
+        THREAD_ACTIVE_POST_ID = p.id;
+        COMMENT_POLL_INTERVAL = setInterval(() => pollNewComments(p.id), 3000);
+
         bumpFeedCountsForKey(currentKey);
 
       } catch (err) {
         if (activeThreadKey !== currentKey) return;
-
         console.warn("load_comments_failed:", err);
-
         if (threadComments) {
           threadComments.innerHTML = `<div class="thread-empty">Failed to load comments.</div>`;
         }
@@ -3247,13 +3251,6 @@
           threadFootnote.textContent = "Comments sync failed.";
         }
       }
-
-      // Avvia polling real-time
-      // Avvia polling real-time
-      if (COMMENT_POLL_INTERVAL) clearInterval(COMMENT_POLL_INTERVAL);
-      THREAD_LAST_TS = comments.length ? comments[comments.length - 1].created_at : null;
-      THREAD_ACTIVE_POST_ID = p.id;
-      COMMENT_POLL_INTERVAL = setInterval(() => pollNewComments(p.id), 3000);
     }
     async function pollNewComments(postId) {
       if (!postId || postId !== THREAD_ACTIVE_POST_ID) return;
