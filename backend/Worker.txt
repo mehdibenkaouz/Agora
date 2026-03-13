@@ -24,7 +24,6 @@ export default {
         const now = new Date().toISOString();
         const userId = crypto.randomUUID();
 
-        // Create user if not exists
         const existing = await env.dbagora.prepare(
           "SELECT id, email FROM users WHERE email = ?1"
         ).bind(emailRaw).first();
@@ -37,10 +36,9 @@ export default {
           finalUserId = userId;
         }
 
-        // Create session token
         const token = crypto.randomUUID();
         const createdAt = now;
-        const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString(); // 30 days
+        const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
 
         await env.dbagora.prepare(
           "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)"
@@ -65,7 +63,8 @@ export default {
                 ELSE u.email
               END
             ) AS display_name,
-            COALESCE(u.picture_url, '') AS picture_url
+            COALESCE(u.picture_url, '') AS picture_url,
+            COALESCE(u.banned, 0) AS banned
           FROM sessions s
           JOIN users u ON u.id = s.user_id
           WHERE s.token = ?1
@@ -73,9 +72,9 @@ export default {
         ).bind(token, new Date().toISOString()).first();
 
         if (!row) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
-        return json({ ok: true, user: { id: row.id, email: row.email,  display_name: row.display_name, picture_url: row.picture_url} }, 200, ALLOWED_ORIGIN);
+        if (row.banned) return json({ ok: false, error: "banned" }, 403, ALLOWED_ORIGIN);
+        return json({ ok: true, user: { id: row.id, email: row.email, display_name: row.display_name, picture_url: row.picture_url } }, 200, ALLOWED_ORIGIN);
       }
-
 
       if (url.pathname === "/api/profile" && request.method === "POST") {
         const auth = request.headers.get("Authorization") || "";
@@ -83,61 +82,30 @@ export default {
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
-          `SELECT
-            s.user_id AS user_id,
-            u.email AS email
-          FROM sessions s
-          JOIN users u ON u.id = s.user_id
-          WHERE s.token = ?1
-            AND s.expires_at > ?2`
+          `SELECT s.user_id AS user_id, u.email AS email
+          FROM sessions s JOIN users u ON u.id = s.user_id
+          WHERE s.token = ?1 AND s.expires_at > ?2`
         ).bind(token, new Date().toISOString()).first();
 
-        if (!session) {
-          return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
-        }
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
         const body = await request.json().catch(() => ({}));
+        const display_name = String(body.display_name || "").trim().replace(/\s+/g, " ").slice(0, 60);
+        const picture_url = String(body.picture_url || "").trim().slice(0, 1000);
 
-        const display_name = String(body.display_name || "")
-          .trim()
-          .replace(/\s+/g, " ")
-          .slice(0, 60);
-
-        const picture_url = String(body.picture_url || "")
-          .trim()
-          .slice(0, 1000);
-
-        if (!display_name) {
-          return json({ ok: false, error: "invalid_display_name" }, 400, ALLOWED_ORIGIN);
-        }
-
-        if (
-          picture_url &&
-          !/^https?:\/\//i.test(picture_url) &&
-          !picture_url.startsWith("/media/")
-        ) {
+        if (!display_name) return json({ ok: false, error: "invalid_display_name" }, 400, ALLOWED_ORIGIN);
+        if (picture_url && !/^https?:\/\//i.test(picture_url) && !picture_url.startsWith("/media/")) {
           return json({ ok: false, error: "invalid_picture_url" }, 400, ALLOWED_ORIGIN);
         }
 
         await env.dbagora.prepare(
-          `UPDATE users
-          SET display_name = ?1,
-              picture_url = ?2
-          WHERE id = ?3`
+          `UPDATE users SET display_name = ?1, picture_url = ?2 WHERE id = ?3`
         ).bind(display_name, picture_url, session.user_id).run();
 
-        return json({
-          ok: true,
-          user: {
-            id: session.user_id,
-            email: session.email || "",
-            display_name,
-            picture_url
-          }
-        }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true, user: { id: session.user_id, email: session.email || "", display_name, picture_url } }, 200, ALLOWED_ORIGIN);
       }
 
-
+      // ── POSTS: POST ──────────────────────────────────────────────────
       if (url.pathname === "/api/posts" && request.method === "POST") {
         const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
@@ -146,49 +114,53 @@ export default {
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first();
-
         if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
-        const body = await request.json().catch(() => ({}));
+        // Check ban
+        const userRow = await env.dbagora.prepare("SELECT banned FROM users WHERE id = ?1").bind(session.user_id).first();
+        if (userRow?.banned) return json({ ok: false, error: "banned" }, 403, ALLOWED_ORIGIN);
 
-        // Accetta sia il vecchio campo (content) sia il nuovo (content_html)
+        const body = await request.json().catch(() => ({}));
         const content_html = String(body.content_html || "").trim();
         const legacy_text  = String(body.content || "").trim();
-        
-        // Se mi hai mandato HTML lo uso, altrimenti cado sul testo
         const contentToStore = content_html || legacy_text;
-
-        // Contenuto valido se: testo non vuoto OPPURE contiene almeno un <img>
         const hasImg = /<img\b/i.test(contentToStore);
-        const textLike = (body.content_text != null)
-          ? String(body.content_text || "").trim()
-          : legacy_text;
+        const textLike = (body.content_text != null) ? String(body.content_text || "").trim() : legacy_text;
 
-        if (!textLike && !hasImg) {
-          return json({ ok: false, error: "empty_content" }, 400, ALLOWED_ORIGIN);
+        if (!textLike && !hasImg) return json({ ok: false, error: "empty_content" }, 400, ALLOWED_ORIGIN);
+
+        // ── SERVER-SIDE SPAM CHECK ────────────────────────────────────
+        const spamResult = await checkSpamServer(env, session.user_id, "post");
+        if (spamResult.isSpam) {
+          await flagSpam(env, session.user_id, "post", spamResult.intervals, spamResult.score);
+          return json({ ok: false, error: "spam_detected", until: spamResult.until }, 429, ALLOWED_ORIGIN);
         }
 
         const postId = crypto.randomUUID();
         const now = new Date().toISOString();
+        await env.dbagora.prepare(
+          `INSERT INTO posts (id, user_id, content, created_at) VALUES (?1, ?2, ?3, ?4)`
+        ).bind(postId, session.user_id, contentToStore, now).run();
 
-        await env.dbagora.prepare(`
-          INSERT INTO posts (id, user_id, content, created_at)
-          VALUES (?1, ?2, ?3, ?4)
-        `).bind(
-          postId,
-          session.user_id,
-          contentToStore,
-          now
-        ).run();
+        // Salva timestamp per spam tracking
+        await recordAction(env, session.user_id, "post");
 
-        // ✅ QUESTA È LA PARTE CHE TI MANCAVA: rispondi 200 e NON cadere nel not_found
         return json({ ok: true, post: { id: postId, created_at: now } }, 200, ALLOWED_ORIGIN);
       }
 
+      // ── POSTS: GET ───────────────────────────────────────────────────
       if (url.pathname === "/api/posts" && request.method === "GET") {
+        const authHeader = request.headers.get("Authorization") || "";
+        const feedToken  = parseBearer(authHeader);
+        const feedSession = feedToken ? await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(feedToken, new Date().toISOString()).first() : null;
+        const feedUid = feedSession?.user_id || null;
+
         const rows = await env.dbagora.prepare(
           `SELECT
               p.id,
+              u.id as author_id,
               p.content,
               p.created_at,
               u.email as author_email,
@@ -200,34 +172,39 @@ export default {
                 END
               ) AS author_display_name,
               COALESCE(u.picture_url, '') AS author_picture_url,
-              (
-                SELECT COUNT(*)
-                FROM comments c
-                WHERE c.post_id = p.id
-              ) as comment_count
+              (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comment_count
           FROM posts p
           JOIN users u ON u.id = p.user_id
+          WHERE (?1 IS NULL OR NOT EXISTS (
+            SELECT 1 FROM blocks b
+            WHERE
+              (b.blocker_id = ?1 AND b.blocked_id = p.user_id)
+              OR (b.block_type = 1 AND b.blocker_id = p.user_id AND b.blocked_id = ?1)
+          ))
+          AND COALESCE(u.banned, 0) = 0
           ORDER BY p.created_at DESC
           LIMIT 30`
-        ).all();
-
+        ).bind(feedUid).all();
         return json({ ok: true, posts: rows.results || [] }, 200, ALLOWED_ORIGIN);
       }
 
-
+      // ── COMMENTS: GET ────────────────────────────────────────────────
       const postCommentsMatch = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments$/);
       if (postCommentsMatch && request.method === "GET") {
-
         const postId = decodeURIComponent(postCommentsMatch[1] || "").trim();
-        if (!postId) {
-          return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
-        }
+        if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
+
+        const authHeaderC = request.headers.get("Authorization") || "";
+        const feedTokenC  = parseBearer(authHeaderC);
+        const feedSessionC = feedTokenC ? await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(feedTokenC, new Date().toISOString()).first() : null;
+        const feedUidC = feedSessionC?.user_id || null;
+        const since = url.searchParams.get("since") || null;
 
         const rows = await env.dbagora.prepare(
           `SELECT
-              c.id,
-              c.content,
-              c.created_at,
+              c.id, c.content, c.created_at,
               u.email as author_email,
               COALESCE(
                 NULLIF(TRIM(u.display_name), ''),
@@ -240,17 +217,21 @@ export default {
           FROM comments c
           JOIN users u ON u.id = c.user_id
           WHERE c.post_id = ?1
+            AND (?2 IS NULL OR NOT EXISTS (
+              SELECT 1 FROM blocks b
+              WHERE
+                (b.blocker_id = ?2 AND b.blocked_id = c.user_id)
+                OR (b.block_type = 1 AND b.blocker_id = c.user_id AND b.blocked_id = ?2)
+            ))
+            AND (?3 IS NULL OR c.created_at > ?3)
           ORDER BY c.created_at ASC`
-        ).bind(postId).all();
+        ).bind(postId, feedUidC, since).all();
 
         const comments = rows.results || [];
-        return json({
-          ok: true,
-          comments,
-          comment_count: comments.length
-        }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true, comments, comment_count: comments.length }, 200, ALLOWED_ORIGIN);
       }
 
+      // ── COMMENTS: POST ───────────────────────────────────────────────
       if (postCommentsMatch && request.method === "POST") {
         const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
@@ -259,93 +240,86 @@ export default {
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first();
-
         if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
+        // Check ban
+        const userRowC = await env.dbagora.prepare("SELECT banned FROM users WHERE id = ?1").bind(session.user_id).first();
+        if (userRowC?.banned) return json({ ok: false, error: "banned" }, 403, ALLOWED_ORIGIN);
+
         const postId = decodeURIComponent(postCommentsMatch[1] || "").trim();
-        if (!postId) {
-          return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
-        }
+        if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
 
-        const post = await env.dbagora.prepare(
-          "SELECT id FROM posts WHERE id = ?1"
-        ).bind(postId).first();
-
-        if (!post) {
-          return json({ ok: false, error: "post_not_found" }, 404, ALLOWED_ORIGIN);
-        }
+        const post = await env.dbagora.prepare("SELECT id FROM posts WHERE id = ?1").bind(postId).first();
+        if (!post) return json({ ok: false, error: "post_not_found" }, 404, ALLOWED_ORIGIN);
 
         const body = await request.json().catch(() => ({}));
         const content = String(body.content || "").trim();
+        if (!content) return json({ ok: false, error: "empty_comment" }, 400, ALLOWED_ORIGIN);
+        if (content.length < 2) return json({ ok: false, error: "comment_too_short" }, 400, ALLOWED_ORIGIN);
+        if (content.length > 300) return json({ ok: false, error: "comment_too_long" }, 400, ALLOWED_ORIGIN);
 
-
-        if (!content) {
-          return json({ ok: false, error: "empty_comment" }, 400, ALLOWED_ORIGIN);
-        }
-
-        if (content.length < 2) {
-          return json({ ok: false, error: "comment_too_short" }, 400, ALLOWED_ORIGIN);
-        }
-
-        if (content.length > 300) {
-          return json({ ok: false, error: "comment_too_long" }, 400, ALLOWED_ORIGIN);
-        }
-
-        if (!content) {
-          return json({ ok: false, error: "empty_comment" }, 400, ALLOWED_ORIGIN);
-        }
-
-        if (content.length > 300) {
-          return json({ ok: false, error: "comment_too_long" }, 400, ALLOWED_ORIGIN);
+        // ── SERVER-SIDE SPAM CHECK (commenti) ────────────────────────
+        const spamResultC = await checkSpamServer(env, session.user_id, "comment");
+        if (spamResultC.isSpam) {
+          await flagSpam(env, session.user_id, "comment", spamResultC.intervals, spamResultC.score);
+          return json({ ok: false, error: "spam_detected", until: spamResultC.until }, 429, ALLOWED_ORIGIN);
         }
 
         const commentId = crypto.randomUUID();
         const now = new Date().toISOString();
-
         await env.dbagora.prepare(
-          `INSERT INTO comments (id, post_id, user_id, content, created_at)
-          VALUES (?1, ?2, ?3, ?4, ?5)`
-        ).bind(
-          commentId,
-          postId,
-          session.user_id,
-          content,
-          now
-        ).run();
+          `INSERT INTO comments (id, post_id, user_id, content, created_at) VALUES (?1, ?2, ?3, ?4, ?5)`
+        ).bind(commentId, postId, session.user_id, content, now).run();
+
+        // Salva timestamp per spam tracking
+        await recordAction(env, session.user_id, "comment");
 
         const author = await env.dbagora.prepare(
-        `SELECT
-            id,
-            email,
-            COALESCE(
-              NULLIF(TRIM(display_name), ''),
-              CASE
-                WHEN instr(email, '@') > 1 THEN substr(email, 1, instr(email, '@') - 1)
-                ELSE email
-              END
+          `SELECT id, email,
+            COALESCE(NULLIF(TRIM(display_name),''),
+              CASE WHEN instr(email,'@')>1 THEN substr(email,1,instr(email,'@')-1) ELSE email END
             ) AS display_name,
-            COALESCE(picture_url, '') AS picture_url
-          FROM users
-          WHERE id = ?1`
+            COALESCE(picture_url,'') AS picture_url
+          FROM users WHERE id = ?1`
         ).bind(session.user_id).first();
 
         return json({
           ok: true,
           comment: {
-            id: commentId,
-            post_id: postId,
-            content,
-            created_at: now,
+            id: commentId, post_id: postId, content, created_at: now,
             author_id: author?.id || "",
             author_email: author?.email || "anon",
             author_display_name: author?.display_name || author?.email || "anon",
-            author_picture_url: author?.picture_url || ""        
-  }
+            author_picture_url: author?.picture_url || ""
+          }
         }, 200, ALLOWED_ORIGIN);
       }
 
+      // ── DELETE COMMENT ───────────────────────────────────────────────
+      const commentDeleteMatch = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments\/([^/]+)$/);
+      if (commentDeleteMatch && request.method === "DELETE") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
-      // Delete post (auth required)
+        const postId    = decodeURIComponent(commentDeleteMatch[1] || "").trim();
+        const commentId = decodeURIComponent(commentDeleteMatch[2] || "").trim();
+
+        const del = await env.dbagora.prepare(
+          "DELETE FROM comments WHERE id = ?1 AND post_id = ?2 AND user_id = ?3"
+        ).bind(commentId, postId, session.user_id).run();
+
+        if ((del?.meta?.changes ?? 0) === 0)
+          return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
+
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── DELETE POST ──────────────────────────────────────────────────
       if (url.pathname.startsWith("/api/posts/") && request.method === "DELETE") {
         const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
@@ -354,20 +328,16 @@ export default {
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first();
-
         if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
         const postId = decodeURIComponent(url.pathname.slice("/api/posts/".length)).trim();
         if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
 
-        // check owner + grab content (serve anche per cleanup media)
         const row = await env.dbagora.prepare(
           "SELECT content FROM posts WHERE id = ?1 AND user_id = ?2"
         ).bind(postId, session.user_id).first();
-
         if (!row) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
 
-        // best-effort: elimina anche le immagini del post (solo quelle dell’utente)
         try {
           const prefix = `u/${session.user_id}/`;
           const html = String(row.content || "");
@@ -381,28 +351,21 @@ export default {
           await Promise.allSettled([...keys].map(k => env.AGORA_MEDIA.delete(k)));
         } catch (_) {}
 
-        await env.dbagora.prepare(
-          "DELETE FROM comments WHERE post_id = ?1"
-        ).bind(postId).run();
+        await env.dbagora.prepare("DELETE FROM comments WHERE post_id = ?1").bind(postId).run();
         const del = await env.dbagora.prepare(
           "DELETE FROM posts WHERE id = ?1 AND user_id = ?2"
         ).bind(postId, session.user_id).run();
 
-        const changes = del?.meta?.changes ?? 0;
-        if (changes === 0) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
-
+        if ((del?.meta?.changes ?? 0) === 0) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
-
+      // ── GOOGLE AUTH ──────────────────────────────────────────────────
       if (url.pathname === "/api/auth/google/start" && request.method === "GET") {
         const returnTo = new URL(request.url).searchParams.get("returnTo") || env.FRONTEND_ORIGIN + "/";
-        if (!returnTo.startsWith(env.FRONTEND_ORIGIN)) {
-          return new Response("Invalid returnTo", { status: 400 });
-        }
+        if (!returnTo.startsWith(env.FRONTEND_ORIGIN)) return new Response("Invalid returnTo", { status: 400 });
 
         const state = await signState({ returnTo, ts: Date.now() }, env.STATE_SECRET);
-
         const auth = new URL("https://accounts.google.com/o/oauth2/v2/auth");
         auth.searchParams.set("client_id", env.GOOGLE_CLIENT_ID);
         auth.searchParams.set("response_type", "code");
@@ -410,7 +373,6 @@ export default {
         auth.searchParams.set("state", state);
         auth.searchParams.set("prompt", "select_account");
         auth.searchParams.set("redirect_uri", env.GOOGLE_REDIRECT_URI);
-        
         return Response.redirect(auth.toString(), 302);
       }
 
@@ -451,11 +413,9 @@ export default {
         const sub = String(info.sub || "");
         const name = String(info.name || "");
         const picture = String(info.picture || "");
-
         if (!email || !sub) return new Response("Missing user info", { status: 400 });
 
         const now = new Date().toISOString();
-
         let user = await env.dbagora.prepare("SELECT id FROM users WHERE google_sub = ?1").bind(sub).first();
         if (!user) user = await env.dbagora.prepare("SELECT id FROM users WHERE email = ?1").bind(email).first();
 
@@ -463,139 +423,96 @@ export default {
         if (!userId) {
           userId = crypto.randomUUID();
           await env.dbagora.prepare(
-            `INSERT INTO users (id, email, created_at, google_sub, display_name, picture_url)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
+            `INSERT INTO users (id, email, created_at, google_sub, display_name, picture_url) VALUES (?1,?2,?3,?4,?5,?6)`
           ).bind(userId, email, now, sub, name, picture).run();
         } else {
           await env.dbagora.prepare(
-            `UPDATE users
-            SET
-              google_sub = ?1,
-              display_name = CASE
-                WHEN display_name IS NULL OR TRIM(display_name) = '' THEN ?2
-                ELSE display_name
-              END,
-              picture_url = CASE
-                WHEN picture_url IS NULL OR TRIM(picture_url) = '' THEN ?3
-                ELSE picture_url
-              END
-            WHERE id = ?4`
+            `UPDATE users SET google_sub=?1,
+              display_name=CASE WHEN display_name IS NULL OR TRIM(display_name)='' THEN ?2 ELSE display_name END,
+              picture_url=CASE WHEN picture_url IS NULL OR TRIM(picture_url)='' THEN ?3 ELSE picture_url END
+            WHERE id=?4`
           ).bind(sub, name, picture, userId).run();
         }
 
         const token = crypto.randomUUID();
         const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
-
         await env.dbagora.prepare(
-          "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)"
+          "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?1,?2,?3,?4)"
         ).bind(token, userId, now, expiresAt).run();
 
         const back = new URL(payload.returnTo);
         back.hash = "token=" + encodeURIComponent(token);
         return Response.redirect(back.toString(), 302);
       }
+
       if (url.pathname === "/api/debug/oauth" && request.method === "GET") {
         const keys = Object.keys(env || {});
         const cid = env.GOOGLE_CLIENT_ID || "";
         const redir = env.GOOGLE_REDIRECT_URI || "";
-        return json({
-          ok: true,
-          build_tag: "DEBUG_KEYS_V2",
-          env_keys: keys,
-          google_client_id_len: cid.length,
-          client_id_present: !!cid,
-          client_id_suffix_ok: cid.endsWith(".apps.googleusercontent.com"),
-          redirect_uri: redir,
-          frontend_origin: env.FRONTEND_ORIGIN || ""
-        }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true, build_tag: "DEBUG_KEYS_V2", env_keys: keys, google_client_id_len: cid.length, client_id_present: !!cid, client_id_suffix_ok: cid.endsWith(".apps.googleusercontent.com"), redirect_uri: redir, frontend_origin: env.FRONTEND_ORIGIN || "" }, 200, ALLOWED_ORIGIN);
       }
-      // Serve files from R2 through the Worker
+
+      // ── MEDIA ────────────────────────────────────────────────────────
       if (url.pathname.startsWith("/media/") && request.method === "GET") {
         const key = decodeURIComponent(url.pathname.slice("/media/".length));
         if (!key) return new Response("Not found", { status: 404 });
-
         const obj = await env.AGORA_MEDIA.get(key);
         if (!obj) return new Response("Not found", { status: 404 });
-
         return new Response(obj.body, {
-          headers: {
-            "Content-Type": obj.httpMetadata?.contentType || "application/octet-stream",
-            "Cache-Control": "public, max-age=31536000, immutable",
-          },
+          headers: { "Content-Type": obj.httpMetadata?.contentType || "application/octet-stream", "Cache-Control": "public, max-age=31536000, immutable" },
         });
       }
-      // Upload image to R2 (auth required)
+
       if (url.pathname === "/api/media/upload" && request.method === "POST") {
         const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
-
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first();
-
         if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
         const ct = request.headers.get("content-type") || "";
-        if (!ct.includes("multipart/form-data")) {
-          return json({ ok: false, error: "expected_multipart" }, 400, ALLOWED_ORIGIN);
-        }
+        if (!ct.includes("multipart/form-data")) return json({ ok: false, error: "expected_multipart" }, 400, ALLOWED_ORIGIN);
 
         const form = await request.formData();
         const file = form.get("file");
-        if (!file || typeof file.arrayBuffer !== "function") {
-          return json({ ok: false, error: "missing_file" }, 400, ALLOWED_ORIGIN);
-        }
+        if (!file || typeof file.arrayBuffer !== "function") return json({ ok: false, error: "missing_file" }, 400, ALLOWED_ORIGIN);
 
         const mime = file.type || "";
-        if (!mime.startsWith("image/")) {
-          return json({ ok: false, error: "not_image" }, 400, ALLOWED_ORIGIN);
-        }
+        if (!mime.startsWith("image/")) return json({ ok: false, error: "not_image" }, 400, ALLOWED_ORIGIN);
 
         const buf = await file.arrayBuffer();
-        const maxBytes = 8 * 1024 * 1024; // 8MB
-        if (buf.byteLength > maxBytes) {
-          return json({ ok: false, error: "too_big" }, 400, ALLOWED_ORIGIN);
-        }
+        if (buf.byteLength > 8 * 1024 * 1024) return json({ ok: false, error: "too_big" }, 400, ALLOWED_ORIGIN);
 
         const ext = (mime.split("/")[1] || "bin").replace(/[^a-z0-9]/gi, "");
         const key = `u/${session.user_id}/${crypto.randomUUID()}.${ext}`;
-
         await env.AGORA_MEDIA.put(key, buf, { httpMetadata: { contentType: mime } });
 
         const base = new URL(request.url);
         const publicUrl = `${base.origin}/media/${encodeURIComponent(key)}`;
-
         return json({ ok: true, key, url: publicUrl }, 200, ALLOWED_ORIGIN);
       }
-      
-      // Delete image from R2 (auth required)
+
       if (url.pathname === "/api/media/delete" && request.method === "DELETE") {
         const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
-
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first();
-
         if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
         const body = await request.json().catch(() => ({}));
         const key = String(body.key || "").trim();
         if (!key) return json({ ok: false, error: "missing_key" }, 400, ALLOWED_ORIGIN);
-
-        // Ownership check: user can delete only their own files
-        const prefix = `u/${session.user_id}/`;
-        if (!key.startsWith(prefix)) {
-          return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
-        }
+        if (!key.startsWith(`u/${session.user_id}/`)) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
 
         await env.AGORA_MEDIA.delete(key);
-return json({ ok: true }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
-      // Save a post
+      // ── SAVED POSTS ──────────────────────────────────────────────────
       if (url.pathname === "/api/saved" && request.method === "POST") {
         const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
@@ -610,12 +527,11 @@ return json({ ok: true }, 200, ALLOWED_ORIGIN);
         const post = await env.dbagora.prepare("SELECT id FROM posts WHERE id = ?1").bind(postId).first();
         if (!post) return json({ ok: false, error: "post_not_found" }, 404, ALLOWED_ORIGIN);
         await env.dbagora.prepare(
-          "INSERT OR IGNORE INTO saved_posts (user_id, post_id, saved_at) VALUES (?1, ?2, ?3)"
+          "INSERT OR IGNORE INTO saved_posts (user_id, post_id, saved_at) VALUES (?1,?2,?3)"
         ).bind(session.user_id, postId, new Date().toISOString()).run();
         return json({ ok: true, saved: true }, 200, ALLOWED_ORIGIN);
       }
 
-      // Unsave a post
       if (url.pathname === "/api/saved" && request.method === "DELETE") {
         const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
@@ -633,7 +549,6 @@ return json({ ok: true }, 200, ALLOWED_ORIGIN);
         return json({ ok: true, saved: false }, 200, ALLOWED_ORIGIN);
       }
 
-      // Get saved posts
       if (url.pathname === "/api/saved" && request.method === "GET") {
         const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
@@ -643,8 +558,8 @@ return json({ ok: true }, 200, ALLOWED_ORIGIN);
         ).bind(token, new Date().toISOString()).first();
         if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
         const rows = await env.dbagora.prepare(`
-          SELECT
-            p.id, p.content, p.created_at,
+          SELECT p.id, p.content, p.created_at,
+            u.id as author_id,
             u.email as author_email,
             COALESCE(NULLIF(TRIM(u.display_name),''),
               CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
@@ -655,10 +570,463 @@ return json({ ok: true }, 200, ALLOWED_ORIGIN);
           JOIN posts p ON p.id = sp.post_id
           JOIN users u ON u.id = p.user_id
           WHERE sp.user_id = ?1
-          ORDER BY sp.saved_at DESC
-          LIMIT 100
+          ORDER BY sp.saved_at DESC LIMIT 100s
         `).bind(session.user_id).all();
         return json({ ok: true, posts: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── MAP ──────────────────────────────────────────────────────────
+      if (url.pathname === "/api/map/sessions" && request.method === "GET") {
+        const now = new Date().toISOString();
+        const rows = await env.dbagora.prepare(`
+          SELECT id, user_id, name, type, place, topic, tags, duration, lat, lng, created_at
+          FROM study_sessions WHERE expires_at > ?1 ORDER BY created_at DESC LIMIT 200
+        `).bind(now).all();
+        const sessions = (rows.results || []).map(s => ({ ...s, tags: JSON.parse(s.tags || "[]"), time: timeAgo(s.created_at) }));
+        return json({ ok: true, sessions }, 200, ALLOWED_ORIGIN);
+      }
+
+      if (url.pathname === "/api/map/sessions" && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const body = await request.json().catch(() => ({}));
+        const { name, type, place, topic, tags, duration, lat, lng } = body;
+        if (!name || !type || !topic || !lat || !lng) return json({ ok: false, error: "missing_fields" }, 400, ALLOWED_ORIGIN);
+
+        const id = crypto.randomUUID();
+        const now = new Date().toISOString();
+        const expiresAt = new Date(Date.now() + (type === "luogo" ? 7 : 1) * 86400000).toISOString();
+        await env.dbagora.prepare(`
+          INSERT INTO study_sessions (id,user_id,name,type,place,topic,tags,duration,lat,lng,created_at,expires_at)
+          VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)
+        `).bind(id, session.user_id, name, type, place||"", topic, JSON.stringify(tags||[]), duration, lat, lng, now, expiresAt).run();
+        return json({ ok: true, id }, 200, ALLOWED_ORIGIN);
+      }
+
+      if (url.pathname.startsWith("/api/map/sessions/") && request.method === "DELETE") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const sessionId = url.pathname.split("/").pop();
+        await env.dbagora.prepare(
+          "DELETE FROM study_sessions WHERE id = ?1 AND user_id = ?2"
+        ).bind(sessionId, session.user_id).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── BLOCKS ───────────────────────────────────────────────────────
+      if (url.pathname === "/api/blocks" && request.method === "GET") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const rows = await env.dbagora.prepare(`
+          SELECT b.id AS block_id, b.block_type, b.reason, b.created_at,
+            u.email AS blocked_email,
+            COALESCE(NULLIF(TRIM(u.display_name),''),
+              CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
+            ) AS blocked_name,
+            COALESCE(u.picture_url,'') AS blocked_picture
+          FROM blocks b
+          JOIN users u ON u.id = b.blocked_id
+          WHERE b.blocker_id = ?1 ORDER BY b.created_at DESC
+        `).bind(session.user_id).all();
+        return json({ ok: true, blocks: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
+      if (url.pathname === "/api/blocks" && request.method === "DELETE") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const body = await request.json().catch(() => ({}));
+        const blockId = String(body.block_id || "").trim();
+        if (!blockId) return json({ ok: false, error: "missing_block_id" }, 400, ALLOWED_ORIGIN);
+
+        const del = await env.dbagora.prepare(
+          "DELETE FROM blocks WHERE id = ?1 AND blocker_id = ?2"
+        ).bind(blockId, session.user_id).run();
+        if ((del?.meta?.changes ?? 0) === 0) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      if (url.pathname === "/api/blocks" && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const body = await request.json().catch(() => ({}));
+        const blockedEmail = String(body.blocked_email || "").trim().toLowerCase();
+        const blockType    = Number(body.block_type);
+        const reason       = String(body.reason || "").trim().slice(0, 1000);
+
+        if (!blockedEmail || !blockedEmail.includes("@")) return json({ ok: false, error: "invalid_email" }, 400, ALLOWED_ORIGIN);
+        if (blockType !== 1 && blockType !== 2) return json({ ok: false, error: "invalid_block_type" }, 400, ALLOWED_ORIGIN);
+        if (blockType === 1 && !reason) return json({ ok: false, error: "reason_required" }, 400, ALLOWED_ORIGIN);
+
+        const target = await env.dbagora.prepare("SELECT id FROM users WHERE email = ?1").bind(blockedEmail).first();
+        if (!target) return json({ ok: false, error: "user_not_found" }, 404, ALLOWED_ORIGIN);
+        if (target.id === session.user_id) return json({ ok: false, error: "cannot_block_self" }, 400, ALLOWED_ORIGIN);
+
+        const now = new Date().toISOString();
+        const blockId = crypto.randomUUID();
+        await env.dbagora.prepare(`
+          INSERT INTO blocks (id, blocker_id, blocked_id, block_type, reason, created_at)
+          VALUES (?1,?2,?3,?4,?5,?6)
+          ON CONFLICT(blocker_id, blocked_id) DO UPDATE
+            SET block_type=excluded.block_type, reason=excluded.reason, created_at=excluded.created_at
+        `).bind(blockId, session.user_id, target.id, blockType, reason || null, now).run();
+
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── BLOCK COMPLAINTS (utente bloccato invia reclamo) ─────────────
+      if (url.pathname === "/api/complaints" && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const body = await request.json().catch(() => ({}));
+        const message = String(body.message || "").trim().slice(0, 2000);
+        const blockId = String(body.block_id || "").trim();
+
+        if (!message || message.length < 10) return json({ ok: false, error: "message_too_short" }, 400, ALLOWED_ORIGIN);
+
+        // Verifica che esista un blocco di tipo 1 verso questo utente
+        const blockRow = blockId
+          ? await env.dbagora.prepare("SELECT id FROM blocks WHERE id = ?1 AND blocked_id = ?2 AND block_type = 1").bind(blockId, session.user_id).first()
+          : await env.dbagora.prepare("SELECT id FROM blocks WHERE blocked_id = ?1 AND block_type = 1 LIMIT 1").bind(session.user_id).first();
+
+        if (!blockRow) return json({ ok: false, error: "no_block_found" }, 404, ALLOWED_ORIGIN);
+
+        const now = new Date().toISOString();
+        await env.dbagora.prepare(`
+          INSERT INTO block_complaints (id, complainant_id, block_id, message, created_at, status)
+          VALUES (?1,?2,?3,?4,?5,'pending')
+        `).bind(crypto.randomUUID(), session.user_id, blockRow.id, message, now).run();
+
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+      // ── USER PROFILE: GET /api/users/:id ─────────────────────────────
+        const userProfileMatch = url.pathname.match(/^\/api\/users\/([^/]+)$/);
+        if (userProfileMatch && request.method === "GET") {
+          const userId = decodeURIComponent(userProfileMatch[1] || "").trim();
+          if (!userId) return json({ ok: false, error: "missing_id" }, 400, ALLOWED_ORIGIN);
+          const u = await env.dbagora.prepare(
+            `SELECT id, display_name, picture_url,
+              COALESCE(NULLIF(TRIM(display_name),''),
+                CASE WHEN instr(email,'@')>1 THEN substr(email,1,instr(email,'@')-1) ELSE email END
+              ) AS display_name_resolved
+            FROM users WHERE id = ?1 AND COALESCE(banned,0) = 0`
+          ).bind(userId).first();
+          if (!u) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
+          return json({ ok: true, user: {
+            id: u.id,
+            display_name: u.display_name_resolved || u.display_name || "",
+            picture_url: u.picture_url || ""
+          }}, 200, ALLOWED_ORIGIN);
+        }
+
+      // ── USER POSTS: GET /api/users/:id/posts ─────────────────────────
+        const userPostsMatch = url.pathname.match(/^\/api\/users\/([^/]+)\/posts$/);
+        if (userPostsMatch && request.method === "GET") {
+          const userId = decodeURIComponent(userPostsMatch[1] || "").trim();
+          if (!userId) return json({ ok: false, error: "missing_id" }, 400, ALLOWED_ORIGIN);
+          const rows = await env.dbagora.prepare(
+            `SELECT p.id, p.content, p.created_at,
+              u.id as author_id,
+              COALESCE(NULLIF(TRIM(u.display_name),''),
+                CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
+              ) AS author_display_name,
+              COALESCE(u.picture_url,'') AS author_picture_url,
+              (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comment_count
+            FROM posts p JOIN users u ON u.id = p.user_id
+            WHERE p.user_id = ?1 AND COALESCE(u.banned,0) = 0
+            ORDER BY p.created_at ASC LIMIT 200`
+          ).bind(userId).all();
+          return json({ ok: true, posts: rows.results || [] }, 200, ALLOWED_ORIGIN);
+        }
+      // ════════════════════════════════════════════════════════════════
+      // ── ADMIN ────────────────────────────────────────────────────────
+      // ════════════════════════════════════════════════════════════════
+
+      // POST /api/admin/auth — verifica password, emette token admin
+      if (url.pathname === "/api/admin/auth" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const password = String(body.password || "");
+        const userToken = String(body.user_token || ""); // token sessione Google
+
+        // Verifica che chi tenta sia l'utente admin
+        const session = await env.dbagora.prepare(
+          `SELECT s.user_id, u.email FROM sessions s JOIN users u ON u.id = s.user_id
+          WHERE s.token = ?1 AND s.expires_at > ?2`
+        ).bind(userToken, new Date().toISOString()).first();
+
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+        if (session.email !== env.ADMIN_EMAIL) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        // Confronto password con timing-safe HMAC
+        const expectedHash = await hmac(env.ADMIN_PASSWORD, env.STATE_SECRET);
+        const providedHash  = await hmac(password, env.STATE_SECRET);
+        if (expectedHash !== providedHash) return json({ ok: false, error: "wrong_password" }, 403, ALLOWED_ORIGIN);
+
+        // Emetti token admin (valido 2 ore)
+        const adminToken = crypto.randomUUID();
+        const expiresAt  = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+        await env.dbagora.prepare(
+          "INSERT INTO admin_sessions (token, created_at, expires_at) VALUES (?1,?2,?3)"
+        ).bind(adminToken, new Date().toISOString(), expiresAt).run();
+
+        return json({ ok: true, admin_token: adminToken, expires_at: expiresAt }, 200, ALLOWED_ORIGIN);
+      }
+
+      // Helper: verifica admin token per le route seguenti
+      async function requireAdmin(req) {
+        const a = req.headers.get("X-Admin-Token") || "";
+        if (!a) return null;
+        return await env.dbagora.prepare(
+          "SELECT token FROM admin_sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(a, new Date().toISOString()).first();
+      }
+
+      // GET /api/admin/spam — lista spam flags
+      if (url.pathname === "/api/admin/spam" && request.method === "GET") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const rows = await env.dbagora.prepare(`
+          SELECT sf.id, sf.action_type, sf.detected_at, sf.intervals_json, sf.score,
+            u.email, u.id AS user_id,
+            COALESCE(NULLIF(TRIM(u.display_name),''),
+              CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
+            ) AS display_name,
+            COALESCE(u.picture_url,'') AS picture_url,
+            COALESCE(u.banned, 0) AS banned
+          FROM spam_flags sf
+          JOIN users u ON u.id = sf.user_id
+          ORDER BY sf.detected_at DESC LIMIT 200
+        `).all();
+        return json({ ok: true, flags: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
+      // GET /api/admin/users — lista tutti gli utenti
+      if (url.pathname === "/api/admin/users" && request.method === "GET") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const rows = await env.dbagora.prepare(`
+          SELECT id, email,
+            COALESCE(NULLIF(TRIM(display_name),''),
+              CASE WHEN instr(email,'@')>1 THEN substr(email,1,instr(email,'@')-1) ELSE email END
+            ) AS display_name,
+            COALESCE(picture_url,'') AS picture_url,
+            created_at,
+            COALESCE(banned, 0) AS banned
+          FROM users ORDER BY created_at DESC LIMIT 500
+        `).all();
+        return json({ ok: true, users: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
+      // GET /api/admin/complaints — reclami blocchi
+      if (url.pathname === "/api/admin/complaints" && request.method === "GET") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const rows = await env.dbagora.prepare(`
+          SELECT bc.id, bc.message, bc.created_at, bc.status, bc.block_id,
+            u.email AS complainant_email,
+            COALESCE(NULLIF(TRIM(u.display_name),''),
+              CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
+            ) AS complainant_name,
+            COALESCE(u.picture_url,'') AS complainant_picture,
+            b.block_type, b.reason AS block_reason,
+            bu.email AS blocker_email,
+            COALESCE(NULLIF(TRIM(bu.display_name),''),
+              CASE WHEN instr(bu.email,'@')>1 THEN substr(bu.email,1,instr(bu.email,'@')-1) ELSE bu.email END
+            ) AS blocker_name
+          FROM block_complaints bc
+          JOIN users u ON u.id = bc.complainant_id
+          JOIN blocks b ON b.id = bc.block_id
+          JOIN users bu ON bu.id = b.blocker_id
+          ORDER BY bc.created_at DESC LIMIT 200
+        `).all();
+        return json({ ok: true, complaints: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
+      // POST /api/admin/complaints/:id/resolve — segna reclamo come risolto/respinto
+      const complaintResolveMatch = url.pathname.match(/^\/api\/admin\/complaints\/([^/]+)\/resolve$/);
+      if (complaintResolveMatch && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const body = await request.json().catch(() => ({}));
+        const status = String(body.status || "").trim(); // "resolved" | "rejected"
+        if (!["resolved","rejected"].includes(status)) return json({ ok: false, error: "invalid_status" }, 400, ALLOWED_ORIGIN);
+
+        await env.dbagora.prepare(
+          "UPDATE block_complaints SET status = ?1 WHERE id = ?2"
+        ).bind(status, complaintResolveMatch[1]).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // POST /api/admin/ban — banna utente
+      if (url.pathname === "/api/admin/ban" && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const body = await request.json().catch(() => ({}));
+        const userId = String(body.user_id || "").trim();
+        if (!userId) return json({ ok: false, error: "missing_user_id" }, 400, ALLOWED_ORIGIN);
+
+        await env.dbagora.prepare("UPDATE users SET banned = 1 WHERE id = ?1").bind(userId).run();
+        // Invalida tutte le sessioni dell'utente
+        await env.dbagora.prepare("DELETE FROM sessions WHERE user_id = ?1").bind(userId).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // DELETE /api/admin/ban — rimuovi ban
+      if (url.pathname === "/api/admin/ban" && request.method === "DELETE") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const body = await request.json().catch(() => ({}));
+        const userId = String(body.user_id || "").trim();
+        if (!userId) return json({ ok: false, error: "missing_user_id" }, 400, ALLOWED_ORIGIN);
+
+        await env.dbagora.prepare("UPDATE users SET banned = 0 WHERE id = ?1").bind(userId).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // DELETE /api/admin/posts/:id — admin elimina post
+      const adminPostDeleteMatch = url.pathname.match(/^\/api\/admin\/posts\/([^/]+)$/);
+      if (adminPostDeleteMatch && request.method === "DELETE") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const postId = adminPostDeleteMatch[1];
+        await env.dbagora.prepare("DELETE FROM comments WHERE post_id = ?1").bind(postId).run();
+        await env.dbagora.prepare("DELETE FROM posts WHERE id = ?1").bind(postId).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── BUG REPORTS ──────────────────────────────────────────────────
+
+      // POST /api/bugs — utente loggato segnala un bug
+      if (url.pathname === "/api/bugs" && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+        const body = await request.json().catch(() => ({}));
+        const title       = String(body.title || "").trim().slice(0, 120);
+        const description = String(body.description || "").trim().slice(0, 2000);
+        const page        = String(body.page || "").trim().slice(0, 100);
+        if (!title || title.length < 3)       return json({ ok: false, error: "title_too_short" }, 400, ALLOWED_ORIGIN);
+        if (!description || description.length < 10) return json({ ok: false, error: "description_too_short" }, 400, ALLOWED_ORIGIN);
+        await env.dbagora.prepare(
+          "INSERT INTO bug_reports (id,user_id,title,description,page,status,created_at) VALUES (?1,?2,?3,?4,?5,'pending',?6)"
+        ).bind(crypto.randomUUID(), session.user_id, title, description, page || null, new Date().toISOString()).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // GET /api/admin/bugs
+      if (url.pathname === "/api/admin/bugs" && request.method === "GET") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        const rows = await env.dbagora.prepare(`
+          SELECT br.id, br.title, br.description, br.page, br.status, br.created_at, br.admin_note,
+            u.email AS reporter_email,
+            COALESCE(NULLIF(TRIM(u.display_name),''), substr(u.email,1,instr(u.email,'@')-1)) AS reporter_name,
+            COALESCE(u.picture_url,'') AS reporter_picture
+          FROM bug_reports br
+          JOIN users u ON u.id = br.user_id
+          ORDER BY br.created_at DESC LIMIT 300
+        `).all();
+        return json({ ok: true, bugs: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
+      // POST /api/admin/bugs/:id/status
+      const bugStatusMatch = url.pathname.match(/^\/api\/admin\/bugs\/([^/]+)\/status$/);
+      if (bugStatusMatch && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        const body = await request.json().catch(() => ({}));
+        const status     = String(body.status || "").trim();
+        const admin_note = String(body.admin_note || "").trim().slice(0, 500);
+        const valid = ["pending","confirmed","in_progress","resolved","wontfix"];
+        if (!valid.includes(status)) return json({ ok: false, error: "invalid_status" }, 400, ALLOWED_ORIGIN);
+        await env.dbagora.prepare(
+          "UPDATE bug_reports SET status = ?1, admin_note = ?2 WHERE id = ?3"
+        ).bind(status, admin_note || null, bugStatusMatch[1]).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── RELEASE NOTES ────────────────────────────────────────────────
+
+      // GET /api/releases — pubblico
+      if (url.pathname === "/api/releases" && request.method === "GET") {
+        const rows = await env.dbagora.prepare(
+          "SELECT id, version, title, content, type, created_at FROM releases ORDER BY created_at DESC LIMIT 50"
+        ).all();
+        return json({ ok: true, releases: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
+      // POST /api/admin/releases
+      if (url.pathname === "/api/admin/releases" && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        const body = await request.json().catch(() => ({}));
+        const version = String(body.version || "").trim().slice(0, 30);
+        const title   = String(body.title || "").trim().slice(0, 120);
+        const content = String(body.content || "").trim().slice(0, 5000);
+        const type    = ["update","fix","feature","breaking"].includes(body.type) ? body.type : "update";
+        if (!version) return json({ ok: false, error: "missing_version" }, 400, ALLOWED_ORIGIN);
+        if (!title || title.length < 3) return json({ ok: false, error: "title_too_short" }, 400, ALLOWED_ORIGIN);
+        if (!content || content.length < 5) return json({ ok: false, error: "content_too_short" }, 400, ALLOWED_ORIGIN);
+        const id = crypto.randomUUID();
+        await env.dbagora.prepare(
+          "INSERT INTO releases (id,version,title,content,type,created_at) VALUES (?1,?2,?3,?4,?5,?6)"
+        ).bind(id, version, title, content, type, new Date().toISOString()).run();
+        return json({ ok: true, id }, 200, ALLOWED_ORIGIN);
+      }
+
+      // DELETE /api/admin/releases/:id
+      const releaseDeleteMatch = url.pathname.match(/^\/api\/admin\/releases\/([^/]+)$/);
+      if (releaseDeleteMatch && request.method === "DELETE") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        await env.dbagora.prepare("DELETE FROM releases WHERE id = ?1").bind(releaseDeleteMatch[1]).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
       return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
@@ -668,11 +1036,126 @@ return json({ ok: true }, 200, ALLOWED_ORIGIN);
   }
 };
 
+// ════════════════════════════════════════════════════════════════════════
+// ── SPAM DETECTION (server-side) ────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+
+// Salva timestamp azione nel DB
+async function recordAction(env, userId, actionType) {
+  const now = new Date().toISOString();
+  await env.dbagora.prepare(
+    `INSERT INTO action_timestamps (id, user_id, action_type, ts) VALUES (?1,?2,?3,?4)`
+  ).bind(crypto.randomUUID(), userId, actionType, now).run();
+  // Pulizia: tieni solo gli ultimi 200 per utente/tipo
+  await env.dbagora.prepare(`
+    DELETE FROM action_timestamps
+    WHERE user_id = ?1 AND action_type = ?2
+    AND id NOT IN (
+      SELECT id FROM action_timestamps
+      WHERE user_id = ?1 AND action_type = ?2
+      ORDER BY ts DESC LIMIT 200
+    )
+  `).bind(userId, actionType).run();
+}
+
+// Verifica pattern spam: 3+ azioni a intervallo costante
+async function checkSpamServer(env, userId, actionType) {
+  // Prendi gli ultimi 64 timestamp per questo utente+tipo
+  const rows = await env.dbagora.prepare(`
+    SELECT ts FROM action_timestamps
+    WHERE user_id = ?1 AND action_type = ?2
+    ORDER BY ts DESC LIMIT 64
+  `).bind(userId, actionType).all();
+
+  const timestamps = (rows.results || []).map(r => new Date(r.ts).getTime()).reverse();
+
+  if (timestamps.length < 3) return { isSpam: false, score: 0 };
+
+  // Controlla se è già in spam block temporaneo
+  const spamBlock = await env.dbagora.prepare(`
+    SELECT detected_at FROM spam_flags
+    WHERE user_id = ?1 AND action_type = ?2
+    ORDER BY detected_at DESC LIMIT 1
+  `).bind(userId, actionType).first();
+
+  if (spamBlock) {
+    const blockUntil = new Date(spamBlock.detected_at).getTime() + 30 * 60 * 1000;
+    if (Date.now() < blockUntil) {
+      return { isSpam: true, score: 99, until: new Date(blockUntil).toISOString() };
+    }
+  }
+
+  const PRECISION_MS = 3000; // tolleranza ±3 secondi
+  const intervals = timestamps.slice(1).map((v, i) => v - timestamps[i]);
+
+  let score = 0;
+
+  // 8 cicli di rilevamento periodicità (specchio della logica client-side)
+  for (let cycle = 1; cycle <= 8; cycle++) {
+    if (cycle === 1) {
+      const last3 = intervals.slice(-3);
+      if (last3.length === 3) {
+        const avg = last3.reduce((a, b) => a + b, 0) / 3;
+        const vari = last3.reduce((s, v) => s + (v - avg) ** 2, 0) / 3;
+        // Copre qualsiasi intervallo costante (da 5s fino a ore)
+        if (vari < PRECISION_MS ** 2) score += 6;
+      }
+    }
+
+    const w = cycle;
+    if (intervals.length < w * 2) continue;
+
+    let hits = 0;
+    for (let i = 0; i <= intervals.length - w * 2; i++) {
+      const a = intervals.slice(i, i + w);
+      const b = intervals.slice(i + w, i + w * 2);
+      const match = a.filter((_, j) => Math.abs(a[j] - b[j]) < PRECISION_MS).length;
+      if (match / w >= 0.80) hits++;
+    }
+    if (hits > 0) score += cycle * hits;
+
+    if (cycle === 8 && intervals.length >= 4) {
+      const avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+      const vari = intervals.reduce((s, v) => s + (v - avg) ** 2, 0) / intervals.length;
+      if (vari < (PRECISION_MS * 1.5) ** 2 && score >= 6) score += 10;
+    }
+  }
+
+  const isSpam = score >= 8;
+  return {
+    isSpam,
+    score,
+    intervals: intervals.slice(-10), // ultimi 10 per il log
+    until: isSpam ? new Date(Date.now() + 30 * 60 * 1000).toISOString() : null
+  };
+}
+
+// Scrive spam flag nel DB (segnalazione silenziosa admin)
+async function flagSpam(env, userId, actionType, intervals, score) {
+  try {
+    await env.dbagora.prepare(`
+      INSERT INTO spam_flags (id, user_id, action_type, detected_at, intervals_json, score)
+      VALUES (?1,?2,?3,?4,?5,?6)
+    `).bind(
+      crypto.randomUUID(),
+      userId,
+      actionType,
+      new Date().toISOString(),
+      JSON.stringify(intervals || []),
+      score
+    ).run();
+  } catch (_) {}
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// ── HELPERS ─────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+
 function corsHeaders(origin) {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "GET,POST,DELETE,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Admin-Token",
     "Access-Control-Allow-Credentials": "true",
     "Access-Control-Max-Age": "86400",
   };
@@ -681,10 +1164,7 @@ function corsHeaders(origin) {
 function json(obj, status, origin) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      ...corsHeaders(origin),
-    },
+    headers: { "Content-Type": "application/json; charset=utf-8", ...corsHeaders(origin) },
   });
 }
 
@@ -709,11 +1189,8 @@ async function verifyState(state, secret) {
 
 async function hmac(data, secret) {
   const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
+    "raw", new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
   );
   const mac = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
   return b64urlBytes(new Uint8Array(mac));
@@ -734,4 +1211,12 @@ function b64urlBytes(bytes) {
   for (const b of bytes) bin += String.fromCharCode(b);
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
-//da rendere OTP vero
+
+function timeAgo(isoStr) {
+
+  const diff = Math.floor((Date.now() - new Date(isoStr).getTime()) / 1000);
+  if (diff < 60) return "adesso";
+  if (diff < 3600) return `${Math.floor(diff / 60)} min fa`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)} ore fa`;
+  return `${Math.floor(diff / 86400)} giorni fa`;
+}
