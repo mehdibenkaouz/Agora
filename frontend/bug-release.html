@@ -828,7 +828,7 @@
       // mostra tutti tranne wontfix/rejected se non admin
       const visible = bugs.filter(b => {
         if (isAdmin()) return true;
-        return b.status !== "wontfix" && b.status !== "pending";
+        return b.status !== "wontfix";
       }).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
 
       if (!visible.length) {
