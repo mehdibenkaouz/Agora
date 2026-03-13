@@ -3069,7 +3069,7 @@ loadPosts();
     if (!els.indexPanel) return;
     els.indexPanel.classList.remove("open");
     els.indexPanel.setAttribute("aria-hidden","true");
-  }k
+  }
 
   if (els.openIndexBtn) els.openIndexBtn.addEventListener("click", (e)=>{ e.stopPropagation(); els.indexPanel?.classList.contains("open") ? closeIndex() : openIndex(); });
   if (els.closeIndexBtn) els.closeIndexBtn.addEventListener("click", closeIndex);
