@@ -1072,6 +1072,58 @@
     /* Panel wrapper around book head */
     .panel { background: transparent; }
 
+    /* ===== Blocked users section ===== */
+    .blocked-section {
+      margin-top: 32px;
+      background: var(--panel);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 22px;
+      padding: 22px;
+    }
+    :root[data-theme="dark"] .blocked-section {
+      border-color: rgba(255,255,255,0.08);
+    }
+    .blocked-section-title {
+      font-weight: 900; font-size: 1.05rem; margin-bottom: 16px;
+    }
+    .blocked-list {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .blocked-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px;
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 14px;
+      background: var(--panel-2);
+    }
+    :root[data-theme="dark"] .blocked-row {
+      border-color: rgba(255,255,255,0.08);
+    }
+    .blocked-avatar {
+      width: 38px; height: 38px; border-radius: 50%;
+      object-fit: cover; flex-shrink: 0;
+      background: rgba(0,0,0,0.08);
+    }
+    .blocked-info { flex: 1; min-width: 0; }
+    .blocked-name { font-weight: 700; font-size: .93rem; }
+    .blocked-meta { font-size: .78rem; color: var(--muted); margin-top: 2px; }
+    .blocked-type-badge {
+      font-size: .72rem; font-weight: 700; padding: 2px 8px;
+      border-radius: 99px; flex-shrink: 0;
+      background: rgba(87,25,41,0.10); color: var(--brand);
+      border: 1px solid rgba(87,25,41,0.20);
+    }
+    .unblock-btn {
+      padding: 7px 14px; border-radius: 12px; font-size: .82rem;
+      font-weight: 700; cursor: pointer; flex-shrink: 0;
+      border: 1px solid rgba(0,0,0,0.14);
+      background: rgba(248,247,243,0.92); color: inherit;
+      transition: background .15s;
+    }
+    .unblock-btn:hover { background: rgba(220,60,60,0.10); border-color: rgba(160,0,0,0.30); color: rgba(160,0,0,0.9); }
+    :root[data-theme="dark"] .unblock-btn { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.14); color: #fff; }
+    .blocked-empty { color: var(--muted); font-size: .9rem; padding: 8px 0; }
+
     /* ==========================================
        LIGHT THEME FIELD ADJUSTMENTS (for light modals)
     ========================================== */
@@ -1747,6 +1799,13 @@
         </div>
       </div><!-- /bookStage saved -->
 
+      <!-- Utenti bloccati -->
+      <div class="blocked-section" id="blockedSection" style="display:none;">
+        <div class="blocked-section-title">Utenti bloccati</div>
+        <div class="blocked-list" id="blockedList">
+          <div class="blocked-empty">Caricamento…</div>
+        </div>
+      </div>
 
 
     </div>
@@ -2309,7 +2368,61 @@ function renderSpread(){
 
   spreadMeta.textContent = `Spread ${spreadIndex + 1} / ${spreadCount()} • Posts ${leftIdx + 1}-${Math.min(rightIdx + 1, POSTS.length)} / ${POSTS.length}`;
 }
+/* ===== Blocked users ===== */
+async function loadBlockedUsers() {
+  if (!getToken()) return;
+  const section = document.getElementById("blockedSection");
+  const list    = document.getElementById("blockedList");
+  if (!section || !list) return;
+  section.style.display = "block";
 
+  try {
+    const data = await api("/api/blocks", { method: "GET" });
+    if (!data.ok) { list.innerHTML = "<div class='blocked-empty'>Errore nel caricamento.</div>"; return; }
+
+    const blocks = data.blocks || [];
+    if (blocks.length === 0) {
+      list.innerHTML = "<div class='blocked-empty'>Nessun utente bloccato.</div>";
+      return;
+    }
+
+    list.innerHTML = "";
+    blocks.forEach(b => {
+      const row = document.createElement("div");
+      row.className = "blocked-row";
+      const typeLabel = b.block_type === 1 ? "Blocco 1" : "Blocco 2";
+      const date = new Date(b.created_at).toLocaleDateString("it-IT");
+      row.innerHTML = `
+        <img class="blocked-avatar"
+             src="${b.blocked_picture || '/avatar-default.png'}"
+             alt="${b.blocked_name}" />
+        <div class="blocked-info">
+          <div class="blocked-name">${b.blocked_name}</div>
+          <div class="blocked-meta">${b.blocked_email} · bloccato il ${date}</div>
+          ${b.reason ? `<div class="blocked-meta" style="margin-top:3px;font-style:italic;">"${b.reason.slice(0,80)}${b.reason.length>80?'…':''}"</div>` : ""}
+        </div>
+        <span class="blocked-type-badge">${typeLabel}</span>
+        <button class="unblock-btn" data-block-id="${b.block_id}">Sblocca</button>
+      `;
+      row.querySelector(".unblock-btn").addEventListener("click", async (e) => {
+        const btn = e.currentTarget;
+        const blockId = btn.dataset.blockId;
+        btn.disabled = true; btn.textContent = "…";
+        try {
+          await api("/api/blocks", { method: "DELETE", body: JSON.stringify({ block_id: blockId }) });
+          await loadBlockedUsers();
+        } catch(err) {
+          btn.disabled = false; btn.textContent = "Sblocca";
+          alert("Errore: " + (err?.message || err));
+        }
+      });
+      list.appendChild(row);
+    });
+  } catch(err) {
+    list.innerHTML = "<div class='blocked-empty'>Errore nel caricamento.</div>";
+  }
+}
+  
 async function fetchMyPosts(){
   // try dedicated endpoint first
   try{
@@ -2450,6 +2563,7 @@ async function loadPosts(){
 
   try{
     const posts = await fetchMyPosts();
+    await loadBlockedUsers();
     POSTS = normalizePosts(posts || []);
     spreadIndex = 0;
     renderSpread();
