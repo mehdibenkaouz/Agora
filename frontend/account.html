@@ -3096,7 +3096,9 @@ loadPosts();
     }
     try {
       const out = await api("/api/saved", { method: "GET" });
+      console.log("SAVED API response:", out);
       SAVED_POSTS = Array.isArray(out.posts) ? out.posts : [];
+      console.log("SAVED_POSTS length:", SAVED_POSTS.length);
       savedSpreadIndex = 0;
       renderSpread();
     } catch(e){
