@@ -1,202 +1,655 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bug & Release – AGORÀ</title>
 
-<title>Bug & Releases – AGORÀ</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="item/Logoaagora.png">
+  <link rel="apple-touch-icon" href="item/Logoagora.png">
 
-<link rel="icon" type="image/png" sizes="32x32" href="item/Logoaagora.png">
+  <style>
+    :root {
+      --bg: #e8e5de;
+      --panel: #f8f7f3;
+      --panel-2: #fcfbf8;
+      --text: #111111;
+      --muted: #666666;
+      --line: rgba(0, 0, 0, 0.08);
+      --shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
+      --soft-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+      --radius-xl: 42px;
+      --radius-lg: 32px;
+      --radius-md: 22px;
+      --topbar-h: 80px;
+      --maxw: 1360px;
+      --brand: #571929;
+    }
 
-<style>
+    :root[data-theme="dark"]{
+      --bg: #0f1115;
+      --panel: #151821;
+      --panel-2: #1b1f2b;
+      --text: #f2f2f2;
+      --muted: rgba(255,255,255,0.62);
+      --line: rgba(255,255,255,0.10);
+      --shadow: 0 10px 28px rgba(0,0,0,0.55);
+      --soft-shadow: 0 8px 20px rgba(0,0,0,0.40);
+      --brand: #a8ebf6;
+    }
 
-:root {
-  --bg: #e8e5de;
-  --panel: #f8f7f3;
-  --text: #111;
-  --line: rgba(0,0,0,0.1);
-  --brand: #571929;
-}
+    * { box-sizing: border-box; }
 
-body {
-  margin: 0;
-  background: var(--bg);
-  font-family: system-ui, Arial;
-  color: var(--text);
-}
+    html, body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, Arial, Helvetica, sans-serif;
+    }
 
+    body { min-height: 100vh; }
 
-/* TOPBAR */
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
 
-.topbar {
-  height: 70px;
-  background: white;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 22px;
-}
+    .topbar {
+      height: var(--topbar-h);
+      background: #dddcd6;
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
 
+    :root[data-theme="dark"] .topbar{
+      background: #12151d;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.55);
+    }
 
-/* LAYOUT */
+    .topbar-inner {
+      width: min(calc(100% - 24px), var(--maxw));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
 
-.main {
+    .brand {
+      display: flex;
+      align-items: center;
+    }
 
-  display: flex;
-  height: calc(100vh - 70px);
+    .logo{
+      height: 70px;
+      width: 70px;
+      object-fit: contain;
+      display: block;
+      margin-top: 5px;
+    }
 
-}
+    .top-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
 
+    .top-links a:hover,
+    .top-links a.active {
+      color: var(--brand);
+      font-weight: 700;
+    }
 
-.left {
+    .account-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
 
-  width: 50%;
-  border-right: 1px solid var(--line);
-  padding: 20px;
-  overflow-y: auto;
+    .account-btn{
+      width: 44px;
+      height: 44px;
+      border-radius: 999px;
+      border: 1px solid rgba(0,0,0,0.10);
+      background: rgba(248,247,243,0.85);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.20);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: transform .15s ease, box-shadow .15s ease;
+    }
 
-}
+    .account-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 14px 28px rgba(0,0,0,0.24);
+    }
 
-.right {
+    .account-btn svg{
+      width: 22px;
+      height: 22px;
+      stroke: #111;
+      stroke-width: 2.2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
 
-  width: 50%;
-  padding: 20px;
-  overflow-y: auto;
+    :root[data-theme="dark"] .account-btn{
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.16);
+      background: rgba(255,255,255,0.08);
+    }
 
-}
+    :root[data-theme="dark"] .account-btn svg{
+      stroke: rgba(255,255,255,0.88);
+    }
 
+    .account-menu{
+      position: absolute;
+      right: 0;
+      top: calc(100% + 10px);
+      width: 230px;
+      background: rgba(252,251,248,0.98);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: 20px;
+      box-shadow: 0 18px 38px rgba(0,0,0,0.22);
+      overflow: hidden;
+      display: none;
+      z-index: 30;
+    }
 
+    .account-menu.open{ display: block; }
 
-h2 {
-  margin-top: 0;
-}
+    :root[data-theme="dark"] .account-menu{
+      background: #151821;
+      border: 1px solid rgba(255,255,255,0.14);
+    }
 
+    .account-menu-head{
+      padding: 14px 14px 10px;
+      border-bottom: 1px solid var(--line);
+    }
 
+    .account-menu-title{
+      font-weight: 700;
+      letter-spacing: .01em;
+    }
 
-/* BUG */
+    .account-menu-sub{
+      margin-top: 4px;
+      font-size: .9rem;
+      color: var(--muted);
+    }
 
-.bug {
+    .account-menu-actions{
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+    }
 
-  padding: 10px;
-  margin-bottom: 8px;
-  border-radius: 8px;
-  font-weight: 600;
+    .menu-item{
+      width: 100%;
+      text-align: left;
+      border: 1px solid rgba(0,0,0,0.08);
+      background: rgba(248,247,243,0.86);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: 650;
+      transition: transform .12s ease, background .12s ease;
+    }
 
-}
+    .menu-item:hover{
+      transform: translateY(-1px);
+      background: rgba(248,247,243,1);
+    }
 
-.bug-open {
+    :root[data-theme="dark"] .menu-item{
+      color: rgba(255,255,255,0.88);
+      border-color: rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+    }
 
-  background: #ffdddd;
-  border: 1px solid #ff0000;
+    :root[data-theme="dark"] .menu-item:hover{
+      background: rgba(255,255,255,0.10);
+    }
 
-}
+    .page {
+      width: min(calc(100% - 24px), var(--maxw));
+      margin: 0 auto;
+      padding: 28px 0 40px;
+    }
 
-.bug-fixed {
+    .hero-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--soft-shadow);
+      padding: 28px 28px 24px;
+      margin-bottom: 20px;
+    }
 
-  background: #ddffdd;
-  border: 1px solid #00aa00;
+    .hero-title {
+      margin: 0;
+      font-size: clamp(1.9rem, 4vw, 3rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
 
-}
+    .hero-sub {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.55;
+      max-width: 850px;
+      font-size: 1rem;
+    }
 
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
 
+    .panel-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--soft-shadow);
+      padding: 20px;
+      min-height: 540px;
+    }
 
-/* UPDATE */
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
 
-.update {
+    .panel-head h2 {
+      margin: 0;
+      font-size: 1.3rem;
+      font-weight: 700;
+    }
 
-  padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
+    .panel-note {
+      color: var(--muted);
+      font-size: .92rem;
+    }
 
-}
+    .stack {
+      display: grid;
+      gap: 12px;
+    }
 
-.date {
+    .bug-item,
+    .update-item {
+      border-radius: 20px;
+      padding: 16px 16px 14px;
+      border: 1px solid var(--line);
+      background: var(--panel-2);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.04);
+    }
 
-  font-size: 12px;
-  color: gray;
+    .bug-item.open {
+      background: rgba(255, 84, 84, 0.10);
+      border-color: rgba(220, 50, 50, 0.50);
+    }
 
-}
+    .bug-item.fixed {
+      background: rgba(70, 190, 100, 0.11);
+      border-color: rgba(40, 150, 70, 0.48);
+    }
 
-</style>
+    :root[data-theme="dark"] .bug-item.open {
+      background: rgba(255, 84, 84, 0.12);
+      border-color: rgba(255, 110, 110, 0.34);
+    }
+
+    :root[data-theme="dark"] .bug-item.fixed {
+      background: rgba(70, 190, 100, 0.12);
+      border-color: rgba(90, 210, 120, 0.30);
+    }
+
+    .item-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+
+    .item-title {
+      font-size: 1rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: .78rem;
+      font-weight: 800;
+      letter-spacing: .02em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .status-badge.open {
+      color: #8d1111;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid rgba(200,30,30,0.35);
+    }
+
+    .status-badge.fixed {
+      color: #0f6d2c;
+      background: rgba(255,255,255,0.7);
+      border: 1px solid rgba(20,140,60,0.35);
+    }
+
+    :root[data-theme="dark"] .status-badge.open {
+      color: #ff9e9e;
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,120,120,0.26);
+    }
+
+    :root[data-theme="dark"] .status-badge.fixed {
+      color: #9ef0b5;
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(120,255,160,0.22);
+    }
+
+    .item-meta {
+      color: var(--muted);
+      font-size: .85rem;
+      margin-bottom: 6px;
+    }
+
+    .item-text {
+      color: var(--text);
+      line-height: 1.5;
+      font-size: .96rem;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .panel-card {
+        min-height: auto;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .topbar-inner {
+        flex-wrap: wrap;
+        justify-content: space-between;
+      }
+
+      .top-links {
+        width: 100%;
+        order: 3;
+        padding-bottom: 6px;
+        gap: 14px;
+        font-size: 0.9rem;
+      }
+
+      .hero-card {
+        padding: 22px 18px 20px;
+        border-radius: 28px;
+      }
+
+      .panel-card {
+        padding: 16px;
+        border-radius: 24px;
+      }
+    }
+  </style>
 </head>
-
-
-
 <body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <a href="index.html">
+          <img id="mainLogo"
+               src="item/Logoagora.png"
+               data-light="item/Logoagora.png"
+               data-dark="item/Logoagoradark.png"
+               class="logo"
+               alt="Agora">
+        </a>
+      </div>
 
+      <nav class="top-links">
+        <a href="index.html">Home</a>
+        <a href="principles.html">Principles</a>
+        <a href="manifesto.html">Manifesto</a>
+        <a href="bug-release.html" class="active">Bug / Release</a>
+      </nav>
 
-<div class="topbar">
+      <div class="account-wrap">
+        <button id="accountBtn" class="account-btn" aria-label="Settings" aria-haspopup="menu" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 21a8 8 0 0 0-16 0"></path>
+            <circle cx="12" cy="8" r="4"></circle>
+          </svg>
+        </button>
 
-BUG & RELEASES
+        <div id="accountMenu" class="account-menu" role="menu" aria-hidden="true">
+          <div class="account-menu-head">
+            <div class="account-menu-title">Display</div>
+            <div class="account-menu-sub">Same theme system as Home</div>
+          </div>
+          <div class="account-menu-actions">
+            <button id="themeToggleBtn" class="menu-item" role="menuitem">Dark mode</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
 
-</div>
+  <main class="page">
+    <section class="hero-card">
+      <h1 class="hero-title">Bug & Release Board</h1>
+      <p class="hero-sub">
+        On the left, current bugs and fixed issues. On the right, the latest updates and release notes.
+      </p>
+    </section>
 
+    <section class="layout">
+      <section class="panel-card">
+        <div class="panel-head">
+          <h2>Bug reports</h2>
+          <div class="panel-note">Red = to fix · Green = solved</div>
+        </div>
 
+        <div class="stack">
+          <article class="bug-item open">
+            <div class="item-top">
+              <div class="item-title">Login not working on mobile</div>
+              <span class="status-badge open">Open</span>
+            </div>
+            <div class="item-meta">Bug #001</div>
+            <div class="item-text">
+              Some mobile users may fail to complete login correctly in specific flows.
+            </div>
+          </article>
 
-<div class="main">
+          <article class="bug-item open">
+            <div class="item-top">
+              <div class="item-title">Map slow loading</div>
+              <span class="status-badge open">Open</span>
+            </div>
+            <div class="item-meta">Bug #002</div>
+            <div class="item-text">
+              Cultural points loading can still be slow in some large map areas.
+            </div>
+          </article>
 
+          <article class="bug-item fixed">
+            <div class="item-top">
+              <div class="item-title">Avatar upload fixed</div>
+              <span class="status-badge fixed">Fixed</span>
+            </div>
+            <div class="item-meta">Bug #003</div>
+            <div class="item-text">
+              Avatar upload and preview now behave correctly after the latest patch.
+            </div>
+          </article>
 
-<!-- LEFT BUGS -->
+          <article class="bug-item fixed">
+            <div class="item-top">
+              <div class="item-title">Comments crash fixed</div>
+              <span class="status-badge fixed">Fixed</span>
+            </div>
+            <div class="item-meta">Bug #004</div>
+            <div class="item-text">
+              A thread-related error that could break the comments panel has been resolved.
+            </div>
+          </article>
+        </div>
+      </section>
 
-<div class="left">
+      <section class="panel-card">
+        <div class="panel-head">
+          <h2>Latest updates</h2>
+          <div class="panel-note">Recent release notes</div>
+        </div>
 
-<h2>Bugs</h2>
+        <div class="stack">
+          <article class="update-item">
+            <div class="item-top">
+              <div class="item-title">Added cultural map</div>
+            </div>
+            <div class="item-meta">2026-03-12 · Release 0.4.0</div>
+            <div class="item-text">
+              Introduced the new map section focused on cultural and study-related places.
+            </div>
+          </article>
 
+          <article class="update-item">
+            <div class="item-top">
+              <div class="item-title">Improved editor speed</div>
+            </div>
+            <div class="item-meta">2026-03-11 · Release 0.3.8</div>
+            <div class="item-text">
+              Optimized the post editor for better responsiveness and cleaner interactions.
+            </div>
+          </article>
 
-<div class="bug bug-open">
-Login not working on mobile
-</div>
+          <article class="update-item">
+            <div class="item-top">
+              <div class="item-title">Profile system updated</div>
+            </div>
+            <div class="item-meta">2026-03-10 · Release 0.3.5</div>
+            <div class="item-text">
+              Refined profile editing, avatar handling and general account-related UI behavior.
+            </div>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
 
-<div class="bug bug-open">
-Map slow loading
-</div>
+  <script>
+    const THEME_KEY = "agora_theme";
 
-<div class="bug bug-fixed">
-Avatar upload fixed
-</div>
+    const accountBtn = document.getElementById("accountBtn");
+    const accountMenu = document.getElementById("accountMenu");
+    const themeToggleBtn = document.getElementById("themeToggleBtn");
 
-<div class="bug bug-fixed">
-Comments crash fixed
-</div>
+    function applyTheme(theme){
+      const root = document.documentElement;
+      const logo = document.getElementById("mainLogo");
 
+      if (!logo) return;
 
-</div>
+      const lightSrc = logo.dataset.light;
+      const darkSrc  = logo.dataset.dark;
 
+      if (theme === "dark"){
+        root.setAttribute("data-theme", "dark");
+        logo.src = darkSrc;
+      } else {
+        root.removeAttribute("data-theme");
+        logo.src = lightSrc;
+      }
+    }
 
+    function getPreferredTheme(){
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === "dark" || saved === "light") return saved;
+      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
 
-<!-- RIGHT UPDATES -->
+    function syncThemeUi(){
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      if (themeToggleBtn) themeToggleBtn.textContent = isDark ? "Light mode" : "Dark mode";
+    }
 
-<div class="right">
+    function toggleTheme(){
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      const next = isDark ? "light" : "dark";
+      localStorage.setItem(THEME_KEY, next);
+      applyTheme(next);
+      syncThemeUi();
+    }
 
-<h2>Updates</h2>
+    function openMenu() {
+      accountMenu.classList.add("open");
+      accountBtn.setAttribute("aria-expanded", "true");
+      accountMenu.setAttribute("aria-hidden", "false");
+    }
 
+    function closeMenu() {
+      accountMenu.classList.remove("open");
+      accountBtn.setAttribute("aria-expanded", "false");
+      accountMenu.setAttribute("aria-hidden", "true");
+    }
 
-<div class="update">
-<div class="date">2026-03-12</div>
-Added cultural map
-</div>
+    accountBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (accountMenu.classList.contains("open")) closeMenu();
+      else openMenu();
+    });
 
+    themeToggleBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleTheme();
+    });
 
-<div class="update">
-<div class="date">2026-03-11</div>
-Improved editor speed
-</div>
+    accountMenu.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
 
+    document.addEventListener("click", () => {
+      closeMenu();
+    });
 
-<div class="update">
-<div class="date">2026-03-10</div>
-Profile system updated
-</div>
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeMenu();
+    });
 
-
-</div>
-
-
-</div>
-
-
+    applyTheme(getPreferredTheme());
+    syncThemeUi();
+  </script>
 </body>
 </html>
