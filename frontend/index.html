@@ -3150,7 +3150,7 @@
             const avatar = escapeHtml(c.author_picture_url || '/avatar-default.png');
             const isMine = myEmail && myEmail === String(c.author_email || "").trim().toLowerCase();
             const side   = isMine ? "mine" : "theirs";
-            const canBlock = !isMine && canInteract;
+            const canBlock = !isMine && !!getToken();
             const commentMenuHtml = (isMine || canBlock) ? `
               <div class="comment-menu-wrap">
                 <button class="comment-menu-btn" type="button" aria-label="Opzioni commento">···</button>
