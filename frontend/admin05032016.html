@@ -1296,6 +1296,12 @@
   if (adminToken) {
     showAdminPanel();
   }
+
+  setInterval(() => {
+    loadBugsFromApi();
+    loadReleases();
+  }, 30000); // ogni 30 secondi
+    
 </script>
 </body>
 </html>
