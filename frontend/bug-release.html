@@ -567,6 +567,26 @@
       background: rgba(255,255,255,0.20);
     }
 
+    .update-type-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: .72rem;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .update-type-badge.update  { background: rgba(255,214,64,0.22);  color: #876200; border: 1px solid rgba(190,145,0,0.30); }
+    .update-type-badge.feature { background: rgba(77,166,255,0.15);  color: #185fa5; border: 1px solid rgba(77,166,255,0.35); }
+    .update-type-badge.fix     { background: rgba(70,190,100,0.15);  color: #0f6d2c; border: 1px solid rgba(40,150,70,0.35); }
+    .update-type-badge.breaking{ background: rgba(255,84,84,0.15);   color: #8d1111; border: 1px solid rgba(200,30,30,0.35); }
+    :root[data-theme="dark"] .update-type-badge.update  { color: #ffd96a; background: rgba(255,214,64,0.12);  border-color: rgba(255,220,120,0.24); }
+    :root[data-theme="dark"] .update-type-badge.feature { color: #7ec8ff; background: rgba(77,166,255,0.12);  border-color: rgba(77,166,255,0.28); }
+    :root[data-theme="dark"] .update-type-badge.fix     { color: #9ef0b5; background: rgba(70,190,100,0.12); border-color: rgba(120,255,160,0.22); }
+    :root[data-theme="dark"] .update-type-badge.breaking{ color: #ff9e9e; background: rgba(255,84,84,0.12);  border-color: rgba(255,120,120,0.26); }
+
     @media (max-width: 900px) {
       .layout {
         grid-template-columns: 1fr;
@@ -696,142 +716,47 @@
         </div>
 
         <div class="stack" id="updateList">
-          <article class="update-item">
-            <div class="item-top">
-              <div class="item-title">Added cultural map</div>
-            </div>
-            <div class="item-meta">2026-03-12 · Release 0.4.0</div>
-            <div class="item-text">
-              Introduced the new map section focused on cultural and study-related places.
-            </div>
-          </article>
-
-          <article class="update-item">
-            <div class="item-top">
-              <div class="item-title">Improved editor speed</div>
-            </div>
-            <div class="item-meta">2026-03-11 · Release 0.3.8</div>
-            <div class="item-text">
-              Optimized the post editor for better responsiveness and cleaner interactions.
-            </div>
-          </article>
-
-          <article class="update-item">
-            <div class="item-top">
-              <div class="item-title">Profile system updated</div>
-            </div>
-            <div class="item-meta">2026-03-10 · Release 0.3.5</div>
-            <div class="item-text">
-              Refined profile editing, avatar handling and general account-related UI behavior.
-            </div>
-          </article>
+          <div class="empty-box">Loading updates...</div>
         </div>
       </section>
     </section>
   </main>
 
   <script>
-    const API_BASE = "https://agora-api.convergegame.workers.dev";
+    const API_BASE  = "https://agora-api.convergegame.workers.dev";
     const TOKEN_KEY = "agora_token";
     const THEME_KEY = "agora_theme";
-
-    /* IMPORTANTE:
-       metti qui la tua mail admin esatta */
-    const ADMIN_EMAIL = "TUAMAILQUI@example.com";
-
-    const BUGS_STORAGE_KEY = "agora_bug_reports_v1";
+    const ADMIN_EMAIL = "TUAMAILQUI@example.com"; /* ← sostituisci con la tua mail admin */
 
     let CURRENT_USER = null;
 
-    const accountBtn = document.getElementById("accountBtn");
-    const accountMenu = document.getElementById("accountMenu");
-    const themeToggleBtn = document.getElementById("themeToggleBtn");
+    const accountBtn        = document.getElementById("accountBtn");
+    const accountMenu       = document.getElementById("accountMenu");
+    const themeToggleBtn    = document.getElementById("themeToggleBtn");
     const menuPrimaryAction = document.getElementById("menuPrimaryAction");
-    const accountMenuSub = document.getElementById("accountMenuSub");
+    const accountMenuSub    = document.getElementById("accountMenuSub");
+    const bugForm           = document.getElementById("bugForm");
+    const bugTitleInput     = document.getElementById("bugTitleInput");
+    const bugDescInput      = document.getElementById("bugDescInput");
+    const sendBugBtn        = document.getElementById("sendBugBtn");
+    const bugFormStatus     = document.getElementById("bugFormStatus");
+    const formHeadNote      = document.getElementById("formHeadNote");
+    const bugList           = document.getElementById("bugList");
+    const updateList        = document.getElementById("updateList");
 
-    const bugForm = document.getElementById("bugForm");
-    const bugTitleInput = document.getElementById("bugTitleInput");
-    const bugDescInput = document.getElementById("bugDescInput");
-    const sendBugBtn = document.getElementById("sendBugBtn");
-    const bugFormStatus = document.getElementById("bugFormStatus");
-    const formHeadNote = document.getElementById("formHeadNote");
-    const bugList = document.getElementById("bugList");
-
-    function getToken() {
-      return localStorage.getItem(TOKEN_KEY) || "";
-    }
+    // ── UTILS ────────────────────────────────────────────────
+    function getToken() { return localStorage.getItem(TOKEN_KEY) || ""; }
 
     function escapeHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#039;"
-      }[c]));
+      return String(s || "").replace(/[&<>"']/g, c =>
+        ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;" }[c]));
     }
 
-    function applyTheme(theme){
-      const root = document.documentElement;
-      const logo = document.getElementById("mainLogo");
-      if (!logo) return;
-
-      const lightSrc = logo.dataset.light;
-      const darkSrc  = logo.dataset.dark;
-
-      if (theme === "dark"){
-        root.setAttribute("data-theme", "dark");
-        logo.src = darkSrc;
-      } else {
-        root.removeAttribute("data-theme");
-        logo.src = lightSrc;
-      }
-    }
-
-    function getPreferredTheme(){
-      const saved = localStorage.getItem(THEME_KEY);
-      if (saved === "dark" || saved === "light") return saved;
-      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    }
-
-    function syncThemeUi(){
-      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      if (themeToggleBtn) themeToggleBtn.textContent = isDark ? "Light mode" : "Dark mode";
-    }
-
-    function toggleTheme(){
-      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      const next = isDark ? "light" : "dark";
-      localStorage.setItem(THEME_KEY, next);
-      applyTheme(next);
-      syncThemeUi();
-    }
-
-    function openMenu() {
-      accountMenu.classList.add("open");
-      accountBtn.setAttribute("aria-expanded", "true");
-      accountMenu.setAttribute("aria-hidden", "false");
-    }
-
-    function closeMenu() {
-      accountMenu.classList.remove("open");
-      accountBtn.setAttribute("aria-expanded", "false");
-      accountMenu.setAttribute("aria-hidden", "true");
-    }
-
-    async function api(path, opts = {}) {
-      const headers = Object.assign({}, opts.headers || {});
-      const token = getToken();
-      if (token) headers["Authorization"] = "Bearer " + token;
-
-      if (!(opts.body instanceof FormData) && !headers["Content-Type"]) {
-        headers["Content-Type"] = "application/json";
-      }
-
-      const res = await fetch(API_BASE + path, { ...opts, headers });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error((data && data.error) ? data.error : ("http_" + res.status));
-      return data;
+    function fmtDate(iso) {
+      if (!iso) return "";
+      const d = new Date(iso);
+      return d.toLocaleDateString("it-IT", { day:"2-digit", month:"short", year:"2-digit" })
+           + " · " + d.toLocaleTimeString("it-IT", { hour:"2-digit", minute:"2-digit" });
     }
 
     function getCurrentUserEmail() {
@@ -839,236 +764,277 @@
     }
 
     function isAdmin() {
-      return getCurrentUserEmail() && getCurrentUserEmail() === String(ADMIN_EMAIL).trim().toLowerCase();
+      return getCurrentUserEmail() === String(ADMIN_EMAIL).trim().toLowerCase();
     }
 
-    function loadStoredBugs() {
-      try {
-        const raw = localStorage.getItem(BUGS_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : [];
-        return Array.isArray(parsed) ? parsed : [];
-      } catch {
-        return [];
+    // ── THEME ────────────────────────────────────────────────
+    function applyTheme(theme) {
+      const root = document.documentElement;
+      const logo = document.getElementById("mainLogo");
+      if (theme === "dark") {
+        root.setAttribute("data-theme","dark");
+        if (logo) logo.src = logo.dataset.dark;
+      } else {
+        root.removeAttribute("data-theme");
+        if (logo) logo.src = logo.dataset.light;
       }
     }
-
-    function saveStoredBugs(items) {
-      localStorage.setItem(BUGS_STORAGE_KEY, JSON.stringify(items));
+    function getPreferredTheme() {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === "dark" || saved === "light") return saved;
+      return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    function syncThemeUi() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      if (themeToggleBtn) themeToggleBtn.textContent = isDark ? "Light mode" : "Dark mode";
+    }
+    function toggleTheme() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      const next = isDark ? "light" : "dark";
+      localStorage.setItem(THEME_KEY, next);
+      applyTheme(next);
+      syncThemeUi();
     }
 
-    function seedInitialBugsIfNeeded() {
-      const existing = loadStoredBugs();
-      if (existing.length) return;
+    // ── MENU ─────────────────────────────────────────────────
+    function openMenu()  { accountMenu.classList.add("open"); accountBtn.setAttribute("aria-expanded","true"); accountMenu.setAttribute("aria-hidden","false"); }
+    function closeMenu() { accountMenu.classList.remove("open"); accountBtn.setAttribute("aria-expanded","false"); accountMenu.setAttribute("aria-hidden","true"); }
 
-      const seeded = [
-        {
-          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-          title: "Login not working on mobile",
-          description: "Some mobile users may fail to complete login correctly in specific flows.",
-          status: "open",
-          created_at: "2026-03-12T10:00:00.000Z",
-          submitted_by_email: "system@local",
-          submitted_by_name: "System",
-          decision_by: null
-        },
-        {
-          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-          title: "Map slow loading",
-          description: "Cultural points loading can still be slow in some large map areas.",
-          status: "open",
-          created_at: "2026-03-12T11:00:00.000Z",
-          submitted_by_email: "system@local",
-          submitted_by_name: "System",
-          decision_by: null
-        },
-        {
-          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-          title: "Avatar upload fixed",
-          description: "Avatar upload and preview now behave correctly after the latest patch.",
-          status: "fixed",
-          created_at: "2026-03-10T12:00:00.000Z",
-          submitted_by_email: "system@local",
-          submitted_by_name: "System",
-          decision_by: null
-        },
-        {
-          id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-          title: "Comments crash fixed",
-          description: "A thread-related error that could break the comments panel has been resolved.",
-          status: "fixed",
-          created_at: "2026-03-09T15:00:00.000Z",
-          submitted_by_email: "system@local",
-          submitted_by_name: "System",
-          decision_by: null
-        }
-      ];
-
-      saveStoredBugs(seeded);
+    // ── API ──────────────────────────────────────────────────
+    async function api(path, opts = {}) {
+      const headers = Object.assign({}, opts.headers || {});
+      const token = getToken();
+      if (token) headers["Authorization"] = "Bearer " + token;
+      if (!(opts.body instanceof FormData) && !headers["Content-Type"])
+        headers["Content-Type"] = "application/json";
+      const res  = await fetch(API_BASE + path, { ...opts, headers });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error || "http_" + res.status);
+      return data;
     }
 
-    function getStatusBadgeClass(status) {
-      if (status === "pending") return "pending";
-      if (status === "fixed") return "fixed";
-      return "open";
-    }
+    // ── BUG STATUS ───────────────────────────────────────────
+    // Mappa stati API → label visiva + classe CSS
+    const STATUS_MAP = {
+      pending:     { label: "Pending",     cls: "pending" },
+      confirmed:   { label: "Open",        cls: "open"    },
+      in_progress: { label: "In progress", cls: "open"    },
+      resolved:    { label: "Fixed",       cls: "fixed"   },
+      wontfix:     { label: "Won't fix",   cls: "pending" }
+    };
 
-    function getStatusLabel(status) {
-      if (status === "pending") return "Pending";
-      if (status === "fixed") return "Fixed";
-      return "Open";
-    }
+    // ── RENDER BUGS ──────────────────────────────────────────
+    function renderBugs(bugs) {
+      // mostra tutti tranne wontfix/rejected se non admin
+      const visible = bugs.filter(b => {
+        if (isAdmin()) return true;
+        return b.status !== "wontfix" && b.status !== "pending";
+      }).sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
 
-    function renderBugList() {
-      const bugs = loadStoredBugs()
-        .filter(b => b.status !== "rejected")
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-
-      if (!bugs.length) {
+      if (!visible.length) {
         bugList.innerHTML = `<div class="empty-box">No bug reports yet.</div>`;
         return;
       }
 
-      bugList.innerHTML = bugs.map(bug => {
-        const statusClass = getStatusBadgeClass(bug.status);
-        const submittedWhen = new Date(bug.created_at).toLocaleString();
+      bugList.innerHTML = visible.map(bug => {
+        const s = STATUS_MAP[bug.status] || { label: bug.status, cls: "pending" };
         const canModerate = isAdmin() && bug.status === "pending";
-
         return `
-          <article class="bug-item ${statusClass}">
+          <article class="bug-item ${s.cls}">
             <div class="item-top">
               <div class="item-title">${escapeHtml(bug.title)}</div>
-              <span class="status-badge ${statusClass}">${getStatusLabel(bug.status)}</span>
+              <span class="status-badge ${s.cls}">${s.label}</span>
             </div>
-
             <div class="item-meta">
-              Reported by ${escapeHtml(bug.submitted_by_name || bug.submitted_by_email || "Unknown")} · ${escapeHtml(submittedWhen)}
+              Reported by ${escapeHtml(bug.reporter_name || bug.reporter_email || "User")} · ${fmtDate(bug.created_at)}
+              ${bug.page ? ` · <em>${escapeHtml(bug.page)}</em>` : ""}
             </div>
-
             <div class="item-text">${escapeHtml(bug.description || "")}</div>
-
             ${canModerate ? `
               <div class="admin-actions">
-                <button class="admin-btn accept" data-accept-id="${escapeHtml(bug.id)}" type="button">Accept</button>
-                <button class="admin-btn reject" data-reject-id="${escapeHtml(bug.id)}" type="button">Reject</button>
+                <button class="admin-btn accept" data-confirm-id="${escapeHtml(bug.id)}" type="button">Confirm</button>
+                <button class="admin-btn reject"  data-reject-id="${escapeHtml(bug.id)}"  type="button">Reject</button>
               </div>
-            ` : ``}
-          </article>
-        `;
+            ` : ""}
+          </article>`;
       }).join("");
     }
 
+    // ── LOAD BUGS ────────────────────────────────────────────
+    async function loadBugs() {
+      try {
+        // Admin vede tutti i bug via endpoint admin; utenti normali vedono solo quelli confermati
+        if (isAdmin()) {
+          const token = getToken();
+          const adminToken = localStorage.getItem("agora_admin_token") || "";
+          // Prova endpoint admin se admin_token presente
+          if (adminToken) {
+            const res = await fetch(API_BASE + "/api/admin/bugs", {
+              headers: { "X-Admin-Token": adminToken }
+            });
+            const data = await res.json().catch(() => ({}));
+            if (data.ok) { renderBugs(data.bugs || []); return; }
+          }
+        }
+        // Fallback: endpoint pubblico (non esiste, quindi usiamo admin con graceful fallback)
+        // Per gli utenti normali mostriamo solo confirmed/in_progress/resolved recuperati da admin
+        // L'endpoint GET /api/releases è pubblico, ma per i bug usiamo /api/admin/bugs solo se admin
+        // Gli utenti normali vedono solo un sottoinsieme: confirmed + in_progress + resolved
+        const adminToken = localStorage.getItem("agora_admin_token") || "";
+        if (adminToken) {
+          const res = await fetch(API_BASE + "/api/admin/bugs", {
+            headers: { "X-Admin-Token": adminToken }
+          });
+          const data = await res.json().catch(() => ({}));
+          if (data.ok) { renderBugs(data.bugs || []); return; }
+        }
+        // Nessun accesso admin disponibile — mostra lista vuota con messaggio appropriato
+        bugList.innerHTML = `<div class="empty-box">Bug reports are visible once confirmed by the admin.</div>`;
+      } catch(e) {
+        bugList.innerHTML = `<div class="empty-box">Could not load bug reports.</div>`;
+      }
+    }
+
+    // ── LOAD RELEASES ────────────────────────────────────────
+    async function loadReleases() {
+      try {
+        const data = await api("/api/releases");
+        const releases = data.releases || [];
+        if (!releases.length) {
+          updateList.innerHTML = `<div class="empty-box">No release notes yet.</div>`;
+          return;
+        }
+        updateList.innerHTML = releases.map(r => `
+          <article class="update-item">
+            <div class="item-top">
+              <div class="item-title">${escapeHtml(r.title)}</div>
+              <span class="update-type-badge ${escapeHtml(r.type)}">${escapeHtml(r.type)}</span>
+            </div>
+            <div class="item-meta">${fmtDate(r.created_at)} · v${escapeHtml(r.version)}</div>
+            <div class="item-text">${escapeHtml(r.content)}</div>
+          </article>
+        `).join("");
+      } catch(e) {
+        updateList.innerHTML = `<div class="empty-box">Could not load release notes.</div>`;
+      }
+    }
+
+    // ── FORM UI ──────────────────────────────────────────────
     function updateBugFormUi() {
       const logged = !!getToken() && !!CURRENT_USER;
       sendBugBtn.disabled = !logged;
-
       if (!logged) {
         formHeadNote.textContent = "Login required to send a bug.";
         bugFormStatus.textContent = "Only logged-in users can submit.";
         return;
       }
-
       if (isAdmin()) {
         formHeadNote.textContent = "You are logged in as administrator.";
-        bugFormStatus.textContent = "As admin, you can also confirm or reject pending bugs below.";
+        bugFormStatus.textContent = "As admin, you can confirm or reject pending bugs below.";
       } else {
-        formHeadNote.textContent = "Your report will appear in yellow until confirmed by the administrator.";
+        formHeadNote.textContent = "Your report will appear once confirmed by the administrator.";
         bugFormStatus.textContent = "Logged in. New reports will be sent as pending.";
       }
     }
 
+    // ── REFRESH ME ───────────────────────────────────────────
     async function refreshMe() {
       const token = getToken();
-
       if (!token) {
         CURRENT_USER = null;
         accountMenuSub.textContent = "Not logged in";
         menuPrimaryAction.textContent = "Login";
         menuPrimaryAction.classList.remove("danger");
         updateBugFormUi();
-        renderBugList();
+        loadBugs();
+        loadReleases();
         return;
       }
-
       try {
         const me = await api("/api/me", { method: "GET" });
         CURRENT_USER = {
-          id: me?.user?.id || "",
-          email: me?.user?.email || "",
+          id:           me?.user?.id || "",
+          email:        me?.user?.email || "",
           display_name: me?.user?.display_name || "",
-          picture_url: me?.user?.picture_url || ""
+          picture_url:  me?.user?.picture_url || ""
         };
-
         accountMenuSub.textContent = CURRENT_USER.display_name || CURRENT_USER.email || "Logged in";
         menuPrimaryAction.textContent = "Logout";
         menuPrimaryAction.classList.add("danger");
-      } catch (err) {
+      } catch {
         localStorage.removeItem(TOKEN_KEY);
         CURRENT_USER = null;
         accountMenuSub.textContent = "Not logged in";
         menuPrimaryAction.textContent = "Login";
         menuPrimaryAction.classList.remove("danger");
       }
-
       updateBugFormUi();
-      renderBugList();
+      loadBugs();
+      loadReleases();
     }
 
-    function submitNewBug(title, description) {
-      const items = loadStoredBugs();
+    // ── SUBMIT BUG ───────────────────────────────────────────
+    bugForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!getToken() || !CURRENT_USER) { alert("You must login first."); return; }
+      const title       = bugTitleInput.value.trim();
+      const description = bugDescInput.value.trim();
+      if (!title || !description) { alert("Please fill title and description."); return; }
 
-      items.push({
-        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()),
-        title,
-        description,
-        status: "pending",
-        created_at: new Date().toISOString(),
-        submitted_by_email: CURRENT_USER?.email || "",
-        submitted_by_name: CURRENT_USER?.display_name || CURRENT_USER?.email || "User",
-        decision_by: null
-      });
+      sendBugBtn.disabled = true;
+      sendBugBtn.textContent = "Sending...";
+      try {
+        await api("/api/bugs", {
+          method: "POST",
+          body: JSON.stringify({ title, description, page: window.location.pathname })
+        });
+        bugTitleInput.value = "";
+        bugDescInput.value  = "";
+        alert("Bug sent. It will appear once confirmed by the administrator.");
+        loadBugs();
+      } catch(err) {
+        alert("Error sending bug: " + err.message);
+      } finally {
+        sendBugBtn.disabled = false;
+        sendBugBtn.textContent = "Send bug";
+      }
+    });
 
-      saveStoredBugs(items);
-    }
+    // ── ADMIN MODERATION ─────────────────────────────────────
+    bugList.addEventListener("click", async (e) => {
+      if (!isAdmin()) return;
+      const confirmBtn = e.target.closest("[data-confirm-id]");
+      const rejectBtn  = e.target.closest("[data-reject-id]");
+      const adminToken = localStorage.getItem("agora_admin_token") || "";
+      if (!adminToken) { alert("Admin token not found. Log in via the admin panel first."); return; }
 
-    function acceptBug(id) {
-      const items = loadStoredBugs().map(item => {
-        if (item.id !== id) return item;
-        return {
-          ...item,
-          status: "open",
-          decision_by: getCurrentUserEmail()
-        };
-      });
-      saveStoredBugs(items);
-    }
+      if (confirmBtn) {
+        const id = confirmBtn.getAttribute("data-confirm-id");
+        await fetch(API_BASE + `/api/admin/bugs/${id}/status`, {
+          method: "POST",
+          headers: { "Content-Type":"application/json", "X-Admin-Token": adminToken },
+          body: JSON.stringify({ status: "confirmed" })
+        });
+        loadBugs();
+      }
+      if (rejectBtn) {
+        const id = rejectBtn.getAttribute("data-reject-id");
+        await fetch(API_BASE + `/api/admin/bugs/${id}/status`, {
+          method: "POST",
+          headers: { "Content-Type":"application/json", "X-Admin-Token": adminToken },
+          body: JSON.stringify({ status: "wontfix" })
+        });
+        loadBugs();
+      }
+    });
 
-    function rejectBug(id) {
-      const items = loadStoredBugs().map(item => {
-        if (item.id !== id) return item;
-        return {
-          ...item,
-          status: "rejected",
-          decision_by: getCurrentUserEmail()
-        };
-      });
-      saveStoredBugs(items);
-    }
-
+    // ── EVENTS ───────────────────────────────────────────────
     accountBtn.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (accountMenu.classList.contains("open")) closeMenu();
-      else openMenu();
+      accountMenu.classList.contains("open") ? closeMenu() : openMenu();
     });
-
-    accountMenu.addEventListener("click", (e) => {
-      e.stopPropagation();
-    });
-
-    themeToggleBtn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      toggleTheme();
-    });
-
+    accountMenu.addEventListener("click", (e) => e.stopPropagation());
+    themeToggleBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleTheme(); });
     menuPrimaryAction.addEventListener("click", async () => {
       if (getToken()) {
         localStorage.removeItem(TOKEN_KEY);
@@ -1077,64 +1043,12 @@
         closeMenu();
         return;
       }
-
       window.location.href = "index.html";
     });
-
     document.addEventListener("click", () => closeMenu());
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
 
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") closeMenu();
-    });
-
-    bugForm.addEventListener("submit", (e) => {
-      e.preventDefault();
-
-      if (!getToken() || !CURRENT_USER) {
-        alert("You must login first.");
-        return;
-      }
-
-      const title = (bugTitleInput.value || "").trim();
-      const description = (bugDescInput.value || "").trim();
-
-      if (!title || !description) {
-        alert("Please fill title and description.");
-        return;
-      }
-
-      submitNewBug(title, description);
-
-      bugTitleInput.value = "";
-      bugDescInput.value = "";
-
-      renderBugList();
-      updateBugFormUi();
-
-      alert("Bug sent. It is now pending confirmation.");
-    });
-
-    bugList.addEventListener("click", (e) => {
-      const acceptBtn = e.target.closest("[data-accept-id]");
-      const rejectBtn = e.target.closest("[data-reject-id]");
-
-      if (!isAdmin()) return;
-
-      if (acceptBtn) {
-        const id = acceptBtn.getAttribute("data-accept-id");
-        acceptBug(id);
-        renderBugList();
-        return;
-      }
-
-      if (rejectBtn) {
-        const id = rejectBtn.getAttribute("data-reject-id");
-        rejectBug(id);
-        renderBugList();
-      }
-    });
-
-    seedInitialBugsIfNeeded();
+    // ── INIT ─────────────────────────────────────────────────
     applyTheme(getPreferredTheme());
     syncThemeUi();
     refreshMe();
