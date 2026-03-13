@@ -1197,6 +1197,23 @@
     else showToast("Errore: " + data.error, true);
   }
 
+  async function saveAllBugs() {
+    const rows = document.querySelectorAll("[id^='sel-']");
+    let ok = 0, err = 0;
+    for (const sel of rows) {
+      const id   = sel.id.replace("sel-","");
+      const status = sel.value;
+      const note   = document.getElementById("note-" + id)?.value || "";
+      const data = await adminApi(`/api/admin/bugs/${id}/status`, {
+        method: "POST",
+        body: JSON.stringify({ status, admin_note: note })
+      });
+      data.ok ? ok++ : err++;
+    }
+    showToast(`Salvati ${ok} bug${err ? `, ${err} errori` : ""}.`);
+    loadBugs();
+  }
+
   // ════════════════════════════════════════════════════════
   // ── RELEASES ────────────────────────────────────────────
   // ════════════════════════════════════════════════════════
