@@ -1643,7 +1643,7 @@
       </section>
 
 
-      <div class="h-title">Book of posts</div>
+      <div class="h-title" id="bookPostsTitle">Book of posts</div>
       <div id="bookStage" class="book-stage" aria-label="Book viewer">
 
         <!-- Spine decoration -->
@@ -1732,9 +1732,9 @@
         </div>
 
       </div><!-- /bookStage posts -->
-
+      <div id="savedBookSection">
       <div class="h-title">Book of saved posts</div>
-<div id="savedBookStage" class="book-stage" aria-label="Book viewer">
+      <div id="savedBookStage" class="book-stage" aria-label="Book viewer">
         <div class="book-stage-spine" aria-hidden="true"></div>
         <button id="savedOpenIndexBtn" class="file-btn book-index-btn" type="button">Index</button>
         <div class="book-shell" id="savedBookShell" tabindex="0" aria-label="Book pages">
@@ -1799,6 +1799,7 @@
           </div>
         </div>
       </div><!-- /bookStage saved -->
+      </div>
 
       <!-- Utenti bloccati -->
       <div class="blocked-section" id="blockedSection" style="display:none;">
@@ -2574,41 +2575,60 @@ async function loadPosts(){
   showEmpty("Loading…", "Fetching posts…");
 
   // Modalità visualizzazione profilo altrui
-  if (VIEW_USER_ID) {
-    const found = await loadViewUser();
-    if (!found) {
-      showEmpty("User not found", "This profile does not exist or has been removed.");
-      renderSpread();
-      return;
-    }
-    // Mostra banner con nome/avatar dell'utente visualizzato
-    const banner = document.getElementById("viewUserBanner");
-    if (banner) {
-      banner.innerHTML = `
-        <img src="${escapeHtml(VIEW_USER.picture_url || '/avatar-default.png')}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />
-        <span style="font-weight:700;">${escapeHtml(VIEW_USER.display_name || "User")}</span>
-        <a href="account.html" style="margin-left:auto;font-size:0.85rem;color:var(--muted);">← Back to my profile</a>
-      `;
-      banner.style.display = "flex";
-    }
-    try {
-      const posts = await fetchViewUserPosts();
-      POSTS = normalizePosts(posts || []);
-      spreadIndex = 0;
-      renderSpread();
-    } catch(e) {
-      POSTS = [];
-      showEmpty("Failed to load", "Try refreshing.");
-      renderSpread();
-    }
-    // Nascondi sezioni personali (blocchi, form profilo, saved)
-    ["profileForm", "blockedSection", "savedSection"].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.style.display = "none";
-    });
+if (VIEW_USER_ID) {
+  // Esegui refreshMe comunque per mantenere la sessione dell'utente loggato
+  await refreshMe();
+
+  const found = await loadViewUser();
+  if (!found) {
+    showEmpty("User not found", "This profile does not exist or has been removed.");
+    renderSpread();
     return;
   }
 
+  // Titolo libro
+  const bookTitle = document.getElementById("bookPostsTitle");
+  if (bookTitle) bookTitle.textContent = `Books of ${VIEW_USER.display_name || "User"}`;
+
+  // Banner avatar + nome
+  const banner = document.getElementById("viewUserBanner");
+  if (banner) {
+    banner.innerHTML = `
+      <img src="${escapeHtml(VIEW_USER.picture_url || '/avatar-default.png')}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />
+      <span style="font-weight:700;">${escapeHtml(VIEW_USER.display_name || "User")}</span>
+      <a href="account.html" style="margin-left:auto;font-size:0.85rem;color:var(--muted);">← Back to my profile</a>
+    `;
+    banner.style.display = "flex";
+  }
+
+  // Carica i post dell'utente visitato
+  try {
+    const posts = await fetchViewUserPosts();
+    POSTS = normalizePosts(posts || []);
+    spreadIndex = 0;
+    renderSpread();
+  } catch(e) {
+    POSTS = [];
+    showEmpty("Failed to load", "Try refreshing.");
+    renderSpread();
+  }
+
+  // Nascondi sezioni personali
+  ["profileForm", "profilePickAvatarBtn", "blockedSection", "savedBookSection"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "none";
+  });
+
+  // Mostra avatar dell'utente visitato nella profile-card
+  const avatarPreview = document.getElementById("profileAvatarPreview");
+  if (avatarPreview && VIEW_USER.picture_url) {
+    avatarPreview.style.backgroundImage = `url('${escapeHtml(VIEW_USER.picture_url)}')`;
+    avatarPreview.style.backgroundSize = "cover";
+    avatarPreview.style.backgroundPosition = "center";
+  }
+
+  return;
+}
   await refreshMe();
 
   if (!CURRENT_USER){
