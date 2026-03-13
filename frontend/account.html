@@ -2059,10 +2059,11 @@ let VIEW_USER = null;
 
 
 function resetPersonalSections() {
-  ["profileForm", "profilePickAvatarBtn", "blockedSection", "savedBookSection", "yourBooksTitle"].forEach(id => {
+  ["profileForm", "profilePickAvatarBtn", "savedBookSection", "yourBooksTitle"].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = "";
+    if (el) el.style.removeProperty("display");
   });
+  // blockedSection parte hidden di default, non toccarla
 }
 
 
