@@ -1322,6 +1322,47 @@
       color: rgba(0,0,0,0.35);
       padding: 0 4px;
     }
+    .comment-row-wrap{
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+    }
+    .comment-row.mine .comment-row-wrap{ flex-direction: row-reverse; }
+    .comment-menu-wrap{ position: relative; flex-shrink: 0; }
+    .comment-menu-btn{
+      background: none; border: none; cursor: pointer;
+      padding: 2px 5px; border-radius: 8px;
+      opacity: 0; transition: opacity .15s;
+      color: var(--muted);
+      font-size: 1rem; line-height: 1;
+    }
+    .comment-row-wrap:hover .comment-menu-btn{ opacity: 1; }
+    .comment-menu{
+      position: absolute; bottom: 100%; right: 0;
+      background: var(--panel, #fff);
+      border: 1px solid rgba(0,0,0,0.10);
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.14);
+      min-width: 130px;
+      display: none; z-index: 100;
+      padding: 4px;
+    }
+    .comment-row.mine .comment-menu{ right: auto; left: 0; }
+    .comment-menu.open{ display: block; }
+    .comment-menu-item{
+      display: block; width: 100%;
+      padding: 8px 12px; background: none;
+      border: none; text-align: left;
+      font-size: .88rem; border-radius: 8px;
+      cursor: pointer; color: var(--text);
+    }
+    .comment-menu-item:hover{ background: rgba(0,0,0,0.06); }
+    .comment-menu-item.danger{ color: rgba(160,0,0,0.9); }
+    :root[data-theme="dark"] .comment-menu{
+      background: var(--panel-2);
+      border-color: rgba(255,255,255,0.12);
+    }
+    :root[data-theme="dark"] .comment-menu-item:hover{ background: rgba(255,255,255,0.08); }
 
     .thread-compose{
       display:flex;
@@ -3110,12 +3151,27 @@
             const isMine = myEmail && myEmail === String(c.author_email || "").trim().toLowerCase();
             const side   = isMine ? "mine" : "theirs";
             return `
+            const canBlock = !isMine && canInteract;
+            const commentMenuHtml = (isMine || canBlock) ? `
+              <div class="comment-menu-wrap">
+                <button class="comment-menu-btn" type="button" aria-label="Opzioni commento">···</button>
+                <div class="comment-menu">
+                  ${isMine ? `<button class="comment-menu-item danger c-del-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(c.post_id || '')}">Elimina</button>` : ''}
+                  ${canBlock ? `<button class="comment-menu-item c-block-btn"
+                    data-author-email="${escapeHtml(c.author_email || '')}"
+                    data-author-name="${escapeHtml(c.author_display_name || c.author_email || 'utente')}">Blocca</button>` : ''}
+                </div>
+              </div>` : '';
+            return `
             <div class="comment-row ${side}">
               ${!isMine ? `<div class="comment-who">
                 <img class="comment-avatar" src="${avatar}" />
                 <span class="comment-name">${who}</span>
               </div>` : ''}
-              <div class="comment-bubble ${side}">${text}</div>
+              <div class="comment-row-wrap">
+                <div class="comment-bubble ${side}">${text}</div>
+                ${commentMenuHtml}
+              </div>
               <span class="comment-time">${when}</span>
             </div>`;
           }).join("");
@@ -3124,6 +3180,50 @@
         if (threadComments) {
           threadComments.innerHTML = inner;
           requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
+
+          // ── menu ··· per ogni commento ──
+          threadComments.querySelectorAll(".comment-menu-btn").forEach(btn => {
+            btn.addEventListener("click", e => {
+              e.stopPropagation();
+              const wrap = btn.nextElementSibling;
+              const isOpen = wrap.classList.contains("open");
+              // chiudi tutti gli altri
+              threadComments.querySelectorAll(".comment-menu.open").forEach(m => m.classList.remove("open"));
+              wrap.classList.toggle("open", !isOpen);
+            });
+          });
+
+          threadComments.querySelectorAll(".c-del-btn").forEach(btn => {
+            btn.addEventListener("click", async e => {
+              e.stopPropagation();
+              threadComments.querySelectorAll(".comment-menu.open").forEach(m => m.classList.remove("open"));
+              const commentId = btn.dataset.commentId;
+              const postId    = btn.dataset.postId;
+              if (!commentId || !postId) return;
+              try {
+                await api(`/api/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`, { method: "DELETE" });
+                await renderThread(activeThreadKey);
+              } catch(err) {
+                alert("Eliminazione fallita: " + (err?.message || err));
+              }
+            });
+          });
+
+          threadComments.querySelectorAll(".c-block-btn").forEach(btn => {
+            btn.addEventListener("click", e => {
+              e.stopPropagation();
+              threadComments.querySelectorAll(".comment-menu.open").forEach(m => m.classList.remove("open"));
+              openBlockModal({
+                authorEmail: btn.dataset.authorEmail,
+                authorName:  btn.dataset.authorName
+              });
+            });
+          });
+
+          // chiudi menu cliccando fuori
+          document.addEventListener("click", () => {
+            threadComments.querySelectorAll(".comment-menu.open").forEach(m => m.classList.remove("open"));
+          }, { once: true });
         }
         bumpFeedCountsForKey(currentKey);
 
