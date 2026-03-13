@@ -1702,6 +1702,7 @@
 
         <!-- FOOTER META -->
         <div class="book-footer">
+          <div id="viewUserBanner" style="display:none; align-items:center; gap:12px; padding:10px 20px; background:var(--surface); border-bottom:1px solid var(--border);"></div>
           <div id="spreadMeta" class="book-meta-chip">—</div>
         </div>
 
@@ -2055,6 +2056,8 @@ if (emailLoginForm){
 
 /* ===== User state ===== */
 let CURRENT_USER = null; // {id,email,display_name,picture_url}
+let VIEW_USER_ID = new URLSearchParams(location.search).get('view') || null;
+let VIEW_USER = null; // {id, display_name, picture_url} caricato dall'API
 function userEmailLower(){ return String(CURRENT_USER && CURRENT_USER.email ? CURRENT_USER.email : "").trim().toLowerCase(); }
 
 async function refreshMe(){
@@ -2098,6 +2101,23 @@ async function refreshMe(){
     syncAccountAvatar();
     fillProfileForm();
   }
+}
+
+async function loadViewUser() {
+  if (!VIEW_USER_ID) return false;
+  try {
+    const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(VIEW_USER_ID)}`);
+    const data = await res.json();
+    if (!data.ok) return false;
+    VIEW_USER = data.user;
+    return true;
+  } catch(e) { return false; }
+}
+
+async function fetchViewUserPosts() {
+  const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(VIEW_USER_ID)}/posts`);
+  const data = await res.json();
+  return data.ok ? data.posts : [];
 }
 
 if (menuPrimaryAction){
@@ -2551,7 +2571,44 @@ if (refreshBtn) refreshBtn.addEventListener("click", ()=> loadPosts());
 })();
 
 async function loadPosts(){
-  showEmpty("Loading…", "Fetching your posts…");
+  showEmpty("Loading…", "Fetching posts…");
+
+  // Modalità visualizzazione profilo altrui
+  if (VIEW_USER_ID) {
+    const found = await loadViewUser();
+    if (!found) {
+      showEmpty("User not found", "This profile does not exist or has been removed.");
+      renderSpread();
+      return;
+    }
+    // Mostra banner con nome/avatar dell'utente visualizzato
+    const banner = document.getElementById("viewUserBanner");
+    if (banner) {
+      banner.innerHTML = `
+        <img src="${escapeHtml(VIEW_USER.picture_url || '/avatar-default.png')}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />
+        <span style="font-weight:700;">${escapeHtml(VIEW_USER.display_name || "User")}</span>
+        <a href="account.html" style="margin-left:auto;font-size:0.85rem;color:var(--muted);">← Back to my profile</a>
+      `;
+      banner.style.display = "flex";
+    }
+    try {
+      const posts = await fetchViewUserPosts();
+      POSTS = normalizePosts(posts || []);
+      spreadIndex = 0;
+      renderSpread();
+    } catch(e) {
+      POSTS = [];
+      showEmpty("Failed to load", "Try refreshing.");
+      renderSpread();
+    }
+    // Nascondi sezioni personali (blocchi, form profilo, saved)
+    ["profileForm", "blockedSection", "savedSection"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = "none";
+    });
+    return;
+  }
+
   await refreshMe();
 
   if (!CURRENT_USER){
