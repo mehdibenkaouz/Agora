@@ -3165,8 +3165,10 @@
             <div class="comment-row ${side}">
               ${!isMine ? `<div class="comment-who">
               <a href="account.html?user=${encodeURIComponent(c.author_email || '')}" style="display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;">
-                <img class="comment-avatar" src="${avatar}" />
-                <span class="comment-name">${who}</span>
+                <a href="account.html?view=${encodeURIComponent(c.author_id || '')}" style="display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;">
+                  <img class="comment-avatar" src="${avatar}" />
+                  <span class="comment-name">${who}</span>
+                </a>
               </a>
               </div>` : ''}
               <div class="comment-row-wrap">
@@ -3564,12 +3566,10 @@
         card.innerHTML = `
           <div class="post-head">
             <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+            <a href="account.html?view=${encodeURIComponent(p.author_id || '')}" style="display:flex;align-items:center;gap:10px;min-width:0;color:inherit;text-decoration:none;">
               <img class="comment-avatar" src="${escapeHtml(p.author_picture_url || '/avatar-default.png')}" />
-              <div class="post-author">
-                <a href="account.html?user=${encodeURIComponent(p.author_email || '')}" style="color:inherit;text-decoration:none;">
-                  ${escapeHtml(p.author_display_name || p.author_email || "anon")}
-                </a>
-              </div>
+              <div class="post-author">${escapeHtml(p.author_display_name || p.author_email || "anon")}</div>
+            </a>
             </div>
             <div class="post-head-right">
               <div class="post-date">${escapeHtml(new Date(p.created_at).toLocaleString())}</div>
