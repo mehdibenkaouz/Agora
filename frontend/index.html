@@ -2833,8 +2833,9 @@
     }
 
 
-    async function fetchCommentsForPost(postId) {
-      return await api(`/api/posts/${encodeURIComponent(postId)}/comments`, {
+    async function fetchCommentsForPost(postId, since = null) {
+      const qs = since ? `?since=${encodeURIComponent(since)}` : "";
+      return await api(`/api/posts/${encodeURIComponent(postId)}/comments${qs}`, {
         method: "GET"
       });
     }
@@ -3049,6 +3050,9 @@
     const postUI = new Map();      // key -> { up, saved, upBase, commentBase, localComments:[] }
     const postByKey = new Map();   // key -> post object from API
     let activeThreadKey = null;
+    let COMMENT_POLL_INTERVAL = null;
+    let THREAD_LAST_TS = null;
+    let THREAD_ACTIVE_POST_ID = null;
 
     function makePostKey(p, idx) {
       return String((p && (p.id || p.post_id || p.uuid)) || ((p?.created_at || "no_date") + "_" + idx));
@@ -3102,6 +3106,9 @@
 
     function clearThread() {
       activeThreadKey = null;
+      THREAD_ACTIVE_POST_ID = null;
+      THREAD_LAST_TS = null;
+      if (COMMENT_POLL_INTERVAL) { clearInterval(COMMENT_POLL_INTERVAL); COMMENT_POLL_INTERVAL = null; }
       setActiveCard(null);
 
       if (threadTitle) threadTitle.textContent = "Comments";
@@ -3164,11 +3171,9 @@
             return `
             <div class="comment-row ${side}">
               ${!isMine ? `<div class="comment-who">
-              <a href="account.html?user=${encodeURIComponent(c.author_email || '')}" style="display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;">
-                <a href="account.html?view=${encodeURIComponent(c.author_id || '')}" style="display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;">
-                  <img class="comment-avatar" src="${avatar}" />
-                  <span class="comment-name">${who}</span>
-                </a>
+              <a href="account.html?view=${encodeURIComponent(c.author_id || '')}" style="display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;">
+                <img class="comment-avatar" src="${avatar}" />
+                <span class="comment-name">${who}</span>
               </a>
               </div>` : ''}
               <div class="comment-row-wrap">
@@ -3242,6 +3247,100 @@
           threadFootnote.textContent = "Comments sync failed.";
         }
       }
+
+      // Avvia polling real-time
+      if (COMMENT_POLL_INTERVAL) clearInterval(COMMENT_POLL_INTERVAL);
+        const comments_all = Array.isArray(data.comments) ? data.comments : [];
+        THREAD_LAST_TS = comments_all.length ? comments_all[comments_all.length - 1].created_at : null;
+        THREAD_ACTIVE_POST_ID = p.id;
+        COMMENT_POLL_INTERVAL = setInterval(() => pollNewComments(p.id), 3000);
+    }
+    async function pollNewComments(postId) {
+      if (!postId || postId !== THREAD_ACTIVE_POST_ID) return;
+      try {
+        const data = await fetchCommentsForPost(postId, THREAD_LAST_TS);
+        const newComments = Array.isArray(data.comments) ? data.comments : [];
+        if (!newComments.length) return;
+
+        THREAD_LAST_TS = newComments[newComments.length - 1].created_at;
+
+        const st = postUI.get(activeThreadKey);
+        if (st) st.commentBase = (st.commentBase || 0) + newComments.length;
+
+        const myEmail = getCurrentUserEmail();
+        newComments.forEach(c => {
+          const who    = escapeHtml(c.author_display_name || c.author_email || "anon");
+          const when   = new Date(c.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+          const text   = escapeHtml(c.content || "");
+          const avatar = escapeHtml(c.author_picture_url || '/avatar-default.png');
+          const isMine = myEmail && myEmail === String(c.author_email || "").trim().toLowerCase();
+          const side   = isMine ? "mine" : "theirs";
+          const canBlock = !isMine && !!getToken();
+          const commentMenuHtml = (isMine || canBlock) ? `
+            <div class="comment-menu-wrap">
+              <button class="comment-menu-btn" type="button" aria-label="Opzioni commento">···</button>
+              <div class="comment-menu">
+                ${isMine ? `<button class="comment-menu-item danger c-del-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}">Elimina</button>` : ''}
+                ${canBlock ? `<button class="comment-menu-item c-block-btn"
+                  data-author-email="${escapeHtml(c.author_email || '')}"
+                  data-author-name="${escapeHtml(c.author_display_name || c.author_email || 'utente')}">Blocca</button>` : ''}
+              </div>
+            </div>` : '';
+
+          // Rimuovi "no comments yet" se presente
+          const empty = threadComments?.querySelector(".thread-empty");
+          if (empty) empty.remove();
+
+          const div = document.createElement("div");
+          div.className = `comment-row ${side}`;
+          div.innerHTML = `
+            ${!isMine ? `<div class="comment-who">
+              <a href="account.html?view=${encodeURIComponent(c.author_id || '')}" style="display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;">
+                <img class="comment-avatar" src="${avatar}" />
+                <span class="comment-name">${who}</span>
+              </a>
+            </div>` : ''}
+            <div class="comment-row-wrap">
+              <div class="comment-bubble ${side}">${text}</div>
+              ${commentMenuHtml}
+            </div>
+            <span class="comment-time">${when}</span>
+          `;
+
+          // Attacca eventi menu al nuovo commento
+          div.querySelectorAll(".comment-menu-btn").forEach(btn => {
+            btn.addEventListener("click", e => {
+              e.stopPropagation();
+              const wrap = btn.nextElementSibling;
+              const isOpen = wrap.classList.contains("open");
+              threadComments.querySelectorAll(".comment-menu.open").forEach(m => m.classList.remove("open"));
+              wrap.classList.toggle("open", !isOpen);
+            });
+          });
+          div.querySelectorAll(".c-del-btn").forEach(btn => {
+            btn.addEventListener("click", async e => {
+              e.stopPropagation();
+              const commentId = btn.dataset.commentId;
+              if (!commentId) return;
+              try {
+                await api(`/api/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`, { method: "DELETE" });
+                div.remove();
+              } catch(err) { alert("Eliminazione fallita: " + (err?.message || err)); }
+            });
+          });
+          div.querySelectorAll(".c-block-btn").forEach(btn => {
+            btn.addEventListener("click", e => {
+              e.stopPropagation();
+              openBlockModal({ authorEmail: btn.dataset.authorEmail, authorName: btn.dataset.authorName });
+            });
+          });
+
+          if (threadComments) threadComments.appendChild(div);
+        });
+
+        if (threadComments) requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
+        bumpFeedCountsForKey(activeThreadKey);
+      } catch(e) {}
     }
 
     function bumpFeedCountsForKey(key) {
