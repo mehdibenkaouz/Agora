@@ -1592,7 +1592,7 @@
       <div class="panel" style="margin-top: 18px;">
         <div class="account-head">
           <div>
-            <div class="h-title">Your Books</div>
+            <div class="h-title" id="yourBooksTitle">Your Books</div>
           </div>
           <div class="h-actions">
             <button id="refreshBtn" class="file-btn" type="button" title="Refresh">Refresh</button>
@@ -1616,28 +1616,20 @@
                 <input id="profileDisplayNameInput" type="text" maxlength="60" placeholder="Your public name" />
               </label>
 
-              <div class="field">
+              </form>
+
+              <div class="field" id="awardsSection">
                 <span>AWARDS</span>
                 <div class="awards-list">
                   <div class="award">
                     <img class="award-icon" src="item/Socrate_AW.png" alt="Socrates award">
-
                     <img class="award-icon" src="item/DaVinci_AW.png" alt="Da Vinci award">
-
                     <img class="award-icon" src="item/Alexandria_AW.png" alt="Library of Alexandria award">
-
                     <img class="award-icon" src="item/Hypatia_AW.png" alt="Hypatia award">
-
                     <img class="award-icon" src="item/Aristotele_AW.png" alt="Aristotle award">
                   </div>
                 </div>
               </div>
-
-              <div class="profile-actions">
-                <button id="profileSaveBtn" class="primary-btn" type="button">Save profile</button>
-                <div id="profileStatus" class="profile-status"></div>
-              </div>
-            </form>
 
         </div>
       </section>
@@ -2578,6 +2570,8 @@ async function loadPosts(){
 if (VIEW_USER_ID) {
   // Esegui refreshMe comunque per mantenere la sessione dell'utente loggato
   await refreshMe();
+  const yourBooksTitle = document.getElementById("yourBooksTitle");
+  if (yourBooksTitle) yourBooksTitle.style.display = "none";
 
   const found = await loadViewUser();
   if (!found) {
@@ -2593,14 +2587,16 @@ if (VIEW_USER_ID) {
   // Banner avatar + nome
   const banner = document.getElementById("viewUserBanner");
   if (banner) {
+    const myName = CURRENT_USER?.display_name || CURRENT_USER?.email || "Me";
+    const myPic  = CURRENT_USER?.picture_url || "";
     banner.innerHTML = `
-      <img src="${escapeHtml(VIEW_USER.picture_url || '/avatar-default.png')}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;" />
-      <span style="font-weight:700;">${escapeHtml(VIEW_USER.display_name || "User")}</span>
-      <a href="account.html" style="margin-left:auto;font-size:0.85rem;color:var(--muted);">← Back to my profile</a>
+      ${myPic ? `<img src="${escapeHtml(myPic)}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" />` : ""}
+      <span style="font-size:0.85rem;color:var(--muted);">Logged in as <strong>${escapeHtml(myName)}</strong></span>
+      <a href="account.html" style="margin-left:auto;font-size:0.85rem;color:var(--muted);">← My profile</a>
     `;
     banner.style.display = "flex";
   }
-
+  
   // Carica i post dell'utente visitato
   try {
     const posts = await fetchViewUserPosts();
@@ -2620,13 +2616,13 @@ if (VIEW_USER_ID) {
   });
 
   // Mostra avatar dell'utente visitato nella profile-card
-  const avatarPreview = document.getElementById("profileAvatarPreview");
-  if (avatarPreview && VIEW_USER.picture_url) {
-    avatarPreview.style.backgroundImage = `url('${escapeHtml(VIEW_USER.picture_url)}')`;
-    avatarPreview.style.backgroundSize = "cover";
-    avatarPreview.style.backgroundPosition = "center";
+  if (profileAvatarPreview) {
+    if (VIEW_USER.picture_url) {
+      profileAvatarPreview.innerHTML = `<img src="${escapeHtml(VIEW_USER.picture_url)}" alt="${escapeHtml(VIEW_USER.display_name || 'User')}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit;">`;
+    } else {
+      profileAvatarPreview.innerHTML = ACCOUNT_ICON_SVG;
+    }
   }
-
   return;
 }
   await refreshMe();
