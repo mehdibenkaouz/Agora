@@ -2051,7 +2051,13 @@ if (emailLoginForm){
 /* ===== User state ===== */
 let CURRENT_USER = null; // {id,email,display_name,picture_url}
 let VIEW_USER_ID = new URLSearchParams(location.search).get('view') || null;
-let VIEW_USER = null; // {id, display_name, picture_url} caricato dall'API
+let VIEW_USER = null;
+
+// Nascondi subito il contenuto se siamo in modalità view
+if (VIEW_USER_ID) {
+  document.documentElement.style.visibility = "hidden";
+}
+
 function userEmailLower(){ return String(CURRENT_USER && CURRENT_USER.email ? CURRENT_USER.email : "").trim().toLowerCase(); }
 
 async function refreshMe(){
@@ -2580,6 +2586,7 @@ if (VIEW_USER_ID) {
   if (!found) {
     showEmpty("User not found", "This profile does not exist or has been removed.");
     renderSpread();
+    document.documentElement.style.visibility = "visible";
     return;
   }
 
