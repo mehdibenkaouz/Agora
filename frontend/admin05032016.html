@@ -706,7 +706,13 @@
     <div class="section-header">
       <div class="section-title">Bug Reports <span id="bugs-subtitle" style="color:var(--muted);font-size:12px"></span></div>
       <button class="refresh-btn" onclick="loadBugs()">↻ Aggiorna</button>
+      <div style="display:flex;justify-content:flex-end;margin-top:16px">
+        <button class="action-btn accent" onclick="saveAllBugs()">▶ Salva tutto</button>
+      </div>
     </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:16px">
+  <button class="action-btn accent" onclick="saveAllBugs()">▶ Salva tutto</button>
+</div>
     <table class="data-table">
       <thead>
         <tr>
