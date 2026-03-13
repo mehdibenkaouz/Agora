@@ -1958,6 +1958,7 @@ function renderProfilePreview(url){
 }
 
 function fillProfileForm(){
+  if (VIEW_USER_ID) return; // in modalità view non sovrascrivere
   if (profileDisplayNameInput) {
     profileDisplayNameInput.value = CURRENT_USER?.display_name || "";
   }
