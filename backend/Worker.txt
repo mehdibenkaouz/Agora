@@ -188,6 +188,33 @@ export default {
         return json({ ok: true, posts: rows.results || [] }, 200, ALLOWED_ORIGIN);
       }
 
+
+      // ── MY POSTS: GET /api/my/posts ──────────────────────────────────
+      if (url.pathname === "/api/my/posts" && request.method === "GET") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const limit = Math.min(parseInt(url.searchParams.get("limit") || "200"), 200);
+        const rows = await env.dbagora.prepare(
+          `SELECT p.id, p.content, p.created_at,
+            u.id as author_id,
+            COALESCE(NULLIF(TRIM(u.display_name),''),
+              CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
+            ) AS author_display_name,
+            COALESCE(u.picture_url,'') AS author_picture_url
+          FROM posts p JOIN users u ON u.id = p.user_id
+          WHERE p.user_id = ?1
+          ORDER BY p.created_at ASC LIMIT ?2`
+        ).bind(session.user_id, limit).all();
+        return json({ ok: true, posts: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
+
       // ── COMMENTS: GET ────────────────────────────────────────────────
       const postCommentsMatch = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments$/);
       if (postCommentsMatch && request.method === "GET") {
@@ -570,7 +597,7 @@ export default {
           JOIN posts p ON p.id = sp.post_id
           JOIN users u ON u.id = p.user_id
           WHERE sp.user_id = ?1
-          ORDER BY sp.saved_at DESC LIMIT 100s
+          ORDER BY sp.saved_at DESC LIMIT 100
         `).bind(session.user_id).all();
         return json({ ok: true, posts: rows.results || [] }, 200, ALLOWED_ORIGIN);
       }

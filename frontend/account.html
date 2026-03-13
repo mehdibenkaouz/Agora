@@ -3091,7 +3091,6 @@ loadPosts();
   }
 
   window.loadSavedPosts = async function(){
-    showEmpty("Loading…", "Fetching saved posts…");
     if (!CURRENT_USER){
       SAVED_POSTS = []; renderSpread(); return;
     }
