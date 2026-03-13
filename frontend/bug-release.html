@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Bug & Releases – AGORÀ</title>
+
+<link rel="icon" type="image/png" sizes="32x32" href="item/Logoaagora.png">
+
+<style>
+
+:root {
+  --bg: #e8e5de;
+  --panel: #f8f7f3;
+  --text: #111;
+  --line: rgba(0,0,0,0.1);
+  --brand: #571929;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  font-family: system-ui, Arial;
+  color: var(--text);
+}
+
+
+/* TOPBAR */
+
+.topbar {
+  height: 70px;
+  background: white;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 22px;
+}
+
+
+/* LAYOUT */
+
+.main {
+
+  display: flex;
+  height: calc(100vh - 70px);
+
+}
+
+
+.left {
+
+  width: 50%;
+  border-right: 1px solid var(--line);
+  padding: 20px;
+  overflow-y: auto;
+
+}
+
+.right {
+
+  width: 50%;
+  padding: 20px;
+  overflow-y: auto;
+
+}
+
+
+
+h2 {
+  margin-top: 0;
+}
+
+
+
+/* BUG */
+
+.bug {
+
+  padding: 10px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  font-weight: 600;
+
+}
+
+.bug-open {
+
+  background: #ffdddd;
+  border: 1px solid #ff0000;
+
+}
+
+.bug-fixed {
+
+  background: #ddffdd;
+  border: 1px solid #00aa00;
+
+}
+
+
+
+/* UPDATE */
+
+.update {
+
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+
+}
+
+.date {
+
+  font-size: 12px;
+  color: gray;
+
+}
+
+</style>
+</head>
+
+
+
+<body>
+
+
+<div class="topbar">
+
+BUG & RELEASES
+
+</div>
+
+
+
+<div class="main">
+
+
+<!-- LEFT BUGS -->
+
+<div class="left">
+
+<h2>Bugs</h2>
+
+
+<div class="bug bug-open">
+Login not working on mobile
+</div>
+
+<div class="bug bug-open">
+Map slow loading
+</div>
+
+<div class="bug bug-fixed">
+Avatar upload fixed
+</div>
+
+<div class="bug bug-fixed">
+Comments crash fixed
+</div>
+
+
+</div>
+
+
+
+<!-- RIGHT UPDATES -->
+
+<div class="right">
+
+<h2>Updates</h2>
+
+
+<div class="update">
+<div class="date">2026-03-12</div>
+Added cultural map
+</div>
+
+
+<div class="update">
+<div class="date">2026-03-11</div>
+Improved editor speed
+</div>
+
+
+<div class="update">
+<div class="date">2026-03-10</div>
+Profile system updated
+</div>
+
+
+</div>
+
+
+</div>
+
+
+</body>
+</html>
