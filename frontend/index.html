@@ -1056,7 +1056,60 @@
       font-weight: 900;
     }
     .confirm-btn.danger{ color: rgba(160,0,0,0.95); }
-
+    /* ===== Block modal ===== */
+    .block-modal{ position:fixed; inset:0; display:none; z-index:2100; }
+    .block-modal.open{ display:block; }
+    .block-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,0.40); backdrop-filter:blur(8px); }
+    .block-card{
+      position:relative; max-width:780px; width:calc(100% - 32px);
+      margin:8vh auto 0; background:var(--panel,rgba(255,255,255,0.97));
+      border:1px solid rgba(0,0,0,0.10); border-radius:26px;
+      padding:24px; box-shadow:0 22px 50px rgba(0,0,0,0.25);
+      display:flex; flex-direction:column; gap:18px;
+    }
+    .block-card-header{ display:flex; justify-content:space-between; align-items:center; }
+    .block-card-title{ font-weight:900; font-size:1.15rem; }
+    .block-close-btn{ background:none; border:none; cursor:pointer; font-size:1.5rem; opacity:.45; line-height:1; padding:0; color:var(--text); }
+    .block-close-btn:hover{ opacity:1; }
+    .block-split{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+    .block-side{
+      border:2px solid rgba(0,0,0,0.09); border-radius:18px; padding:18px;
+      cursor:pointer; transition:border-color .18s, box-shadow .18s, background .18s;
+      display:flex; flex-direction:column; gap:10px;
+    }
+    .block-side:hover{ border-color:var(--brand); box-shadow:0 4px 18px rgba(0,0,0,0.10); }
+    .block-side.selected{ border-color:var(--brand); background:rgba(87,25,41,0.05); }
+    .block-side-title{ font-weight:800; font-size:.97rem; }
+    .block-side-desc{ font-size:.87rem; color:var(--muted); line-height:1.45; }
+    .block-side-effects{ font-size:.82rem; color:var(--muted); line-height:1.65; list-style:none; padding:0; margin:0; }
+    .block-side-effects li::before{ content:"• "; }
+    .block-reason{ display:none; flex-direction:column; gap:6px; margin-top:4px; }
+    .block-reason.visible{ display:flex; }
+    .block-reason-label{ font-size:.82rem; font-weight:700; color:var(--muted); }
+    .block-reason textarea{
+      width:100%; min-height:88px; max-height:180px; resize:vertical; overflow-y:auto;
+      border-radius:12px; border:1px solid rgba(0,0,0,0.14);
+      padding:10px 12px; font-size:.9rem; font-family:inherit;
+      background:var(--panel-2,#fcfbf8); color:var(--text);
+    }
+    .block-actions{ display:flex; justify-content:flex-end; gap:10px; }
+    .block-confirm-btn{
+      padding:10px 22px; border-radius:14px; border:none;
+      background:var(--brand); color:#fff; font-weight:900;
+      cursor:pointer; font-size:.93rem;
+    }
+    .block-confirm-btn:disabled{ opacity:.35; cursor:not-allowed; }
+    .block-cancel-btn{
+      padding:10px 16px; border-radius:14px;
+      border:1px solid rgba(0,0,0,0.12);
+      background:rgba(248,247,243,0.92); font-weight:700; cursor:pointer;
+    }
+    :root[data-theme="dark"] .block-card{ background:var(--panel); }
+    :root[data-theme="dark"] .block-side{ border-color:rgba(255,255,255,0.12); }
+    :root[data-theme="dark"] .block-side.selected{ background:rgba(168,235,246,0.07); }
+    :root[data-theme="dark"] .block-reason textarea{ background:var(--panel-2); border-color:rgba(255,255,255,0.14); color:var(--text); }
+    :root[data-theme="dark"] .block-cancel-btn{ background:rgba(255,255,255,0.08); color:#fff; border-color:rgba(255,255,255,0.15); }
+    
     .post-body{
       margin-top: 10px;
       font-size: 1.05rem;
@@ -3265,6 +3318,86 @@
         document.addEventListener("keydown", onKey);
       });
     }
+      function openBlockModal({ authorEmail, authorName }) {
+        const modal     = document.getElementById("blockModal");
+        const side1     = document.getElementById("blockSide1");
+        const side2     = document.getElementById("blockSide2");
+        const reason1   = document.getElementById("blockReason1");
+        const reasonTxt = document.getElementById("blockReasonText");
+        const confirmBtn= document.getElementById("blockConfirmBtn");
+        const cancelBtn = document.getElementById("blockCancelBtn");
+        const closeBtn  = document.getElementById("blockCloseBtn");
+        const backdrop  = document.getElementById("blockBackdrop");
+        const title     = document.getElementById("blockModalTitle");
+  
+        title.textContent = `Blocca ${authorName}`;
+        let selectedType = null;
+        side1.classList.remove("selected");
+        side2.classList.remove("selected");
+        reason1.classList.remove("visible");
+        reasonTxt.value = "";
+        confirmBtn.disabled = true;
+  
+        function selectSide(type) {
+          selectedType = type;
+          side1.classList.toggle("selected", type === 1);
+          side2.classList.toggle("selected", type === 2);
+          reason1.classList.toggle("visible", type === 1);
+          confirmBtn.disabled = (type === 1 && reasonTxt.value.trim().length === 0);
+        }
+  
+        side1.addEventListener("click", () => selectSide(1));
+        side2.addEventListener("click", () => selectSide(2));
+        reasonTxt.addEventListener("input", () => {
+          if (selectedType === 1) confirmBtn.disabled = reasonTxt.value.trim().length === 0;
+        });
+  
+        function open()  { modal.classList.add("open");    modal.setAttribute("aria-hidden","false"); }
+        function close() { modal.classList.remove("open"); modal.setAttribute("aria-hidden","true");
+          side1.removeEventListener("click", () => selectSide(1));
+          side2.removeEventListener("click", () => selectSide(2));
+        }
+        open();
+  
+        const onCancel = () => { cleanup(); close(); };
+        const onKey    = (e) => { if (e.key === "Escape") onCancel(); };
+  
+        confirmBtn.onclick = async () => {
+          if (!selectedType) return;
+          confirmBtn.disabled = true;
+          confirmBtn.textContent = "Invio…";
+          try {
+            await api("/api/blocks", {
+              method: "POST",
+              body: JSON.stringify({
+                blocked_email: authorEmail,
+                block_type:    selectedType,
+                reason:        selectedType === 1 ? reasonTxt.value.trim() : null
+              })
+            });
+            close();
+            await loadFeed();
+          } catch(err) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = "Conferma blocco";
+            alert("Blocco non riuscito: " + (err?.message || err));
+          }
+        };
+  
+        function cleanup() {
+          confirmBtn.onclick = null;
+          cancelBtn.onclick  = null;
+          closeBtn.onclick   = null;
+          backdrop.onclick   = null;
+          document.removeEventListener("keydown", onKey);
+        }
+  
+        cancelBtn.onclick  = () => { cleanup(); close(); };
+        closeBtn.onclick   = () => { cleanup(); close(); };
+        backdrop.onclick   = () => { cleanup(); close(); };
+        document.addEventListener("keydown", onKey);
+      }
+      
     function renderPosts(posts, savedIds = new Set(), append = false) {
       if (!append) {
         feed.innerHTML = "";
@@ -3296,7 +3429,7 @@
           myEmail.includes("@") &&
           myEmail === String(p.author_email || "").trim().toLowerCase();
 
-        const postMenuHtml = (isMine) ? `
+        const postMenuHtml = isMine ? `
           <div class="post-menu-wrap">
             <button class="post-menu-btn" type="button" aria-label="Post options" aria-haspopup="menu" aria-expanded="false">
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -3307,6 +3440,21 @@
             </button>
             <div class="post-menu" role="menu" aria-hidden="true">
               <button class="post-menu-item danger post-menu-delete" type="button" role="menuitem">Delete</button>
+            </div>
+          </div>
+        ` : (canInteract && myEmail.includes("@")) ? `
+          <div class="post-menu-wrap">
+            <button class="post-menu-btn" type="button" aria-label="Post options" aria-haspopup="menu" aria-expanded="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="5" r="1.8"></circle>
+                <circle cx="12" cy="12" r="1.8"></circle>
+                <circle cx="12" cy="19" r="1.8"></circle>
+              </svg>
+            </button>
+            <div class="post-menu" role="menu" aria-hidden="true">
+              <button class="post-menu-item post-menu-block" type="button" role="menuitem"
+                data-author-email="${escapeHtml(p.author_email || "")}"
+                data-author-name="${escapeHtml(p.author_display_name || p.author_email || "utente")}">Blocca</button>
             </div>
           </div>
         ` : "";
@@ -3367,6 +3515,7 @@
         const menuBtn = card.querySelector(".post-menu-btn");
         const menu = card.querySelector(".post-menu");
         const delPostBtn = card.querySelector(".post-menu-delete");
+        const blockPostBtn = card.querySelector(".post-menu-block");
 
         menuBtn?.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -3400,6 +3549,15 @@
             console.warn("delete_post_failed:", err);
             alert("Delete failed: " + (err?.message || err));
           }
+        });
+
+          blockPostBtn?.addEventListener("click", (e) => {
+          e.stopPropagation();
+          closeAllPostMenus();
+          openBlockModal({
+            authorEmail: blockPostBtn.dataset.authorEmail,
+            authorName:  blockPostBtn.dataset.authorName
+          });
         });
         upBtn?.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -4391,6 +4549,46 @@ Try again after ${until.toLocaleTimeString()}.`);
 
   </script>
 
+  <div id="blockModal" class="block-modal" aria-hidden="true">
+    <div class="block-backdrop" id="blockBackdrop"></div>
+    <div class="block-card" role="dialog" aria-modal="true" aria-labelledby="blockModalTitle">
+      <div class="block-card-header">
+        <div class="block-card-title" id="blockModalTitle">Blocca utente</div>
+        <button class="block-close-btn" id="blockCloseBtn" aria-label="Chiudi">×</button>
+      </div>
+      <div class="block-split">
+        <div class="block-side" id="blockSide1" data-type="1">
+          <div class="block-side-title">Blocco 1 — Blocco formale</div>
+          <div class="block-side-desc">Impedisce a questo utente di vedere i tuoi contenuti e viceversa. L'utente viene avvisato e può presentare reclamo.</div>
+          <ul class="block-side-effects">
+            <li>B non vede i tuoi post né commenti</li>
+            <li>Tu non vedi i post né commenti di B</li>
+            <li>Notifica inviata all'utente</li>
+            <li>L'utente può fare reclamo</li>
+          </ul>
+          <div class="block-reason" id="blockReason1">
+            <div class="block-reason-label">Motivo (obbligatorio)</div>
+            <textarea id="blockReasonText" placeholder="Spiega il motivo del blocco…" maxlength="1000"></textarea>
+          </div>
+        </div>
+        <div class="block-side" id="blockSide2" data-type="2">
+          <div class="block-side-title">Blocco 2 — Filtro personale</div>
+          <div class="block-side-desc">Nasconde i contenuti di questo utente solo dal tuo feed, in modo silenzioso. L'utente non viene informato.</div>
+          <ul class="block-side-effects">
+            <li>Tu non vedi i post né commenti di B</li>
+            <li>B continua a vedere i tuoi contenuti</li>
+            <li>Nessuna notifica all'utente</li>
+            <li>Nessuna spiegazione richiesta</li>
+          </ul>
+        </div>
+      </div>
+      <div class="block-actions">
+        <button class="block-cancel-btn" id="blockCancelBtn">Annulla</button>
+        <button class="block-confirm-btn" id="blockConfirmBtn" disabled>Conferma blocco</button>
+      </div>
+    </div>
+  </div>
+  
   <div id="confirmModal" class="confirm-modal" aria-hidden="true">
     <div class="confirm-backdrop"></div>
     <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
