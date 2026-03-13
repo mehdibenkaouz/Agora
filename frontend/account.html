@@ -2578,7 +2578,6 @@ if (VIEW_USER_ID) {
   // Esegui refreshMe comunque per mantenere la sessione dell'utente loggato
   await refreshMe();
   // Nascondi avatar preview finché non abbiamo i dati
-  if (profileAvatarPreview) profileAvatarPreview.style.visibility = "hidden";
   const yourBooksTitle = document.getElementById("yourBooksTitle");
   if (yourBooksTitle) yourBooksTitle.style.display = "none";
 
@@ -2634,6 +2633,7 @@ if (VIEW_USER_ID) {
     }
       profileAvatarPreview.style.visibility = "visible"; // ← mostra solo ora
   }
+    document.documentElement.style.visibility = "visible";
   return;
 }
   await refreshMe();
