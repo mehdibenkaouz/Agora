@@ -2053,6 +2053,15 @@ let CURRENT_USER = null; // {id,email,display_name,picture_url}
 let VIEW_USER_ID = new URLSearchParams(location.search).get('view') || null;
 let VIEW_USER = null;
 
+
+function resetPersonalSections() {
+  ["profileForm", "profilePickAvatarBtn", "blockedSection", "savedBookSection", "yourBooksTitle"].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = "";
+  });
+}
+
+
 // Nascondi subito il contenuto se siamo in modalità view
 if (VIEW_USER_ID) {
   document.documentElement.style.visibility = "hidden";
@@ -2572,6 +2581,7 @@ if (refreshBtn) refreshBtn.addEventListener("click", ()=> loadPosts());
 
 async function loadPosts(){
   showEmpty("Loading…", "Fetching posts…");
+  if (!VIEW_USER_ID) resetPersonalSections();
 
   // Modalità visualizzazione profilo altrui
 if (VIEW_USER_ID) {
