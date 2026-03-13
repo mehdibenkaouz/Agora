@@ -1168,11 +1168,9 @@
           <td style="color:var(--muted);font-size:11px">${fmtDate(b.created_at)}</td>
           <td><span class="badge badge-${b.status}">${BUG_STATUS_LABELS[b.status] || b.status}</span></td>
           <td>
-            <input class="bug-note-input" id="note-${b.id}" type="text" value="${esc(b.admin_note || '')}" placeholder="Nota..." />
-          </td>
+            <input class="bug-note-input" id="note-${b.id}" type="text" value="${esc(b.admin_note || '')}" data-original="${esc(b.admin_note || '')}" placeholder="Nota..." />          </td>
           <td>
-            <select style="background:var(--surface);border:1px solid var(--border2);color:var(--muted);font-family:var(--font-mono);font-size:10px;padding:3px 6px;outline:none" id="sel-${b.id}">
-              ${BUG_STATUS_OPTS.map(s => `<option value="${s}" ${s===b.status?'selected':''}>${s}</option>`).join('')}
+            <select style="background:var(--surface);border:1px solid var(--border2);color:var(--muted);font-family:var(--font-mono);font-size:10px;padding:3px 6px;outline:none" id="sel-${b.id}" data-original="${b.status}">              ${BUG_STATUS_OPTS.map(s => `<option value="${s}" ${s===b.status?'selected':''}>${s}</option>`).join('')}
             </select>
             <button class="action-btn" style="margin-top:4px" onclick="setBugStatus('${b.id}')">Salva</button>
           </td>
@@ -1298,9 +1296,13 @@
   }
 
 setInterval(() => {
-  if (adminToken) loadAll();
-}, 30000); // ogni 30 secondi
-    
+  if (adminToken) {
+    // salta se ci sono select o note modificate
+    const hasUnsaved = [...document.querySelectorAll("[id^='sel-'], [id^='note-']")]
+      .some(el => el.dataset.original !== undefined && el.dataset.original !== el.value);
+    if (!hasUnsaved) loadAll();
+  }
+}, 30000);
 </script>
 </body>
 </html>
