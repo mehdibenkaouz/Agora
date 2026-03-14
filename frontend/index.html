@@ -4973,6 +4973,7 @@ function startNotifPolling() {
       syncThemeUi();
       await refreshMe();
       await loadFeed();
+      startNotifPolling();
     })();
     hideThreadPanel();
     updatePostCounterAndPublish();
