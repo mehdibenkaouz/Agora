@@ -1755,6 +1755,51 @@
       object-fit: cover;
       flex-shrink: 0;
     }
+/* ===== Notifications modal ===== */
+.notif-modal {
+  position: fixed; inset: 0; display: none;
+  align-items: flex-start; justify-content: center;
+  padding: 80px 18px 18px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  z-index: 1500;
+}
+.notif-modal.open { display: flex; }
+.notif-card {
+  width: min(480px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+}
+.notif-card-head {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.notif-card-title { font-weight: 800; font-size: 1.1rem; }
+.notif-card-body { overflow-y: auto; flex: 1; }
+.notif-item {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  transition: background .12s;
+}
+.notif-item:hover { background: rgba(0,0,0,0.04); }
+.notif-item.unread { background: rgba(87,25,41,0.05); }
+:root[data-theme="dark"] .notif-item.unread { background: rgba(168,235,246,0.07); }
+.notif-item-msg { font-size: .93rem; line-height: 1.4; }
+.notif-item-time { font-size: .78rem; color: var(--muted); }
+.notif-empty { padding: 28px 18px; text-align: center; color: var(--muted); font-size: .95rem; }
 
     
   </style>
@@ -4960,6 +5005,18 @@ Try again after ${until.toLocaleTimeString()}.`);
       </div>
     </div>
   </div>
-
+<div id="notifModal" class="notif-modal" aria-hidden="true">
+  <div class="notif-card">
+    <div class="notif-card-head">
+      <span class="notif-card-title">Notifications</span>
+      <button id="notifClose" class="icon-x" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12"/><path d="M18 6L6 18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="notif-card-body" id="notifList"></div>
+  </div>
+</div>
 </body>
 </html>
