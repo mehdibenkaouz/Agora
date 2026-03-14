@@ -4947,7 +4947,16 @@ Try again after ${until.toLocaleTimeString()}.`);
     const notifList  = document.getElementById("notifList");
     const notifBtn   = document.querySelector(".action-btn[aria-label='Notifications']");
     const notifDot   = notifBtn?.querySelector(".notif-dot");
-    
+
+    function updateNotifDot(count) {
+      if (!notifDot) return;
+      if (count > 0) {
+        notifDot.textContent = count > 99 ? "99+" : String(count);
+        notifDot.style.display = "flex";
+      } else {
+        notifDot.style.display = "none";
+      }
+    }
     let NOTIF_POLL = null;
     
     async function loadNotifications() {
