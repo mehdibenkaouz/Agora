@@ -3533,7 +3533,15 @@
         st.commentBase = (Number(st.commentBase) || 0) + 1;
         bumpFeedCountsForKey(activeThreadKey);
 
-        await renderThread(activeThreadKey);
+        // Se siamo in un thread annidato, ricarica il livello corrente
+        if (parentCommentId && threadNavStack.length) {
+          const current = threadNavStack[threadNavStack.length - 1];
+          const data = await fetchCommentsForPost(p.id, null, current.commentId);
+          const comments = Array.isArray(data.comments) ? data.comments : [];
+          await renderThreadReplies(p.id, current.commentId, comments);
+        } else {
+          await renderThread(activeThreadKey);
+        }
 
       } catch (err) {
         console.warn("send_comment_failed:", err);
