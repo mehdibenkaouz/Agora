@@ -1674,16 +1674,25 @@
       position: relative;
     }
 
-    .icon-btn .notif-dot {
+    .icon-btn .notif-dot,
+    .action-btn .notif-dot {
       position: absolute;
-      top: 4px;
-      right: 4px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
+      top: 2px;
+      right: 2px;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      border-radius: 999px;
       background: var(--brand);
+      color: #fff;
+      font-size: .7rem;
+      font-weight: 800;
       display: none;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
     }
+:root[data-theme="dark"] .action-btn .notif-dot { color: #000; }
     .rt-editor{
       transition: box-shadow 150ms ease;
     }
