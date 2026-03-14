@@ -1868,7 +1868,8 @@
       <aside class="right-column">
         <section class="comments-card" id="threadPanel">
           <div class="thread-head">
-            <div>
+            <div style="flex:1;min-width:0;">
+              <div id="threadBreadcrumb" style="display:none;font-size:.8rem;color:var(--muted);margin-bottom:4px;cursor:pointer;"></div>
               <h2 id="threadTitle">Comments</h2>
               <div class="thread-sub" id="threadSub"></div>
             </div>
@@ -2833,17 +2834,20 @@
     }
 
 
-    async function fetchCommentsForPost(postId, since = null) {
-      const qs = since ? `?since=${encodeURIComponent(since)}` : "";
+    async function fetchCommentsForPost(postId, since = null, parentId = null) {
+      const params = new URLSearchParams();
+      if (since) params.set("since", since);
+      if (parentId) params.set("parent_id", parentId);
+      const qs = params.toString() ? "?" + params.toString() : "";
       return await api(`/api/posts/${encodeURIComponent(postId)}/comments${qs}`, {
         method: "GET"
       });
     }
 
-    async function createCommentForPost(postId, content) {
+    async function createCommentForPost(postId, content, parentCommentId = null) {
       return await api(`/api/posts/${encodeURIComponent(postId)}/comments`, {
         method: "POST",
-        body: JSON.stringify({ content })
+        body: JSON.stringify({ content, parent_comment_id: parentCommentId })
       });
     }
 
@@ -3053,6 +3057,7 @@
     let COMMENT_POLL_INTERVAL = null;
     let THREAD_LAST_TS = null;
     let THREAD_ACTIVE_POST_ID = null;
+    let threadNavStack = []; 
 
     function makePostKey(p, idx) {
       return String((p && (p.id || p.post_id || p.uuid)) || ((p?.created_at || "no_date") + "_" + idx));
@@ -3105,6 +3110,10 @@
 
 
     function clearThread() {
+      threadNavStack = [];
+      const bc = document.getElementById("threadBreadcrumb");
+      if (bc) bc.style.display = "none";
+      if (threadSendBtn) delete threadSendBtn.dataset.parentCommentId;
       activeThreadKey = null;
       THREAD_ACTIVE_POST_ID = null;
       THREAD_LAST_TS = null;
@@ -3169,20 +3178,35 @@
                 </div>
               </div>` : '';
             return `
-            <div class="comment-row ${side}">
+            <div class="comment-row ${side}" data-comment-id="${escapeHtml(c.id)}">
               ${!isMine ? `<div class="comment-who">
-              <a href="account.html?view=${encodeURIComponent(c.author_id || '')}" style="display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;">
-                <img class="comment-avatar" src="${avatar}" />
-                <span class="comment-name">${who}</span>
-              </a>
+                <a href="account.html?view=${encodeURIComponent(c.author_id || '')}" style="display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;">
+                  <img class="comment-avatar" src="${avatar}" />
+                  <span class="comment-name">${who}</span>
+                </a>
               </div>` : ''}
               <div class="comment-row-wrap">
                 <div class="comment-bubble ${side}">${text}</div>
                 ${commentMenuHtml}
               </div>
-              <span class="comment-time">${when}</span>
+              <div style="display:flex;align-items:center;gap:8px;padding:0 2px;">
+                <span class="comment-time">${when}</span>
+                <button class="c-open-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(p.id)}" data-author="${escapeHtml(who)}"
+                  style="background:none;border:none;cursor:pointer;font-size:.75rem;color:var(--muted);padding:0;opacity:.7;">
+                  💬 Open
+                </button>
+              </div>
             </div>`;
           }).join("");
+          threadComments.querySelectorAll(".c-open-btn").forEach(btn => {
+            btn.addEventListener("click", async e => {
+              e.stopPropagation();
+              const commentId = btn.dataset.commentId;
+              const postId    = btn.dataset.postId;
+              const author    = btn.dataset.author;
+              await drillIntoComment(postId, commentId, author);
+            });
+          });
         }
 
         if (threadComments) {
@@ -3252,10 +3276,10 @@
         }
       }
     }
-    async function pollNewComments(postId) {
+    async function pollNewComments(postId, parentCommentId = null) {
       if (!postId || postId !== THREAD_ACTIVE_POST_ID) return;
       try {
-        const data = await fetchCommentsForPost(postId, THREAD_LAST_TS);
+        const data = await fetchCommentsForPost(postId, THREAD_LAST_TS, parentCommentId);
         const newComments = Array.isArray(data.comments) ? data.comments : [];
         if (!newComments.length) return;
 
@@ -3340,6 +3364,132 @@
       } catch(e) {}
     }
 
+    async function drillIntoComment(postId, commentId, label) {
+      // Ferma il polling corrente
+      if (COMMENT_POLL_INTERVAL) { clearInterval(COMMENT_POLL_INTERVAL); COMMENT_POLL_INTERVAL = null; }
+    
+      // Salva posizione nello stack
+      threadNavStack.push({ postId, commentId, label });
+    
+      // Carica il commento padre come "intestazione"
+      let parentComment = null;
+      try {
+        const res = await api(`/api/comments/${encodeURIComponent(commentId)}`);
+        parentComment = res.comment;
+      } catch(e) {}
+    
+      // Aggiorna UI breadcrumb
+      updateThreadBreadcrumb();
+    
+      // Mostra il commento padre in cima
+      if (threadTitle) threadTitle.textContent = `Replies`;
+      if (threadSub && parentComment) {
+        threadSub.textContent = `${escapeHtml(label)}: "${escapeHtml((parentComment.content || "").slice(0, 60))}${parentComment.content?.length > 60 ? '…' : ''}"`;
+      }
+    
+      // Carica le risposte a questo commento
+      if (threadComments) threadComments.innerHTML = `<div class="thread-empty">Loading replies...</div>`;
+    
+      try {
+        const data = await fetchCommentsForPost(postId, null, commentId);
+        const comments = Array.isArray(data.comments) ? data.comments : [];
+        
+        // Aggiorna il post corrente nel thread con parent_id corrente
+        // Riusa renderThread ma per i figli
+        await renderThreadReplies(postId, commentId, comments);
+      } catch(e) {
+        if (threadComments) threadComments.innerHTML = `<div class="thread-empty">Failed to load replies.</div>`;
+      }
+    }
+
+    function updateThreadBreadcrumb() {
+      const el = document.getElementById("threadBreadcrumb");
+      if (!el) return;
+      if (!threadNavStack.length) { el.style.display = "none"; return; }
+      
+      el.style.display = "block";
+      el.innerHTML = `← Back`;
+      el.onclick = () => popThreadNav();
+    }
+
+    async function popThreadNav() {
+      threadNavStack.pop();
+      
+      if (COMMENT_POLL_INTERVAL) { clearInterval(COMMENT_POLL_INTERVAL); COMMENT_POLL_INTERVAL = null; }
+      
+      if (!threadNavStack.length) {
+        // Torna al thread del post originale
+        await renderThread(activeThreadKey);
+        const el = document.getElementById("threadBreadcrumb");
+        if (el) el.style.display = "none";
+      } else {
+        // Torna al livello precedente
+        const prev = threadNavStack[threadNavStack.length - 1];
+        threadNavStack.pop(); // rimuovi temporaneamente per permettere drill
+        await drillIntoComment(prev.postId, prev.commentId, prev.label);
+      }
+    }
+
+    async function renderThreadReplies(postId, parentCommentId, comments) {
+      const myEmail = getCurrentUserEmail();
+      
+      let inner = "";
+      if (!comments.length) {
+        inner = `<div class="thread-empty">No replies yet. Be the first!</div>`;
+      } else {
+        inner = comments.map(c => {
+          const who    = escapeHtml(c.author_display_name || c.author_email || "anon");
+          const when   = new Date(c.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+          const text   = escapeHtml(c.content || "");
+          const avatar = escapeHtml(c.author_picture_url || '/avatar-default.png');
+          const isMine = myEmail && myEmail === String(c.author_email || "").trim().toLowerCase();
+          const side   = isMine ? "mine" : "theirs";
+    
+          return `
+          <div class="comment-row ${side}" data-comment-id="${escapeHtml(c.id)}">
+            ${!isMine ? `<div class="comment-who">
+              <a href="account.html?view=${encodeURIComponent(c.author_id || '')}" style="display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;">
+                <img class="comment-avatar" src="${avatar}" />
+                <span class="comment-name">${who}</span>
+              </a>
+            </div>` : ''}
+            <div class="comment-row-wrap">
+              <div class="comment-bubble ${side}">${text}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;padding:0 2px;">
+              <span class="comment-time">${when}</span>
+              <button class="c-open-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}" data-author="${escapeHtml(who)}"
+                style="background:none;border:none;cursor:pointer;font-size:.75rem;color:var(--muted);padding:0;opacity:.7;">
+                💬 Open
+              </button>
+            </div>
+          </div>`;
+        }).join("");
+      }
+
+      if (threadComments) {
+        threadComments.innerHTML = inner;
+        requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
+    
+        // Attacca eventi Open sui figli
+        threadComments.querySelectorAll(".c-open-btn").forEach(btn => {
+          btn.addEventListener("click", async e => {
+            e.stopPropagation();
+            await drillIntoComment(btn.dataset.postId, btn.dataset.commentId, btn.dataset.author);
+          });
+        });
+      }
+    
+      // Polling per le risposte
+      if (COMMENT_POLL_INTERVAL) clearInterval(COMMENT_POLL_INTERVAL);
+      THREAD_LAST_TS = comments.length ? comments[comments.length - 1].created_at : null;
+      THREAD_ACTIVE_POST_ID = postId;
+      COMMENT_POLL_INTERVAL = setInterval(() => pollNewComments(postId, parentCommentId), 3000);
+    
+      // Aggiorna il send per mandare al parent corretto
+      if (threadSendBtn) threadSendBtn.dataset.parentCommentId = parentCommentId;
+    }
+
     function bumpFeedCountsForKey(key) {
       const st = postUI.get(key);
       if (!st) return;
@@ -3371,7 +3521,8 @@
       threadSendBtn.disabled = true;
 
       try {
-        await createCommentForPost(p.id, text);
+        const parentCommentId = threadSendBtn.dataset.parentCommentId || null;
+        await createCommentForPost(p.id, text, parentCommentId);
 
         if (threadInput) {
           threadInput.value = "";
