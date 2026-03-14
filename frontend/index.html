@@ -3198,6 +3198,12 @@
               </div>
             </div>`;
           }).join("");
+                  }
+
+          if (threadComments) {
+            threadComments.innerHTML = inner;
+            requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
+
           threadComments.querySelectorAll(".c-open-btn").forEach(btn => {
             btn.addEventListener("click", async e => {
               e.stopPropagation();
@@ -3207,11 +3213,6 @@
               await drillIntoComment(postId, commentId, author);
             });
           });
-        }
-
-        if (threadComments) {
-          threadComments.innerHTML = inner;
-          requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
 
           // ── menu ··· per ogni commento ──
           threadComments.querySelectorAll(".comment-menu-btn").forEach(btn => {
