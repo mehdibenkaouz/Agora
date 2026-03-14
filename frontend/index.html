@@ -2121,6 +2121,20 @@
       </div>
     </div>
   </div>
+  
+    <div id="notifModal" class="notif-modal" aria-hidden="true">
+    <div class="notif-card">
+      <div class="notif-card-head">
+        <span class="notif-card-title">Notifications</span>
+        <button id="notifClose" class="icon-x" aria-label="Close">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12"/><path d="M18 6L6 18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="notif-card-body" id="notifList"></div>
+    </div>
+  </div>
   <script>
     const API_BASE = "https://agora-api.convergegame.workers.dev";
     const TOKEN_KEY = "agora_token";
@@ -5090,19 +5104,7 @@ Try again after ${until.toLocaleTimeString()}.`);
     })();
 
   </script>
-    <div id="notifModal" class="notif-modal" aria-hidden="true">
-    <div class="notif-card">
-      <div class="notif-card-head">
-        <span class="notif-card-title">Notifications</span>
-        <button id="notifClose" class="icon-x" aria-label="Close">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 6l12 12"/><path d="M18 6L6 18"/>
-          </svg>
-        </button>
-      </div>
-      <div class="notif-card-body" id="notifList"></div>
-    </div>
-  </div>
+
   <div id="blockModal" class="block-modal" aria-hidden="true">
     <div class="block-backdrop" id="blockBackdrop"></div>
     <div class="block-card" role="dialog" aria-modal="true" aria-labelledby="blockModalTitle">
