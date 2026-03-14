@@ -4967,7 +4967,7 @@ Try again after ${until.toLocaleTimeString()}.`);
         const unread = data.unread || 0;
     
         // Aggiorna dot
-        if (notifDot) notifDot.style.display = unread > 0 ? "block" : "none";
+        updateNotifDot(unread);
     
         // Popola lista
         if (!notifList) return;
@@ -5010,7 +5010,7 @@ Try again after ${until.toLocaleTimeString()}.`);
     // Marca come lette
     if (getToken()) {
       api("/api/notifications/read", { method: "POST" }).then(() => {
-        if (notifDot) notifDot.style.display = "none";
+        updateNotifDot(0);
       }).catch(() => {});
     }
   }
@@ -5038,7 +5038,7 @@ Try again after ${until.toLocaleTimeString()}.`);
       if (!getToken()) return;
       try {
         const data = await api("/api/notifications", { method: "GET" });
-        if (notifDot) notifDot.style.display = (data.unread > 0) ? "block" : "none";
+        updateNotifDot(data.unread || 0);
       } catch(e) {}
     }, 30000);
   }
