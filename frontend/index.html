@@ -5186,6 +5186,7 @@ Try again after ${until.toLocaleTimeString()}.`);
   function openNotifModal() {
     const notifModal = getNotifModal();
     if (!notifModal) return;
+    _attachNotifListeners();
     notifModal.classList.add("open");
     notifModal.setAttribute("aria-hidden", "false");
     loadNotifications();
@@ -5209,11 +5210,15 @@ Try again after ${until.toLocaleTimeString()}.`);
     notifModal?.classList.contains("open") ? closeNotifModal() : openNotifModal();
   });
   
-  getNotifClose()?.addEventListener("click", closeNotifModal);
-  getNotifModal()?.addEventListener("click", (e) => {
-    if (e.target === getNotifModal()) closeNotifModal();
-  });
-  
+  let _notifListenersAttached = false;
+  function _attachNotifListeners() {
+    if (_notifListenersAttached) return;
+    getNotifClose()?.addEventListener("click", closeNotifModal);
+    getNotifModal()?.addEventListener("click", (e) => {
+      if (e.target === getNotifModal()) closeNotifModal();
+    });
+    _notifListenersAttached = true;
+  }
   // Polling unread count ogni 30s
   function startNotifPolling() {
     if (NOTIF_POLL) clearInterval(NOTIF_POLL);
