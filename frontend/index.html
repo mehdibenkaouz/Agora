@@ -2101,7 +2101,13 @@
   color: #000;
   box-shadow: 0 4px 12px rgba(0,0,0,0.40);
 }
-    
+.post-body video {
+  max-width: 100%;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.10);
+  display: block;
+  margin: 8px 0;
+}
   </style>
 </head>
 
@@ -2319,7 +2325,7 @@
               <button type="button" id="pickImagesBtn" class="file-btn">↑ Upload</button>
             </div>
 
-            <input id="imageFileInput" type="file" accept="image/*" multiple hidden />
+            <input id="imageFileInput" type="file" accept="image/*,video/mp4,video/webm" multiple hidden />
             <div id="imagePreview" class="preview-grid" aria-live="polite"></div>
           </div>
 
@@ -4616,24 +4622,96 @@
 
       bindImageNode(node);
     }
+
+    function insertVideoAtCursor(url, id, key) {
+      createPostContent.focus();
+    
+      const node = document.createElement("span");
+      node.className = "img-node video-node";
+      node.contentEditable = "false";
+      node.dataset.imgId = id;
+      if (key) node.dataset.r2Key = key;
+    
+      node.innerHTML = `
+        <video src="${url}" controls muted playsinline
+          style="max-width:100%;border-radius:14px;border:1px solid rgba(0,0,0,0.10);display:block;"></video>
+        <span class="img-handle delete" title="Delete">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 7h12"/><path d="M9 7V5h6v2"/>
+            <path d="M9 10v9"/><path d="M12 10v9"/><path d="M15 10v9"/>
+          </svg>
+        </span>
+      `;
+    
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) {
+        createPostContent.appendChild(node);
+        createPostContent.appendChild(document.createTextNode(" "));
+      } else {
+        const range = sel.getRangeAt(0);
+        range.deleteContents();
+        range.insertNode(node);
+        const spacer = document.createTextNode(" ");
+        node.after(spacer);
+        range.setStartAfter(spacer);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+    
+      // attacca solo il delete (no move/resize per i video)
+      const del = node.querySelector(".img-handle.delete");
+      del?.addEventListener("click", async (e) => {
+        e.preventDefault(); e.stopPropagation();
+        const key = node.dataset.r2Key || "";
+        node.remove();
+        if (!key) return;
+        try {
+          await fetch(`${API_BASE}/api/media/delete`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json",
+              ...(getToken() ? { "Authorization": `Bearer ${getToken()}` } : {}) },
+            body: JSON.stringify({ key })
+          });
+        } catch(err) { console.warn("media delete failed:", err); }
+      });
+    }
     function isImageFile(file) {
       return file && file.type && file.type.startsWith("image/");
     }
-
-    function addImageFile(file) {
-      if (!isImageFile(file)) return;
-
-      // (optional) limit: 6 images
+    function isVideoFile(file) {
+      return file && file.type && (file.type === "video/mp4" || file.type === "video/webm");
+    }
+    function isMediaFile(file) {
+      return isImageFile(file) || isVideoFile(file);
+    }
+    function addImageFile(file) { addMediaFile(file); } // mantengo per compatibilità paste
+    function addMediaFile(file) {
+      if (!isMediaFile(file)) return;
       if (selectedImages.length >= 6) {
-        alert("Max 6 images per post (for now).");
+        alert("Max 6 media per post.");
         return;
       }
-
+    
+      // Limiti dimensione
+      if (isVideoFile(file) && file.size > 50 * 1024 * 1024) {
+        alert("Video too large. Maximum 50MB.");
+        return;
+      }
+      if (isImageFile(file) && file.size > 10 * 1024 * 1024) {
+        alert("Image too large. Maximum 10MB.");
+        return;
+      }
+    
       const url = URL.createObjectURL(file);
       const id = crypto.randomUUID ? crypto.randomUUID() : (Date.now() + "_" + Math.random());
-      selectedImages.push({ id, file, url });
+      selectedImages.push({ id, file, url, isVideo: isVideoFile(file) });
       renderImagePreview();
-      insertImageAtCursor(url, id);
+    
+      if (isVideoFile(file)) {
+        insertVideoAtCursor(url, id);
+      } else {
+        insertImageAtCursor(url, id);
+      }
     }
 
     function addMany(files) {
@@ -4777,7 +4855,8 @@
         "BLOCKQUOTE", "CODE", "PRE",
         "SPAN",
         "A",
-        "IMG"
+        "IMG",
+        "VIDEO"
       ]);
 
       const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, null);
@@ -4837,6 +4916,19 @@
 
         node.replaceWith(cleanImg);
       });
+      // AGGIUNGI prima del blocco .img-node esistente:
+      clone.querySelectorAll(".video-node").forEach(node => {
+        const vid = node.querySelector("video");
+        if (!vid) { node.remove(); return; }
+        const cleanVid = document.createElement("video");
+        cleanVid.setAttribute("src", vid.getAttribute("src") || "");
+        cleanVid.setAttribute("controls", "");
+        cleanVid.setAttribute("muted", "");
+        cleanVid.setAttribute("playsinline", "");
+        cleanVid.style.maxWidth = "100%";
+        cleanVid.style.borderRadius = "14px";
+        node.replaceWith(cleanVid);
+      });
 
       // 3) rimuovi div vuoti inutili
       clone.querySelectorAll("div").forEach(d => {
@@ -4894,19 +4986,18 @@
     function renderImagePreview() {
       if (!imagePreview) return;
       imagePreview.innerHTML = "";
-
       for (const img of selectedImages) {
         const item = document.createElement("div");
         item.className = "preview-item";
-        item.innerHTML = `
-          <img src="${img.url}" alt="Selected image" />
-          <button type="button" class="preview-remove" aria-label="Remove image">
-            <svg viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M6 6l12 12"></path>
-              <path d="M18 6L6 18"></path>
-            </svg>
-          </button>
-        `;
+        item.innerHTML = img.isVideo
+          ? `<video src="${img.url}" muted style="width:100%;height:100%;object-fit:cover;border-radius:10px;"></video>
+             <button type="button" class="preview-remove" aria-label="Remove">
+               <svg viewBox="0 0 24 24"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+             </button>`
+          : `<img src="${img.url}" alt="Selected image" />
+             <button type="button" class="preview-remove" aria-label="Remove">
+               <svg viewBox="0 0 24 24"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
+             </button>`;
         item.querySelector(".preview-remove").addEventListener("click", () => removeImage(img.id));
         imagePreview.appendChild(item);
       }
