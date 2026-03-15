@@ -5536,6 +5536,21 @@ setTimeout(function initMobileNav() {
     if (dx > 80) { clearThread(); hideThreadPanel(); }
   }, { passive: true });
 }, 0);
+
+    <div id="notifModal" class="notif-modal" aria-hidden="true">
+  <div class="notif-card">
+    <div class="notif-card-head">
+      <span class="notif-card-title">Notifications</span>
+      <button id="notifClose" class="icon-x" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12"/><path d="M18 6L6 18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="notif-card-body" id="notifList"></div>
+  </div>
+</div>
+    
   </script>
 
   <div id="blockModal" class="block-modal" aria-hidden="true">
@@ -5589,19 +5604,7 @@ setTimeout(function initMobileNav() {
       </div>
     </div>
   </div>
-<div id="notifModal" class="notif-modal" aria-hidden="true">
-  <div class="notif-card">
-    <div class="notif-card-head">
-      <span class="notif-card-title">Notifications</span>
-      <button id="notifClose" class="icon-x" aria-label="Close">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M6 6l12 12"/><path d="M18 6L6 18"/>
-        </svg>
-      </button>
-    </div>
-    <div class="notif-card-body" id="notifList"></div>
-  </div>
-</div>
+
 
   <nav class="bottom-nav" id="bottomNav">
   <button class="bottom-nav-btn" id="mobileNotifBtn" aria-label="Notifications">
