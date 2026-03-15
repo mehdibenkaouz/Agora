@@ -5362,17 +5362,6 @@ async function runSearch() {
           </div>
         </div>`;
       }).join("");
-      html += `<div class="search-result-section">
-        <div class="search-result-label">Posts</div>`;
-      html += posts.map(p => `
-        <div class="search-result-item" data-action="post" data-post-id="${escapeHtml(p.id)}">
-          <img class="search-result-avatar" src="${escapeHtml(p.author_picture_url || '/avatar-default.png')}" />
-          <div class="search-result-body">
-            <div class="search-result-name">${escapeHtml(p.author_display_name || "")}</div>
-             <div class="search-result-snippet">${escapeHtml(stripHtml(p.content_text || "").slice(0, 80))}</div>
-
-          </div>
-        </div>`).join("");
       html += `</div>`;
     }
 
