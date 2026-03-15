@@ -5346,7 +5346,8 @@ async function runSearch() {
           <img class="search-result-avatar" src="${escapeHtml(p.author_picture_url || '/avatar-default.png')}" />
           <div class="search-result-body">
             <div class="search-result-name">${escapeHtml(p.author_display_name || "")}</div>
-            <div class="search-result-snippet">${escapeHtml((p.content_text || "").slice(0, 80))}</div>
+             <div class="search-result-snippet">${escapeHtml(stripHtml(p.content_text || "").slice(0, 80))}</div>
+
           </div>
         </div>`).join("");
       html += `</div>`;
