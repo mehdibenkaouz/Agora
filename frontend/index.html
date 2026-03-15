@@ -5184,6 +5184,7 @@ Try again after ${until.toLocaleTimeString()}.`);
     }
 
   function openNotifModal() {
+    const notifModal = getNotifModal();
     if (!notifModal) return;
     notifModal.classList.add("open");
     notifModal.setAttribute("aria-hidden", "false");
