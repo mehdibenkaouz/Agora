@@ -5198,6 +5198,7 @@ Try again after ${until.toLocaleTimeString()}.`);
   }
   
   function closeNotifModal() {
+    const notifModal = getNotifModal();
     if (!notifModal) return;
     notifModal.classList.remove("open");
     notifModal.setAttribute("aria-hidden", "true");
@@ -5492,7 +5493,8 @@ setTimeout(function initMobileNav() {
   // Collega bottom nav ai bottoni esistenti
   document.getElementById("mobileNotifBtn")?.addEventListener("click", (e) => {
     e.stopPropagation();
-    notifModal?.classList.contains("open") ? closeNotifModal() : openNotifModal();
+    
+    getNotifModal()?.classList.contains("open") ? closeNotifModal() : openNotifModal();
   });
   document.getElementById("mobileCreateBtn")?.addEventListener("click", () => openCreatePostModal());
   document.getElementById("mobileSearchBtn")?.addEventListener("click", (e) => {
