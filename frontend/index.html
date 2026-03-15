@@ -5383,7 +5383,7 @@ Try again after ${until.toLocaleTimeString()}.`);
   
   notifBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    notifModal?.classList.contains("open") ? closeNotifModal() : openNotifModal();
+    getNotifModal()?.classList.contains("open") ? closeNotifModal() : openNotifModal();
   });
   
   let _notifListenersAttached = false;
@@ -5667,7 +5667,7 @@ async function runSearch() {
       });
     })();
 // ===== MOBILE BOTTOM NAV =====
-setTimeout(function initMobileNav() {
+document.addEventListener("DOMContentLoaded", function initMobileNav() {
   const isMobile = () => window.innerWidth <= 760;
   const rightCol = document.querySelector(".right-column");
 
