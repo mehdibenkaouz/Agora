@@ -5118,9 +5118,9 @@ Try again after ${until.toLocaleTimeString()}.`);
     });
 
     // ===== NOTIFICATIONS =====
-    const notifModal = document.getElementById("notifModal");
-    const notifClose = document.getElementById("notifClose");
-    const notifList  = document.getElementById("notifList");
+    function getNotifModal() { return document.getElementById("notifModal"); }
+    function getNotifClose() { return document.getElementById("notifClose"); }
+    function getNotifList()  { return document.getElementById("notifList"); };
     const notifBtn   = document.querySelector(".action-btn[aria-label='Notifications']");
     const notifDot   = notifBtn?.querySelector(".notif-dot");
 
@@ -5537,20 +5537,7 @@ setTimeout(function initMobileNav() {
   }, { passive: true });
 }, 0);
 
-    <div id="notifModal" class="notif-modal" aria-hidden="true">
-  <div class="notif-card">
-    <div class="notif-card-head">
-      <span class="notif-card-title">Notifications</span>
-      <button id="notifClose" class="icon-x" aria-label="Close">
-        <svg viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M6 6l12 12"/><path d="M18 6L6 18"/>
-        </svg>
-      </button>
-    </div>
-    <div class="notif-card-body" id="notifList"></div>
-  </div>
-</div>
-    
+
   </script>
 
   <div id="blockModal" class="block-modal" aria-hidden="true">
@@ -5635,5 +5622,21 @@ setTimeout(function initMobileNav() {
     </svg>
   </a>
 </nav>
+
+      <div id="notifModal" class="notif-modal" aria-hidden="true">
+  <div class="notif-card">
+    <div class="notif-card-head">
+      <span class="notif-card-title">Notifications</span>
+      <button id="notifClose" class="icon-x" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12"/><path d="M18 6L6 18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="notif-card-body" id="notifList"></div>
+  </div>
+</div>
+
+  
 </body>
 </html>
