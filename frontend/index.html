@@ -1853,6 +1853,170 @@
 .notif-item-msg { font-size: .93rem; line-height: 1.4; }
 .notif-item-time { font-size: .78rem; color: var(--muted); }
 .notif-empty { padding: 28px 18px; text-align: center; color: var(--muted); font-size: .95rem; }
+
+/* ===== Search ===== */
+.search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 90px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+}
+.search-overlay.open { display: flex; }
+
+.search-box {
+  width: min(660px, calc(100% - 32px));
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+.search-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  outline: none;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--text);
+}
+.search-input::placeholder { color: var(--muted); }
+
+.search-close-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 1.2rem;
+  padding: 4px 6px;
+  border-radius: 8px;
+  line-height: 1;
+}
+.search-close-btn:hover { color: var(--text); }
+
+.search-filters {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.search-filter-btn {
+  border: 1px solid var(--line);
+  background: transparent;
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: .82rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: var(--muted);
+  transition: all .12s;
+}
+.search-filter-btn.active {
+  background: var(--brand);
+  color: #fff;
+  border-color: var(--brand);
+}
+:root[data-theme="dark"] .search-filter-btn.active { color: #000; }
+
+.search-author-wrap {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.search-author-input {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  border-radius: 12px;
+  padding: 7px 12px;
+  font: inherit;
+  font-size: .88rem;
+  color: var(--text);
+  outline: none;
+}
+.search-author-input::placeholder { color: var(--muted); }
+.search-author-input:focus { border-color: var(--brand); }
+
+.search-results {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.search-result-section {
+  padding: 8px 0;
+}
+.search-result-label {
+  padding: 6px 16px 4px;
+  font-size: .75rem;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.search-result-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
+  transition: background .1s;
+  border-bottom: 1px solid var(--line);
+}
+.search-result-item:hover { background: rgba(0,0,0,0.04); }
+:root[data-theme="dark"] .search-result-item:hover { background: rgba(255,255,255,0.05); }
+.search-result-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.search-result-body { flex: 1; min-width: 0; }
+.search-result-name {
+  font-weight: 700;
+  font-size: .9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-result-snippet {
+  font-size: .82rem;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 2px;
+}
+.search-empty {
+  padding: 28px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: .9rem;
+}
+.search-loading {
+  padding: 20px 16px;
+  text-align: center;
+  color: var(--muted);
+  font-size: .88rem;
+}
     
   </style>
 </head>
@@ -2144,6 +2308,30 @@
       <div class="notif-card-body" id="notifList"></div>
     </div>
   </div>
+  <div id="searchOverlay" class="search-overlay" aria-hidden="true">
+  <div class="search-box">
+    <div class="search-top">
+      <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2.2" fill="none" style="flex-shrink:0;color:var(--muted)">
+        <circle cx="11" cy="11" r="6.5"></circle>
+        <path d="M16 16l4 4"></path>
+      </svg>
+      <input id="searchInput" class="search-input" type="text" placeholder="Search posts, users, comments…" autocomplete="off" />
+      <button id="searchCloseBtn" class="search-close-btn" aria-label="Close search">✕</button>
+    </div>
+    <div class="search-filters">
+      <button class="search-filter-btn active" data-type="all">All</button>
+      <button class="search-filter-btn" data-type="posts">Posts</button>
+      <button class="search-filter-btn" data-type="users">Users</button>
+      <button class="search-filter-btn" data-type="comments">Comments</button>
+    </div>
+    <div class="search-author-wrap">
+      <input id="searchAuthorInput" class="search-author-input" type="text" placeholder="Filter by username…" autocomplete="off" />
+    </div>
+    <div id="searchResults" class="search-results">
+      <div class="search-empty">Type to search…</div>
+    </div>
+  </div>
+</div>
   <script>
     const API_BASE = "https://agora-api.convergegame.workers.dev";
     const TOKEN_KEY = "agora_token";
@@ -5042,6 +5230,167 @@ Try again after ${until.toLocaleTimeString()}.`);
       } catch(e) {}
     }, 30000);
   }
+
+
+// ===== SEARCH =====
+const searchOverlay   = document.getElementById("searchOverlay");
+const searchInput     = document.getElementById("searchInput");
+const searchResults   = document.getElementById("searchResults");
+const searchCloseBtn  = document.getElementById("searchCloseBtn");
+const searchAuthorInput = document.getElementById("searchAuthorInput");
+const searchBtn       = document.querySelector(".action-btn[aria-label='Search']");
+
+let searchDebounce = null;
+let searchType = "all";
+
+function openSearch() {
+  if (!searchOverlay) return;
+  searchOverlay.classList.add("open");
+  searchOverlay.setAttribute("aria-hidden", "false");
+  setTimeout(() => searchInput?.focus(), 0);
+}
+
+function closeSearch() {
+  if (!searchOverlay) return;
+  searchOverlay.classList.remove("open");
+  searchOverlay.setAttribute("aria-hidden", "true");
+  searchInput.value = "";
+  searchAuthorInput.value = "";
+  searchResults.innerHTML = `<div class="search-empty">Type to search…</div>`;
+}
+
+searchBtn?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  searchOverlay?.classList.contains("open") ? closeSearch() : openSearch();
+});
+
+searchCloseBtn?.addEventListener("click", closeSearch);
+searchOverlay?.addEventListener("click", (e) => {
+  if (e.target === searchOverlay) closeSearch();
+});
+
+// Filter tabs
+document.querySelectorAll(".search-filter-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".search-filter-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    searchType = btn.dataset.type;
+    triggerSearch();
+  });
+});
+
+function triggerSearch() {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(runSearch, 300);
+}
+
+searchInput?.addEventListener("input", triggerSearch);
+searchAuthorInput?.addEventListener("input", triggerSearch);
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && searchOverlay?.classList.contains("open")) closeSearch();
+});
+
+async function runSearch() {
+  const q = (searchInput?.value || "").trim();
+  const author = (searchAuthorInput?.value || "").trim();
+
+  if (q.length < 2) {
+    searchResults.innerHTML = `<div class="search-empty">Type at least 2 characters…</div>`;
+    return;
+  }
+
+  searchResults.innerHTML = `<div class="search-loading">Searching…</div>`;
+
+  try {
+    const params = new URLSearchParams({ q, type: searchType });
+    if (author) params.set("author", author);
+    const data = await api(`/api/search?${params.toString()}`, { method: "GET" });
+
+    const posts    = data.posts    || [];
+    const users    = data.users    || [];
+    const comments = data.comments || [];
+
+    const total = posts.length + users.length + comments.length;
+    if (!total) {
+      searchResults.innerHTML = `<div class="search-empty">No results for "<strong>${escapeHtml(q)}</strong>"</div>`;
+      return;
+    }
+
+    let html = "";
+
+    if (users.length) {
+      html += `<div class="search-result-section">
+        <div class="search-result-label">Users</div>`;
+      html += users.map(u => `
+        <div class="search-result-item" data-action="user" data-user-id="${escapeHtml(u.id)}">
+          <img class="search-result-avatar" src="${escapeHtml(u.picture_url || '/avatar-default.png')}" />
+          <div class="search-result-body">
+            <div class="search-result-name">${escapeHtml(u.display_name || u.id)}</div>
+          </div>
+        </div>`).join("");
+      html += `</div>`;
+    }
+
+    if (posts.length) {
+      html += `<div class="search-result-section">
+        <div class="search-result-label">Posts</div>`;
+      html += posts.map(p => `
+        <div class="search-result-item" data-action="post" data-post-id="${escapeHtml(p.id)}">
+          <img class="search-result-avatar" src="${escapeHtml(p.author_picture_url || '/avatar-default.png')}" />
+          <div class="search-result-body">
+            <div class="search-result-name">${escapeHtml(p.author_display_name || "")}</div>
+            <div class="search-result-snippet">${escapeHtml((p.content_text || "").slice(0, 80))}</div>
+          </div>
+        </div>`).join("");
+      html += `</div>`;
+    }
+
+    if (comments.length) {
+      html += `<div class="search-result-section">
+        <div class="search-result-label">Comments</div>`;
+      html += comments.map(c => `
+        <div class="search-result-item" data-action="comment" data-post-id="${escapeHtml(c.post_id)}" data-comment-id="${escapeHtml(c.id)}">
+          <img class="search-result-avatar" src="${escapeHtml(c.author_picture_url || '/avatar-default.png')}" />
+          <div class="search-result-body">
+            <div class="search-result-name">${escapeHtml(c.author_display_name || "")}</div>
+            <div class="search-result-snippet">${escapeHtml((c.content || "").slice(0, 80))}</div>
+          </div>
+        </div>`).join("");
+      html += `</div>`;
+    }
+
+    searchResults.innerHTML = html;
+
+    // Click handlers
+    searchResults.querySelectorAll(".search-result-item").forEach(item => {
+      item.addEventListener("click", () => {
+        const action = item.dataset.action;
+        if (action === "user") {
+          window.location.href = `account.html?view=${encodeURIComponent(item.dataset.userId)}`;
+        } else if (action === "post" || action === "comment") {
+          const postId = item.dataset.postId;
+          closeSearch();
+          // Trova il post nel feed e aprilo
+          for (const [key, p] of postByKey.entries()) {
+            if (p.id === postId) {
+              setActiveCard(key);
+              renderThread(key);
+              document.querySelector(`.post-card[data-post-key="${CSS.escape(key)}"]`)
+                ?.scrollIntoView({ behavior: "smooth", block: "center" });
+              return;
+            }
+          }
+          // Se il post non è nel feed corrente, ricarica il feed e riprova
+          // (per ora naviga solo se il post è già caricato)
+        }
+      });
+    });
+
+  } catch(e) {
+    searchResults.innerHTML = `<div class="search-empty">Search failed. Try again.</div>`;
+  }
+}   
     // init
     (async () => {
       applyTheme(getPreferredTheme());
