@@ -2016,7 +2016,30 @@
   color: var(--muted);
   font-size: .88rem;
 }
-    
+
+/* ===== Dropzone upload button ===== */
+.file-btn {
+  border: 1px solid rgba(0,0,0,0.10);
+  background: var(--brand);
+  color: #fff;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(87,25,41,0.22);
+  transition: transform .12s ease, box-shadow .12s ease;
+  white-space: nowrap;
+  min-height: 36px;
+}
+.file-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(87,25,41,0.28);
+}
+:root[data-theme="dark"] .file-btn {
+  color: #000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.40);
+}
   </style>
 </head>
 
