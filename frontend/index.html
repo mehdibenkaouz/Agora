@@ -5290,7 +5290,13 @@ searchAuthorInput?.addEventListener("input", triggerSearch);
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && searchOverlay?.classList.contains("open")) closeSearch();
 });
-
+    
+function stripHtml(html) {
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  return tmp.textContent || "";
+}
+    
 async function runSearch() {
   const q = (searchInput?.value || "").trim();
   const author = (searchAuthorInput?.value || "").trim();
