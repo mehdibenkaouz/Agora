@@ -4160,8 +4160,9 @@
           </div>
         `;
 
-        // Click anywhere on card => open thread (focus)
+        // Click sulla card => apre thread solo su desktop
         card.addEventListener("click", () => {
+          if (window.innerWidth <= 760) return;
           setActiveCard(key);
           renderThread(key);
         });
@@ -5623,11 +5624,11 @@ async function runSearch() {
       <path d="M10.8 18a1.2 1.2 0 0 0 2.4 0"/>
     </svg>
   </button>
-  <button class="bottom-nav-btn" id="mobileCreateBtn" aria-label="Create post">
-    <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
-  </button>
   <button class="bottom-nav-btn" id="mobileSearchBtn" aria-label="Search">
     <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+  </button>
+  <button class="bottom-nav-btn" id="mobileCreateBtn" aria-label="Create post">
+    <svg viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
   </button>
   <a href="games.html" class="bottom-nav-btn" aria-label="Games">
     <svg viewBox="0 0 24 24">
