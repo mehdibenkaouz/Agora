@@ -2040,6 +2040,68 @@
   color: #000;
   box-shadow: 0 4px 12px rgba(0,0,0,0.40);
 }
+
+
+    /* ===== Dropzone ===== */
+.dropzone {
+  border: 2px dashed rgba(0,0,0,0.15);
+  border-radius: 18px;
+  padding: 16px 18px;
+  transition: border-color .15s, background .15s;
+  background: rgba(255,255,255,0.35);
+}
+.dropzone:hover,
+.dropzone.is-dragover {
+  border-color: var(--brand);
+  background: rgba(87,25,41,0.04);
+}
+:root[data-theme="dark"] .dropzone {
+  border-color: rgba(255,255,255,0.14);
+  background: rgba(255,255,255,0.03);
+}
+:root[data-theme="dark"] .dropzone:hover,
+:root[data-theme="dark"] .dropzone.is-dragover {
+  border-color: var(--brand);
+  background: rgba(168,235,246,0.05);
+}
+.dropzone-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dropzone-title {
+  font-weight: 700;
+  font-size: .95rem;
+}
+.dropzone-hint {
+  font-size: .82rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.file-btn {
+  flex-shrink: 0;
+  border: none;
+  background: var(--brand);
+  color: #fff;
+  border-radius: 999px;
+  padding: 8px 18px;
+  font-size: .88rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(87,25,41,0.22);
+  transition: transform .12s ease, box-shadow .12s ease;
+  min-height: 36px;
+}
+.file-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 18px rgba(87,25,41,0.28);
+}
+:root[data-theme="dark"] .file-btn {
+  color: #000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.40);
+}
+    
   </style>
 </head>
 
@@ -2254,7 +2316,7 @@
                 <div class="dropzone-title">Images</div>
                 <div class="dropzone-hint">Drop here, paste (Ctrl+V), or upload.</div>
               </div>
-              <button type="button" id="pickImagesBtn" class="file-btn">Upload</button>
+              <button type="button" id="pickImagesBtn" class="file-btn">↑ Upload</button>
             </div>
 
             <input id="imageFileInput" type="file" accept="image/*" multiple hidden />
