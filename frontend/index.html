@@ -5493,7 +5493,7 @@ async function runSearch() {
       });
     })();
 // ===== MOBILE BOTTOM NAV =====
-(function initMobileNav() {
+setTimeout(function initMobileNav() {
   const isMobile = () => window.innerWidth <= 760;
   const rightCol = document.querySelector(".right-column");
 
@@ -5547,7 +5547,7 @@ async function runSearch() {
     const dx = e.changedTouches[0].clientX - touchStartX;
     if (dx > 80) { clearThread(); hideThreadPanel(); }
   }, { passive: true });
-})();
+}, 0);
   </script>
 
   <div id="blockModal" class="block-modal" aria-hidden="true">
