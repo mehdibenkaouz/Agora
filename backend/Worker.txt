@@ -47,6 +47,23 @@ export default {
         return json({ ok: true, token, user: { id: finalUserId, email: emailRaw } }, 200, ALLOWED_ORIGIN);
       }
 
+      const singleCommentMatch = url.pathname.match(/^\/api\/comments\/([^/]+)$/);
+      if (singleCommentMatch && request.method === "GET") {
+        const commentId = decodeURIComponent(singleCommentMatch[1]).trim();
+        const c = await env.dbagora.prepare(
+          `SELECT c.id, c.content, c.created_at, c.post_id, c.parent_comment_id,
+            u.id as author_id,
+            COALESCE(NULLIF(TRIM(u.display_name),''),
+              CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
+            ) AS author_display_name,
+            COALESCE(u.picture_url,'') AS author_picture_url
+          FROM comments c JOIN users u ON u.id = c.user_id
+          WHERE c.id = ?1`
+        ).bind(commentId).first();
+        if (!c) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
+        return json({ ok: true, comment: c }, 200, ALLOWED_ORIGIN);
+      }
+
       if (url.pathname === "/api/me" && request.method === "GET") {
         const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
@@ -139,8 +156,9 @@ export default {
         const postId = crypto.randomUUID();
         const now = new Date().toISOString();
         await env.dbagora.prepare(
-          `INSERT INTO posts (id, user_id, content, created_at) VALUES (?1, ?2, ?3, ?4)`
-        ).bind(postId, session.user_id, contentToStore, now).run();
+        // CORRETTO:
+        `INSERT INTO posts (id, user_id, content, content_text, created_at) VALUES (?1, ?2, ?3, ?4, ?5)`
+        ).bind(postId, session.user_id, contentToStore, textLike, now).run();
 
         // Salva timestamp per spam tracking
         await recordAction(env, session.user_id, "post");
@@ -228,11 +246,14 @@ export default {
         ).bind(feedTokenC, new Date().toISOString()).first() : null;
         const feedUidC = feedSessionC?.user_id || null;
         const since = url.searchParams.get("since") || null;
-
+        const parentId = url.searchParams.get("parent_id") || null;
+        
         const rows = await env.dbagora.prepare(
           `SELECT
               c.id, c.content, c.created_at,
+              u.id as author_id,
               u.email as author_email,
+              (SELECT COUNT(*) FROM comments r WHERE r.parent_comment_id = c.id) as reply_count,
               COALESCE(
                 NULLIF(TRIM(u.display_name), ''),
                 CASE
@@ -244,6 +265,7 @@ export default {
           FROM comments c
           JOIN users u ON u.id = c.user_id
           WHERE c.post_id = ?1
+            AND c.parent_comment_id IS ?4
             AND (?2 IS NULL OR NOT EXISTS (
               SELECT 1 FROM blocks b
               WHERE
@@ -252,7 +274,7 @@ export default {
             ))
             AND (?3 IS NULL OR c.created_at > ?3)
           ORDER BY c.created_at ASC`
-        ).bind(postId, feedUidC, since).all();
+        ).bind(postId, feedUidC, since, parentId).all();
 
         const comments = rows.results || [];
         return json({ ok: true, comments, comment_count: comments.length }, 200, ALLOWED_ORIGIN);
@@ -281,6 +303,7 @@ export default {
 
         const body = await request.json().catch(() => ({}));
         const content = String(body.content || "").trim();
+        const parent_comment_id = body.parent_comment_id || null;
         if (!content) return json({ ok: false, error: "empty_comment" }, 400, ALLOWED_ORIGIN);
         if (content.length < 2) return json({ ok: false, error: "comment_too_short" }, 400, ALLOWED_ORIGIN);
         if (content.length > 300) return json({ ok: false, error: "comment_too_long" }, 400, ALLOWED_ORIGIN);
@@ -295,8 +318,8 @@ export default {
         const commentId = crypto.randomUUID();
         const now = new Date().toISOString();
         await env.dbagora.prepare(
-          `INSERT INTO comments (id, post_id, user_id, content, created_at) VALUES (?1, ?2, ?3, ?4, ?5)`
-        ).bind(commentId, postId, session.user_id, content, now).run();
+          `INSERT INTO comments (id, post_id, user_id, content, parent_comment_id, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
+        ).bind(commentId, postId, session.user_id, content, parent_comment_id, now).run();
 
         // Salva timestamp per spam tracking
         await recordAction(env, session.user_id, "comment");
@@ -310,10 +333,43 @@ export default {
           FROM users WHERE id = ?1`
         ).bind(session.user_id).first();
 
+        // Notifica all'autore del post o del commento padre
+        try {
+          if (parent_comment_id) {
+            // Risposta a un commento — notifica l'autore del commento padre
+            const parentComment = await env.dbagora.prepare(
+              "SELECT user_id FROM comments WHERE id = ?1"
+            ).bind(parent_comment_id).first();
+            if (parentComment && parentComment.user_id !== session.user_id) {
+              const senderName = author?.display_name || author?.email || "Someone";
+              await createNotification(
+                env, parentComment.user_id, "reply",
+                `${senderName} replied to your comment.`,
+                postId, commentId
+              );
+            }
+          } else {
+            // Commento top-level — notifica l'autore del post
+            const postRow = await env.dbagora.prepare(
+              "SELECT user_id FROM posts WHERE id = ?1"
+            ).bind(postId).first();
+            if (postRow && postRow.user_id !== session.user_id) {
+              const senderName = author?.display_name || author?.email || "Someone";
+              await createNotification(
+                env, postRow.user_id, "comment",
+                `${senderName} commented on your post.`,
+                postId, commentId
+              );
+            }
+          }
+
+        } catch(e) {}
+
+
         return json({
           ok: true,
           comment: {
-            id: commentId, post_id: postId, content, created_at: now,
+            id: commentId, post_id: postId, content, parent_comment_id, created_at: now,
             author_id: author?.id || "",
             author_email: author?.email || "anon",
             author_display_name: author?.display_name || author?.email || "anon",
@@ -726,7 +782,20 @@ export default {
           ON CONFLICT(blocker_id, blocked_id) DO UPDATE
             SET block_type=excluded.block_type, reason=excluded.reason, created_at=excluded.created_at
         `).bind(blockId, session.user_id, target.id, blockType, reason || null, now).run();
-
+          // Notifica solo per blocco formale (type 1), non per filtro silenzioso (type 2)
+          if (blockType === 1) {
+            try {
+              const blockerRow = await env.dbagora.prepare(
+                `SELECT COALESCE(NULLIF(TRIM(display_name),''), email) AS name FROM users WHERE id = ?1`
+              ).bind(session.user_id).first();
+              const blockerName = blockerRow?.name || "A user";
+              await createNotification(
+                env, target.id, "block",
+                `${blockerName} has formally blocked you. You can submit a complaint from your profile.`,
+                null, null
+              );
+            } catch(e) {}
+          }
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
@@ -800,6 +869,128 @@ export default {
           ).bind(userId).all();
           return json({ ok: true, posts: rows.results || [] }, 200, ALLOWED_ORIGIN);
         }
+
+        // ── NOTIFICATIONS: GET ───────────────────────────────────────────
+      if (url.pathname === "/api/notifications" && request.method === "GET") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const rows = await env.dbagora.prepare(
+          `SELECT id, type, message, post_id, comment_id, read, created_at
+           FROM notifications WHERE user_id = ?1
+           ORDER BY created_at DESC LIMIT 50`
+        ).bind(session.user_id).all();
+
+        const unread = (rows.results || []).filter(n => !n.read).length;
+        return json({ ok: true, notifications: rows.results || [], unread }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── NOTIFICATIONS: MARK ALL READ ─────────────────────────────────
+      if (url.pathname === "/api/notifications/read" && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        await env.dbagora.prepare(
+          "UPDATE notifications SET read = 1 WHERE user_id = ?1"
+        ).bind(session.user_id).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── SEARCH ───────────────────────────────────────────────────────
+      if (url.pathname === "/api/search" && request.method === "GET") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        const session = token ? await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first() : null;
+        const uid = session?.user_id || null;
+
+        const q = (url.searchParams.get("q") || "").trim();
+        const type = url.searchParams.get("type") || "all";
+        const author = (url.searchParams.get("author") || "").trim().toLowerCase();
+        const limit = Math.min(parseInt(url.searchParams.get("limit") || "20"), 50);
+
+        if (!q || q.length < 2) return json({ ok: true, posts: [], users: [], comments: [] }, 200, ALLOWED_ORIGIN);
+
+        const like = `%${q}%`;
+        const results = { posts: [], users: [], comments: [] };
+
+        // ── POSTS ──
+        if (type === "all" || type === "posts") {
+          let postSql = `
+            SELECT p.id, COALESCE(p.content_text, p.content) AS content_text, p.created_at,
+              u.id as author_id,
+              COALESCE(NULLIF(TRIM(u.display_name),''),
+                CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
+              ) AS author_display_name,
+              COALESCE(u.picture_url,'') AS author_picture_url
+            FROM posts p JOIN users u ON u.id = p.user_id
+            WHERE COALESCE(p.content_text, p.content) LIKE ?1
+                  AND COALESCE(u.banned,0) = 0
+                  AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+                    (b.blocker_id = ?2 AND b.blocked_id = p.user_id) OR
+                    (b.block_type = 1 AND b.blocker_id = p.user_id AND b.blocked_id = ?2)))
+                  ${author ? "AND lower(COALESCE(NULLIF(TRIM(u.display_name),''),u.email)) LIKE ?3" : ""}
+            ORDER BY p.created_at DESC LIMIT ${limit}`;
+
+          const binds = [like, uid || null];
+          if (author) binds.push(`%${author}%`);
+          const rows = await env.dbagora.prepare(postSql).bind(...binds).all();
+          results.posts = rows.results || [];
+        }
+
+        // ── USERS ──
+        if (type === "all" || type === "users") {
+          const rows = await env.dbagora.prepare(`
+            SELECT id,
+              COALESCE(NULLIF(TRIM(display_name),''),
+                CASE WHEN instr(email,'@')>1 THEN substr(email,1,instr(email,'@')-1) ELSE email END
+              ) AS display_name,
+              COALESCE(picture_url,'') AS picture_url
+            FROM users
+            WHERE (lower(display_name) LIKE ?1 OR lower(email) LIKE ?1)
+              AND COALESCE(banned,0) = 0
+            LIMIT ${limit}`
+          ).bind(like).all();
+          results.users = rows.results || [];
+        }
+
+        // ── COMMENTS ──
+        if (type === "all" || type === "comments") {
+          let commentSql = `
+            SELECT c.id, c.content, c.post_id, c.created_at,
+              u.id as author_id,
+              COALESCE(NULLIF(TRIM(u.display_name),''),
+                CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
+              ) AS author_display_name,
+              COALESCE(u.picture_url,'') AS author_picture_url
+            FROM comments c JOIN users u ON u.id = c.user_id
+            WHERE c.content LIKE ?1
+              AND COALESCE(u.banned,0) = 0
+              AND (?2 IS NULL OR NOT EXISTS (SELECT 1 FROM blocks b WHERE
+                (b.blocker_id = ?2 AND b.blocked_id = c.user_id) OR
+                (b.block_type = 1 AND b.blocker_id = c.user_id AND b.blocked_id = ?2)))
+              ${author ? "AND lower(COALESCE(NULLIF(TRIM(u.display_name),''),u.email)) LIKE ?3" : ""}
+            ORDER BY c.created_at DESC LIMIT ${limit}`;
+
+          const binds = [like, uid || null];
+          if (author) binds.push(`%${author}%`);
+          const rows = await env.dbagora.prepare(commentSql).bind(...binds).all();
+          results.comments = rows.results || [];
+        }
+
+        return json({ ok: true, ...results }, 200, ALLOWED_ORIGIN);
+      }
       // ════════════════════════════════════════════════════════════════
       // ── ADMIN ────────────────────────────────────────────────────────
       // ════════════════════════════════════════════════════════════════
@@ -1246,4 +1437,13 @@ function timeAgo(isoStr) {
   if (diff < 3600) return `${Math.floor(diff / 60)} min fa`;
   if (diff < 86400) return `${Math.floor(diff / 3600)} ore fa`;
   return `${Math.floor(diff / 86400)} giorni fa`;
+}
+
+
+async function createNotification(env, userId, type, message, postId = null, commentId = null) {
+  const id = crypto.randomUUID();
+  await env.dbagora.prepare(
+    `INSERT INTO notifications (id, user_id, type, message, post_id, comment_id, read, created_at)
+     VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0, ?7)`
+  ).bind(id, userId, type, message, postId, commentId, new Date().toISOString()).run();
 }

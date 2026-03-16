@@ -1179,6 +1179,65 @@
       fill: #ffffff !important;
       stroke: #ffffff !important;
     }
+    .quoted-post-embed{
+      background: rgba(87,25,41,0.04);
+      border-left: 3px solid rgba(87,25,41,0.25);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      font-size: 0.88rem;
+      cursor: pointer;
+    }
+    .quoted-post-embed:hover{
+      background: rgba(87,25,41,0.08);
+    }
+    :root[data-theme="dark"] .quoted-post-embed{
+      background: rgba(255,255,255,0.04);
+      border-left-color: rgba(255,255,255,0.2);
+    }
+    :root[data-theme="dark"] .quoted-post-embed:hover{
+      background: rgba(255,255,255,0.08);
+    }
+    .quoted-post-head{
+      display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+    }
+    .quoted-post-author{
+      font-weight: 600; font-size: 0.82rem; opacity: 0.7;
+    }
+    .quoted-post-body{
+      color: inherit; opacity: 0.8; line-height: 1.4;
+    }
+    
+
+    .quote-preview-inner{
+      background: rgba(87,25,41,0.06);
+      border-left: 3px solid rgba(87,25,41,0.4);
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 10px;
+      position: relative;
+      font-size: 0.88rem;
+    }
+    :root[data-theme="dark"] .quote-preview-inner{
+      background: rgba(255,255,255,0.06);
+      border-left-color: rgba(255,255,255,0.3);
+    }
+    .quote-preview-label{ font-size: 0.82rem; color: rgba(0,0,0,0.5); margin-bottom: 4px; }
+    :root[data-theme="dark"] .quote-preview-label{ color: rgba(255,255,255,0.5); }
+    .quote-preview-text{ color: inherit; line-height: 1.4; }
+    .quote-preview-remove{
+      position: absolute; top: 6px; right: 8px;
+      background: none; border: none; cursor: pointer;
+      font-size: 14px; color: rgba(0,0,0,0.4); padding: 2px 6px;
+    }
+    :root[data-theme="dark"] .quote-preview-remove{ color: rgba(255,255,255,0.4); }
+
+    .logical-btn.is-on svg{
+      stroke: #571929 !important;
+    }
+    :root[data-theme="dark"] .logical-btn.is-on svg{
+      stroke: #ffffff !important;
+    }
 
     .action-count{
       min-width: 18px;
@@ -2365,6 +2424,9 @@
 
               <button type="button" class="rt-btn" id="rtClear" title="Clear formatting">Tx</button>
             </div>
+
+
+            <div id="quotePreview" style="display:none;"></div>
             <!-- content che viene scritto-->
               <div id="createPostContent"
                 class="rt-editor"
@@ -3428,7 +3490,7 @@
       selection.addRange(newRange);
     }
     // --- Feed UI state (frontend-only for now) ---
-    const postUI = new Map();      // key -> { up, saved, upBase, commentBase, localComments:[] }
+    const postUI = new Map();      // key -> { logical, saved, logicalBase, commentBase, quoteBase, localComments:[] }
     const postByKey = new Map();   // key -> post object from API
     let activeThreadKey = null;
     let COMMENT_POLL_INTERVAL = null;
@@ -3443,18 +3505,23 @@
     function ensurePostUI(key, p) {
       if (postUI.has(key)) return postUI.get(key);
       const st = {
-        up: false,
+        logical: !!(p && p.my_logical),
         saved: false,
-        upBase: Number((p && p.up_count) || 0) || 0,
+        logicalBase: Number((p && p.logical_count) || 0) || 0,
         commentBase: Number((p && p.comment_count) || 0) || 0,
+        quoteBase: Number((p && p.quote_count) || 0) || 0,
         localComments: []
       };
       postUI.set(key, st);
       return st;
     }
 
-    function getUpCount(st) {
-      return st.upBase + (st.up ? 1 : 0);
+    function getLogicalCount(st) {
+      return st.logicalBase;
+    }
+
+    function getQuoteCount(st) {
+      return st.quoteBase;
     }
 
     function getCommentCount(st) {
@@ -3876,10 +3943,12 @@
       const card = document.querySelector(`.post-card[data-post-key="${sel}"]`);
       if (!card) return;
 
-      const upEl = card.querySelector(".up-count");
+      const logEl = card.querySelector(".logical-count");
       const cEl = card.querySelector(".comment-count");
-      if (upEl) upEl.textContent = String(getUpCount(st));
+      const qEl = card.querySelector(".quote-count");
+      if (logEl) logEl.textContent = String(getLogicalCount(st));
       if (cEl) cEl.textContent = String(getCommentCount(st));
+      if (qEl) qEl.textContent = String(getQuoteCount(st));
     }
 
     async function trySendThreadComment() {
@@ -4209,17 +4278,27 @@
             </div>
           </div>
 
+          ${p.quoted_post ? `
+            <div class="quoted-post-embed">
+              <div class="quoted-post-head">
+                <img class="comment-avatar" src="${escapeHtml(p.quoted_post.author_picture_url || '/avatar-default.png')}" style="width:20px;height:20px;" />
+                <span class="quoted-post-author">${escapeHtml(p.quoted_post.author_display_name || 'anon')}</span>
+              </div>
+              <div class="quoted-post-body">${escapeHtml((p.quoted_post.content_text || p.quoted_post.content || '').substring(0, 300))}${((p.quoted_post.content_text || p.quoted_post.content || '').length > 300) ? '…' : ''}</div>
+            </div>
+          ` : ''}
+
           ${contentHtml}
 
           <div class="post-actions">
             <div class="actions-left">
-              <button class="icon-btn up-btn ${st.up ? "is-on" : ""}" ${canInteract ? "" : "disabled"} type="button" aria-label="Upvote">
+              <button class="icon-btn logical-btn ${st.logical ? "is-on" : ""}" ${canInteract ? "" : "disabled"} type="button" aria-label="Logical" title="Mark as logically sound">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M12 19V5"></path>
-                  <path d="M6 11l6-6 6 6"></path>
+                  <circle cx="12" cy="12" r="9" stroke-width="2"></circle>
+                  <path d="M8 12l3 3 5-5" stroke-width="2"></path>
                 </svg>
               </button>
-              <span class="action-count up-count">${getUpCount(st)}</span>
+              <span class="action-count logical-count">${getLogicalCount(st)}</span>
 
               <button class="icon-btn comment-btn" type="button" aria-label="Open comments">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -4227,6 +4306,14 @@
                 </svg>
               </button>
               <span class="action-count comment-count">${getCommentCount(st)}</span>
+
+              <button class="icon-btn quote-btn" ${canInteract ? "" : "disabled"} type="button" aria-label="Quote this post" title="Quote this post">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.76-2.017-2-2H5c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"></path>
+                  <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.76-2.017-2-2h-3c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21z"></path>
+                </svg>
+              </button>
+              <span class="action-count quote-count">${getQuoteCount(st)}</span>
             </div>
 
             <div class="actions-right">
@@ -4246,9 +4333,10 @@
           renderThread(key);
         });
 
-        const upBtn = card.querySelector(".up-btn");
+const logicalBtn = card.querySelector(".logical-btn");
         const saveBtn = card.querySelector(".save-btn");
         const commentBtn = card.querySelector(".comment-btn");
+        const quoteBtn = card.querySelector(".quote-btn");
 
         const menuBtn = card.querySelector(".post-menu-btn");
         const menu = card.querySelector(".post-menu");
@@ -4297,12 +4385,30 @@
             authorName:  blockPostBtn.dataset.authorName
           });
         });
-        upBtn?.addEventListener("click", (e) => {
+        logicalBtn?.addEventListener("click", async (e) => {
           e.stopPropagation();
           if (!getToken()) { openModal(); return; }
-          st.up = !st.up;
-          upBtn.classList.toggle("is-on", st.up);
-          bumpFeedCountsForKey(key);
+          logicalBtn.disabled = true;
+          try {
+            const res = await api("/api/posts/" + encodeURIComponent(p.id) + "/logical", { method: "POST" });
+            if (res && res.ok) {
+              st.logical = res.logical;
+              st.logicalBase = res.logical_count;
+              logicalBtn.classList.toggle("is-on", st.logical);
+              bumpFeedCountsForKey(key);
+            }
+          } catch (err) {
+            console.warn("logical_vote_failed:", err);
+          } finally {
+            logicalBtn.disabled = false;
+          }
+        });
+
+        quoteBtn?.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (!getToken()) { openModal(); return; }
+          // Apri il modal di creazione post con la citazione precompilata
+          openCreatePostModal({ quotedPost: p, quotedPostKey: key });
         });
 
         saveBtn?.addEventListener("click", async (e) => {
@@ -4435,23 +4541,54 @@
       }
     });
 
-    function openCreatePostModal() {
+    let pendingQuotedPost = null; // post object da citare
+
+    function openCreatePostModal(opts) {
+      pendingQuotedPost = (opts && opts.quotedPost) || null;
+
+      // Mostra/nascondi la preview della citazione
+      const previewEl = document.getElementById("quotePreview");
+      if (previewEl) {
+        if (pendingQuotedPost) {
+          const qName = escapeHtml(pendingQuotedPost.author_display_name || "anon");
+          const qText = escapeHtml((pendingQuotedPost.content_text || pendingQuotedPost.content || "").substring(0, 200));
+          previewEl.innerHTML = `
+            <div class="quote-preview-inner">
+              <div class="quote-preview-label">Quoting <strong>${qName}</strong></div>
+              <div class="quote-preview-text">${qText}${qText.length >= 200 ? "…" : ""}</div>
+              <button type="button" class="quote-preview-remove" aria-label="Remove quote">✕</button>
+            </div>`;
+          previewEl.style.display = "block";
+          previewEl.querySelector(".quote-preview-remove")?.addEventListener("click", () => {
+            pendingQuotedPost = null;
+            previewEl.style.display = "none";
+            previewEl.innerHTML = "";
+          });
+        } else {
+          previewEl.style.display = "none";
+          previewEl.innerHTML = "";
+        }
+      }
+
+
       createPostModal.classList.add("open");
       createPostModal.setAttribute("aria-hidden", "false");
       closeMenu();
-      closeModal(); // chiude login modal se aperto
+      closeModal();
       setTimeout(() => createPostContent?.focus(), 0);
     }
+
     function closeCreatePostModal() {
       createPostModal.classList.remove("open");
       createPostModal.setAttribute("aria-hidden", "true");
       
       createPostContent.innerHTML = "";
+      pendingQuotedPost = null;
+      const previewEl = document.getElementById("quotePreview");
+      if (previewEl) { previewEl.style.display = "none"; previewEl.innerHTML = ""; }
       updatePostCounterAndPublish();
       clearImages();
-
     }
-
     // --- Images state (frontend only for now) ---
     const selectedImages = []; // { id, file, url }
 
@@ -5178,7 +5315,12 @@ Try again after ${until.toLocaleTimeString()}.`);
         const contentHtml = createPostContent.innerHTML;
         await api("/api/posts", {
           method: "POST",
-          body: JSON.stringify({ content: contentText, content_html: contentHtml, content_text: contentText })
+          body: JSON.stringify({
+            content: contentText,
+            content_html: contentHtml,
+            content_text: contentText,
+            quoted_post_id: pendingQuotedPost ? pendingQuotedPost.id : null
+          })
         });
         spamSaveTs(Date.now());
         createPostContent.innerHTML = "";
