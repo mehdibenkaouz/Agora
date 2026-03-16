@@ -2619,6 +2619,28 @@ if (refreshBtn) refreshBtn.addEventListener("click", ()=> loadPosts());
   el.addEventListener("pointercancel", ()=>{ down=false; });
 })();
 
+async function loadAwards(userId) {
+  try {
+    const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(userId)}/awards`);
+    const data = await res.json();
+    if (!data || !data.ok) return;
+    const a = data.awards;
+    const items = {
+      socrates: a.socrates, davinci: a.davinci,
+      alexandria: a.alexandria, hypatia: a.hypatia, aristotle: a.aristotle
+    };
+    Object.entries(items).forEach(([key, val]) => {
+      const el = document.getElementById("award-" + key);
+      const countEl = document.getElementById("award-" + key + "-count");
+      if (el) {
+        if (!val.unlocked) el.classList.add("locked");
+        else el.classList.remove("locked");
+      }
+      if (countEl) countEl.textContent = val.count + " / 1000";
+    });
+  } catch(e) { console.warn("awards_load_failed:", e); }
+}
+
 async function loadPosts(){
   showEmpty("Loading…", "Fetching posts…");
   if (!VIEW_USER_ID) resetPersonalSections();
