@@ -3427,8 +3427,6 @@
     }
 
     async function uploadAllSelectedImagesAndSwapSrc() {
-      // Carica solo quelle che non sono già state caricate
-      // Salviamo sull’oggetto: uploadedUrl / uploadedKey
       for (const it of selectedImages) {
         if (it.uploadedUrl) continue;
 
@@ -3436,9 +3434,13 @@
         it.uploadedKey = up.key;
         it.uploadedUrl = up.url;
 
-        // Sostituisci src nell'editor: .img-node[data-img-id="..."] img
-        const node = createPostContent.querySelector(`.img-node[data-img-id="${it.id}"] img`);
-        if (node) node.src = it.uploadedUrl;
+        // Sostituisci src nell'editor: immagini
+        const imgNode = createPostContent.querySelector(`.img-node[data-img-id="${it.id}"] img`);
+        if (imgNode) imgNode.src = it.uploadedUrl;
+
+        // Sostituisci src nell'editor: video
+        const vidNode = createPostContent.querySelector(`.video-node[data-img-id="${it.id}"] video`);
+        if (vidNode) vidNode.src = it.uploadedUrl;
       }
     }
 
