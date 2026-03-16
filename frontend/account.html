@@ -2162,6 +2162,16 @@ async function loadAwards(userId) {
     });
   } catch(e) { console.warn("awards_load_failed:", e); }
 }
+async function loadViewUser() {
+  if (!VIEW_USER_ID) return false;
+  try {
+    const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(VIEW_USER_ID)}`);
+    const data = await res.json();
+    if (!data.ok) return false;
+    VIEW_USER = data.user;
+    return true;
+  } catch(e) { return false; }
+}
 
 async function fetchViewUserPosts() {
   const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(VIEW_USER_ID)}/posts`);
