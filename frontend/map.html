@@ -251,7 +251,13 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
 /* ── LOCATION PERMISSION BANNER ── */
 .loc-banner{
-  position:absolute;top:12px;left:50%;transform:translateX(-50%);
+  
+  position: absolute;
+  bottom: 150px;
+  right: -130px;
+  width: auto;
+  height: 48px;
+  transform: translateX(-50%);
   z-index:800;
   background:var(--panel);border:1px solid var(--line);
   border-radius:14px;padding:10px 18px;
@@ -694,12 +700,22 @@ let activeTopics=new Set();
 let activeType="all";
 let searchQ="";
 let markers={};
-let userLat=44.498,userLng=11.347; // default: Bologna
+let userLat=37.988,userLng=23.711; // default: Accademia di Platone, Atene
 let userMarker=null;
 let tileLayer=null;
 
 // ── MAP INIT ───────────────────────────────────────────────────────
 const map=L.map("map",{zoomControl:false,attributionControl:true}).setView([userLat,userLng],15);
+
+// Centra sulla posizione reale dell'utente appena disponibile
+if(navigator.geolocation){
+  navigator.geolocation.getCurrentPosition(pos=>{
+    userLat=pos.coords.latitude;
+    userLng=pos.coords.longitude;
+    map.setView([userLat,userLng],15,{animate:true});
+  },()=>{/* fallback: resta su Bologna */},{enableHighAccuracy:true,timeout:8000,maximumAge:60000});
+}
+
 window._map=map;
 
 L.control.zoom({position:"bottomleft"}).addTo(map);
