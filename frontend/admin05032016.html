@@ -604,6 +604,9 @@
     <button class="tab-btn" data-tab="bugs">
       ⬡ Bug <span class="tab-count" id="cnt-bugs">0</span>
     </button>
+    <button class="tab-btn" data-tab="tagreports">
+      🏷 Tag Reports <span class="tab-count" id="cnt-tagreports">0</span>
+    </button>
     <button class="tab-btn" data-tab="releases">
       ◎ Release
     </button>
@@ -725,6 +728,31 @@
       </thead>
       <tbody id="bugs-tbody">
         <tr class="loading-row"><td colspan="8">CARICAMENTO...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- TAG REPORTS TAB -->
+  <div class="tab-panel" id="tab-tagreports">
+    <div class="section-header">
+      <div class="section-title">Tag Reports <span id="tagreports-subtitle">segnalazioni tag</span></div>
+      <button class="refresh-btn" onclick="loadTagReports()">↻ Aggiorna</button>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Segnalatore</th>
+          <th>Tipo Tag</th>
+          <th>Testo Tag</th>
+          <th>Motivo</th>
+          <th>Tot. Report</th>
+          <th>Stato</th>
+          <th>Data</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody id="tagreports-tbody">
+        <tr><td colspan="8" style="text-align:center;color:var(--muted)">Nessuna segnalazione</td></tr>
       </tbody>
     </table>
   </div>
@@ -899,7 +927,7 @@
 
   // ── LOAD ALL ────────────────────────────────────────────
   async function loadAll() {
-    await Promise.all([loadSpam(), loadUsers(), loadComplaints(), loadBugs(), loadReleases()]);
+    await Promise.all([loadSpam(), loadUsers(), loadComplaints(), loadBugs(), loadReleases(), loadTagReports()]);
   }
 
   // ── FORMAT ──────────────────────────────────────────────
@@ -1209,6 +1237,74 @@
     }
     showToast(`Salvati ${ok} bug${err ? `, ${err} errori` : ""}.`);
     loadBugs();
+  }
+
+
+  // ════════════════════════════════════════════════════════
+  // ── TAG REPORTS ─────────────────────────────────────────
+  // ════════════════════════════════════════════════════════
+  async function loadTagReports() {
+    const tbody = document.getElementById("tagreports-tbody");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr class="loading-row"><td colspan="8">CARICAMENTO...</td></tr>`;
+    try {
+      const data = await adminApi("/api/admin/tag-reports");
+      if (!data.ok) { tbody.innerHTML = `<tr><td colspan="8">Errore caricamento</td></tr>`; return; }
+
+      const reports = data.reports || [];
+      const cntEl = document.getElementById("cnt-tagreports");
+      if (cntEl) cntEl.textContent = reports.length;
+
+      if (!reports.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted)">Nessuna segnalazione</td></tr>`;
+        return;
+      }
+
+      const reasonLabels = {
+        not_a_question: "Not a question",
+        not_a_clarification: "Not a clarification",
+        not_a_source: "Not a source",
+        random_incorrect: "Random / incorrect"
+      };
+
+      const tagLabels = { question: "❓ Question", clarification: "💡 Clarification", sources: "📚 Sources" };
+
+      tbody.innerHTML = reports.map(r => `
+        <tr>
+          <td>${avatarHtml(r.reporter_picture, r.reporter_name)} ${r.reporter_name}</td>
+          <td>${tagLabels[r.segment_type] || r.segment_type}</td>
+          <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.segment_text_snapshot || ''}">${r.segment_text_snapshot || '—'}</td>
+          <td>${reasonLabels[r.reason] || r.reason}</td>
+          <td><strong>${r.total_reports}</strong></td>
+          <td>${r.is_active ? '<span class="badge badge-pending">Attivo</span>' : '<span class="badge badge-resolved">Disattivato</span>'}</td>
+          <td>${fmtDate(r.created_at)}</td>
+          <td>
+            ${r.is_active
+              ? `<button class="action-btn" onclick="adminDeactivateTag('${r.segment_id}')">Disattiva</button>`
+              : `<button class="action-btn" onclick="adminActivateTag('${r.segment_id}')">Riattiva</button>`
+            }
+          </td>
+        </tr>
+      `).join("");
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="8">Errore: ${e.message}</td></tr>`;
+    }
+  }
+
+  async function adminDeactivateTag(segmentId) {
+    try {
+      await adminApi("/api/admin/segments/" + segmentId + "/deactivate", { method: "POST" });
+      toast("Tag disattivato");
+      loadTagReports();
+    } catch(e) { toast("Errore: " + e.message); }
+  }
+
+  async function adminActivateTag(segmentId) {
+    try {
+      await adminApi("/api/admin/segments/" + segmentId + "/activate", { method: "POST" });
+      toast("Tag riattivato");
+      loadTagReports();
+    } catch(e) { toast("Errore: " + e.message); }
   }
 
   // ════════════════════════════════════════════════════════

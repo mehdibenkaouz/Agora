@@ -2708,6 +2708,7 @@ if (VIEW_USER_ID) {
     showEmpty("Failed to load posts", "Try Refresh. If it keeps failing, check API logs / token.");
     renderSpread();
   }
+  if (CURRENT_USER?.id) loadAwards(CURRENT_USER.id);
   if (window.loadSavedPosts) window.loadSavedPosts();
 }
 

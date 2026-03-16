@@ -4795,6 +4795,14 @@ const logicalBtn = card.querySelector(".logical-btn");
       const bodyEl = card.querySelector(".post-body-inner") || card.querySelector(".post-body");
       if (!bodyEl) return;
 
+      // Rimuovi eventuali bottoni tag-remove che sono finiti nell'HTML salvato
+      bodyEl.querySelectorAll(".tag-remove").forEach(el => el.remove());
+      bodyEl.querySelectorAll(".tagged-segment").forEach(el => {
+        const parent = el.parentNode;
+        while (el.firstChild) parent.insertBefore(el.firstChild, el);
+        parent.removeChild(el);
+      });
+
       segments.forEach(seg => {
         if (!seg.segment_text_snapshot || !seg.is_active) return;
         const tagType = seg.segment_type;
@@ -4929,7 +4937,7 @@ const logicalBtn = card.querySelector(".logical-btn");
       if (previewEl) {
         if (pendingQuotedPost) {
           const qName = escapeHtml(pendingQuotedPost.author_display_name || "anon");
-          const qText = escapeHtml((pendingQuotedPost.content_text || pendingQuotedPost.content || "").substring(0, 200));
+          const qText = escapeHtml(stripHtml(pendingQuotedPost.content_text || pendingQuotedPost.content || '').substring(0, 200));
           previewEl.innerHTML = `
             <div class="quote-preview-inner">
               <div class="quote-preview-label">Quoting <strong>${qName}</strong></div>
@@ -5690,7 +5698,15 @@ Try again after ${until.toLocaleTimeString()}.`);
 
       try {
         await uploadAllSelectedImagesAndSwapSrc();
-        const contentHtml = createPostContent.innerHTML;
+        // Pulisci i tag dell'editor prima di salvare: rimuovi .tag-remove e unwrap .tagged-segment
+        const editorClone = createPostContent.cloneNode(true);
+        editorClone.querySelectorAll(".tag-remove").forEach(el => el.remove());
+        editorClone.querySelectorAll(".tagged-segment").forEach(el => {
+          const p = el.parentNode;
+          while (el.firstChild) p.insertBefore(el.firstChild, el);
+          p.removeChild(el);
+        });
+        const contentHtml = editorClone.innerHTML;
         await api("/api/posts", {
           method: "POST",
           body: JSON.stringify({
