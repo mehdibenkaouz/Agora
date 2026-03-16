@@ -153,20 +153,63 @@ export default {
           return json({ ok: false, error: "spam_detected", until: spamResult.until }, 429, ALLOWED_ORIGIN);
         }
 
+        // Quoted post (per citazioni)
+        const quotedPostId = body.quoted_post_id ? String(body.quoted_post_id).trim() : null;
+        if (quotedPostId) {
+          const qExists = await env.dbagora.prepare("SELECT id FROM posts WHERE id = ?1").bind(quotedPostId).first();
+          if (!qExists) return json({ ok: false, error: "quoted_post_not_found" }, 404, ALLOWED_ORIGIN);
+          if (textLike.length < 20) return json({ ok: false, error: "quote_text_too_short" }, 400, ALLOWED_ORIGIN);
+        }
+
         const postId = crypto.randomUUID();
         const now = new Date().toISOString();
         await env.dbagora.prepare(
-        // CORRETTO:
-        `INSERT INTO posts (id, user_id, content, content_text, created_at) VALUES (?1, ?2, ?3, ?4, ?5)`
-        ).bind(postId, session.user_id, contentToStore, textLike, now).run();
+          `INSERT INTO posts (id, user_id, content, content_text, created_at, quoted_post_id)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
+        ).bind(postId, session.user_id, contentToStore, textLike, now, quotedPostId).run();
+
+        // Salva i segmenti (tag Question/Clarification/Sources)
+        const segments = Array.isArray(body.segments) ? body.segments : [];
+        for (const seg of segments) {
+          const sType = String(seg.type || "").toLowerCase();
+          if (!['question','clarification','sources'].includes(sType)) continue;
+          const sStart = parseInt(seg.start_offset);
+          const sEnd   = parseInt(seg.end_offset);
+          const sText  = String(seg.text || "").trim();
+          if (isNaN(sStart) || isNaN(sEnd) || sEnd <= sStart || !sText) continue;
+          await env.dbagora.prepare(
+            `INSERT INTO post_segments (id, post_id, author_user_id, start_offset, end_offset, segment_text_snapshot, segment_type, is_active, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, 1, ?8)`
+          ).bind(crypto.randomUUID(), postId, session.user_id, sStart, sEnd, sText, sType, now).run();
+        }
+
+        // Se è una citazione, registra e notifica l'autore del post citato
+        if (quotedPostId) {
+          await env.dbagora.prepare(
+            `INSERT INTO post_quotes (id, source_post_id, new_post_id, author_user_id, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)`
+          ).bind(crypto.randomUUID(), quotedPostId, postId, session.user_id, now).run();
+          try {
+            const quotedPost = await env.dbagora.prepare("SELECT user_id FROM posts WHERE id = ?1").bind(quotedPostId).first();
+            if (quotedPost && quotedPost.user_id !== session.user_id) {
+              const author = await env.dbagora.prepare(
+                `SELECT COALESCE(NULLIF(TRIM(display_name),''),
+                  CASE WHEN instr(email,'@')>1 THEN substr(email,1,instr(email,'@')-1) ELSE email END
+                ) AS name FROM users WHERE id = ?1`
+              ).bind(session.user_id).first();
+              await createNotification(env, quotedPost.user_id, "quote",
+                `${author?.name || "Someone"} quoted your post.`, quotedPostId, null);
+            }
+          } catch(_) {}
+        }
 
         // Salva timestamp per spam tracking
         await recordAction(env, session.user_id, "post");
 
-        return json({ ok: true, post: { id: postId, created_at: now } }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true, post: { id: postId, created_at: now, quoted_post_id: quotedPostId } }, 200, ALLOWED_ORIGIN);
       }
 
-      // ── POSTS: GET ───────────────────────────────────────────────────
+// ── POSTS: GET ───────────────────────────────────────────────────
       if (url.pathname === "/api/posts" && request.method === "GET") {
         const authHeader = request.headers.get("Authorization") || "";
         const feedToken  = parseBearer(authHeader);
@@ -181,6 +224,7 @@ export default {
               u.id as author_id,
               p.content,
               p.created_at,
+              p.quoted_post_id,
               u.email as author_email,
               COALESCE(
                 NULLIF(TRIM(u.display_name), ''),
@@ -190,7 +234,9 @@ export default {
                 END
               ) AS author_display_name,
               COALESCE(u.picture_url, '') AS author_picture_url,
-              (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comment_count
+              (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comment_count,
+              (SELECT COUNT(*) FROM post_logic_votes lv WHERE lv.post_id = p.id) as logical_count,
+              (SELECT COUNT(*) FROM post_quotes pq WHERE pq.source_post_id = p.id) as quote_count
           FROM posts p
           JOIN users u ON u.id = p.user_id
           WHERE (?1 IS NULL OR NOT EXISTS (
@@ -203,7 +249,44 @@ export default {
           ORDER BY p.created_at DESC
           LIMIT 30`
         ).bind(feedUid).all();
-        return json({ ok: true, posts: rows.results || [] }, 200, ALLOWED_ORIGIN);
+
+        const posts = rows.results || [];
+        for (const post of posts) {
+          // Preview del post citato
+          if (post.quoted_post_id) {
+            const qp = await env.dbagora.prepare(
+              `SELECT p.id, p.content, p.content_text,
+                u.id as author_id,
+                COALESCE(NULLIF(TRIM(u.display_name),''),
+                  CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
+                ) AS author_display_name,
+                COALESCE(u.picture_url,'') AS author_picture_url
+              FROM posts p JOIN users u ON u.id = p.user_id
+              WHERE p.id = ?1`
+            ).bind(post.quoted_post_id).first();
+            post.quoted_post = qp || null;
+          }
+          // Segmenti attivi del post
+          const segs = await env.dbagora.prepare(
+            `SELECT id, start_offset, end_offset, segment_text_snapshot, segment_type, is_active,
+              (SELECT COUNT(*) FROM segment_reports sr WHERE sr.segment_id = post_segments.id) as report_count
+            FROM post_segments WHERE post_id = ?1 AND is_active = 1
+            ORDER BY start_offset ASC`
+          ).bind(post.id).all();
+          post.segments = segs.results || [];
+
+          // Se l'utente è loggato, indica se ha già messo Logical
+          if (feedUid) {
+            const myVote = await env.dbagora.prepare(
+              "SELECT id FROM post_logic_votes WHERE post_id = ?1 AND user_id = ?2"
+            ).bind(post.id, feedUid).first();
+            post.my_logical = !!myVote;
+          } else {
+            post.my_logical = false;
+          }
+        }
+
+        return json({ ok: true, posts }, 200, ALLOWED_ORIGIN);
       }
 
 
@@ -657,6 +740,195 @@ export default {
         `).bind(session.user_id).all();
         return json({ ok: true, posts: rows.results || [] }, 200, ALLOWED_ORIGIN);
       }
+// ═══════════════════════════════════════════════════════════════
+      // ── LOGICAL VOTE: POST /api/posts/:id/logical ─────────────────
+      // ═══════════════════════════════════════════════════════════════
+      const logicalMatch = url.pathname.match(/^\/api\/posts\/([^/]+)\/logical$/);
+      if (logicalMatch && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const postId = decodeURIComponent(logicalMatch[1]).trim();
+        if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
+
+        const post = await env.dbagora.prepare("SELECT id, user_id FROM posts WHERE id = ?1").bind(postId).first();
+        if (!post) return json({ ok: false, error: "post_not_found" }, 404, ALLOWED_ORIGIN);
+
+        // No self-vote
+        if (post.user_id === session.user_id) {
+          return json({ ok: false, error: "cannot_vote_own_post" }, 403, ALLOWED_ORIGIN);
+        }
+
+        // Toggle: se esiste rimuovi, altrimenti aggiungi
+        const existing = await env.dbagora.prepare(
+          "SELECT id FROM post_logic_votes WHERE post_id = ?1 AND user_id = ?2"
+        ).bind(postId, session.user_id).first();
+
+        if (existing) {
+          await env.dbagora.prepare("DELETE FROM post_logic_votes WHERE id = ?1").bind(existing.id).run();
+          const cnt = await env.dbagora.prepare(
+            "SELECT COUNT(*) as c FROM post_logic_votes WHERE post_id = ?1"
+          ).bind(postId).first();
+          return json({ ok: true, logical: false, logical_count: cnt?.c || 0 }, 200, ALLOWED_ORIGIN);
+        } else {
+          await env.dbagora.prepare(
+            "INSERT INTO post_logic_votes (id, post_id, user_id, created_at) VALUES (?1,?2,?3,?4)"
+          ).bind(crypto.randomUUID(), postId, session.user_id, new Date().toISOString()).run();
+
+          const cnt = await env.dbagora.prepare(
+            "SELECT COUNT(*) as c FROM post_logic_votes WHERE post_id = ?1"
+          ).bind(postId).first();
+
+          // Notifica l'autore
+          try {
+            const voter = await env.dbagora.prepare(
+              `SELECT COALESCE(NULLIF(TRIM(display_name),''),
+                CASE WHEN instr(email,'@')>1 THEN substr(email,1,instr(email,'@')-1) ELSE email END
+              ) AS name FROM users WHERE id = ?1`
+            ).bind(session.user_id).first();
+            await createNotification(env, post.user_id, "logical",
+              `${voter?.name || "Someone"} marked your post as Logical.`, postId, null);
+          } catch(_) {}
+
+          return json({ ok: true, logical: true, logical_count: cnt?.c || 0 }, 200, ALLOWED_ORIGIN);
+        }
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ── SEGMENTS: GET /api/posts/:id/segments ──────────────────────
+      // ═══════════════════════════════════════════════════════════════
+      const segmentsMatch = url.pathname.match(/^\/api\/posts\/([^/]+)\/segments$/);
+      if (segmentsMatch && request.method === "GET") {
+        const postId = decodeURIComponent(segmentsMatch[1]).trim();
+        if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
+        const rows = await env.dbagora.prepare(
+          `SELECT s.id, s.start_offset, s.end_offset, s.segment_text_snapshot, s.segment_type, s.is_active,
+            (SELECT COUNT(*) FROM segment_reports sr WHERE sr.segment_id = s.id) as report_count
+          FROM post_segments s
+          WHERE s.post_id = ?1
+          ORDER BY s.start_offset ASC`
+        ).bind(postId).all();
+        return json({ ok: true, segments: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ── SEGMENT REPORT: POST /api/segments/:id/report ─────────────
+      // ═══════════════════════════════════════════════════════════════
+      const segReportMatch = url.pathname.match(/^\/api\/segments\/([^/]+)\/report$/);
+      if (segReportMatch && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const segmentId = decodeURIComponent(segReportMatch[1]).trim();
+        if (!segmentId) return json({ ok: false, error: "missing_segment_id" }, 400, ALLOWED_ORIGIN);
+
+        const segment = await env.dbagora.prepare(
+          "SELECT id, author_user_id, post_id FROM post_segments WHERE id = ?1"
+        ).bind(segmentId).first();
+        if (!segment) return json({ ok: false, error: "segment_not_found" }, 404, ALLOWED_ORIGIN);
+
+        // Non puoi segnalare il tuo tag
+        if (segment.author_user_id === session.user_id) {
+          return json({ ok: false, error: "cannot_report_own_tag" }, 403, ALLOWED_ORIGIN);
+        }
+
+        const body = await request.json().catch(() => ({}));
+        const reason = String(body.reason || "").trim();
+        if (!['not_a_question','not_a_clarification','not_a_source','random_incorrect'].includes(reason)) {
+          return json({ ok: false, error: "invalid_reason" }, 400, ALLOWED_ORIGIN);
+        }
+
+        // Un report per utente per segmento (UNIQUE constraint)
+        try {
+          await env.dbagora.prepare(
+            `INSERT INTO segment_reports (id, segment_id, reporter_user_id, reason, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)`
+          ).bind(crypto.randomUUID(), segmentId, session.user_id, reason, new Date().toISOString()).run();
+        } catch(e) {
+          return json({ ok: false, error: "already_reported" }, 409, ALLOWED_ORIGIN);
+        }
+
+        // Conta report e applica soglie automatiche
+        const cnt = await env.dbagora.prepare(
+          "SELECT COUNT(*) as c FROM segment_reports WHERE segment_id = ?1"
+        ).bind(segmentId).first();
+        const reportCount = cnt?.c || 0;
+
+        // 5 report da utenti distinti → tag disattivato
+        if (reportCount >= 5) {
+          await env.dbagora.prepare(
+            "UPDATE post_segments SET is_active = 0 WHERE id = ?1"
+          ).bind(segmentId).run();
+        }
+
+        return json({ ok: true, report_count: reportCount, tag_deactivated: reportCount >= 5 }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // ── AWARD COUNTERS: GET /api/users/:id/awards ─────────────────
+      // ═══════════════════════════════════════════════════════════════
+      const userAwardsMatch = url.pathname.match(/^\/api\/users\/([^/]+)\/awards$/);
+      if (userAwardsMatch && request.method === "GET") {
+        const userId = decodeURIComponent(userAwardsMatch[1]).trim();
+        if (!userId) return json({ ok: false, error: "missing_id" }, 400, ALLOWED_ORIGIN);
+
+        // Socrates: post con Question valido + >=50 commentatori distinti
+        const socrates = await env.dbagora.prepare(`
+          SELECT COUNT(DISTINCT p.id) as cnt FROM posts p
+          WHERE p.user_id = ?1
+            AND EXISTS (SELECT 1 FROM post_segments ps WHERE ps.post_id = p.id AND ps.segment_type = 'question' AND ps.is_active = 1)
+            AND (SELECT COUNT(DISTINCT c.user_id) FROM comments c WHERE c.post_id = p.id AND c.user_id != p.user_id) >= 50
+        `).bind(userId).first();
+
+        // Hypatia: post con Clarification valido + >=50 commentatori distinti
+        const hypatia = await env.dbagora.prepare(`
+          SELECT COUNT(DISTINCT p.id) as cnt FROM posts p
+          WHERE p.user_id = ?1
+            AND EXISTS (SELECT 1 FROM post_segments ps WHERE ps.post_id = p.id AND ps.segment_type = 'clarification' AND ps.is_active = 1)
+            AND (SELECT COUNT(DISTINCT c.user_id) FROM comments c WHERE c.post_id = p.id AND c.user_id != p.user_id) >= 50
+        `).bind(userId).first();
+
+        // Alexandria: post con Sources valido + >=50 commentatori distinti
+        const alexandria = await env.dbagora.prepare(`
+          SELECT COUNT(DISTINCT p.id) as cnt FROM posts p
+          WHERE p.user_id = ?1
+            AND EXISTS (SELECT 1 FROM post_segments ps WHERE ps.post_id = p.id AND ps.segment_type = 'sources' AND ps.is_active = 1)
+            AND (SELECT COUNT(DISTINCT c.user_id) FROM comments c WHERE c.post_id = p.id AND c.user_id != p.user_id) >= 50
+        `).bind(userId).first();
+
+        // Da Vinci: citazioni ricevute da altri utenti
+        const davinci = await env.dbagora.prepare(`
+          SELECT COUNT(*) as cnt FROM post_quotes pq
+          JOIN posts p ON p.id = pq.source_post_id
+          WHERE p.user_id = ?1 AND pq.author_user_id != ?1
+        `).bind(userId).first();
+
+        // Aristotle: voti Logical ricevuti da utenti distinti
+        const aristotle = await env.dbagora.prepare(`
+          SELECT COUNT(*) as cnt FROM post_logic_votes lv
+          JOIN posts p ON p.id = lv.post_id
+          WHERE p.user_id = ?1 AND lv.user_id != ?1
+        `).bind(userId).first();
+
+        const THRESHOLD = 1000;
+        return json({ ok: true, awards: {
+          socrates:   { count: socrates?.cnt || 0,   unlocked: (socrates?.cnt || 0) >= THRESHOLD },
+          hypatia:    { count: hypatia?.cnt || 0,    unlocked: (hypatia?.cnt || 0) >= THRESHOLD },
+          alexandria: { count: alexandria?.cnt || 0,  unlocked: (alexandria?.cnt || 0) >= THRESHOLD },
+          davinci:    { count: davinci?.cnt || 0,    unlocked: (davinci?.cnt || 0) >= THRESHOLD },
+          aristotle:  { count: aristotle?.cnt || 0,  unlocked: (aristotle?.cnt || 0) >= THRESHOLD }
+        }}, 200, ALLOWED_ORIGIN);
+      }
 
       // ── MAP ──────────────────────────────────────────────────────────
       if (url.pathname === "/api/map/sessions" && request.method === "GET") {
@@ -850,19 +1122,21 @@ export default {
           }}, 200, ALLOWED_ORIGIN);
         }
 
-      // ── USER POSTS: GET /api/users/:id/posts ─────────────────────────
+// ── USER POSTS: GET /api/users/:id/posts ─────────────────────────
         const userPostsMatch = url.pathname.match(/^\/api\/users\/([^/]+)\/posts$/);
         if (userPostsMatch && request.method === "GET") {
           const userId = decodeURIComponent(userPostsMatch[1] || "").trim();
           if (!userId) return json({ ok: false, error: "missing_id" }, 400, ALLOWED_ORIGIN);
           const rows = await env.dbagora.prepare(
-            `SELECT p.id, p.content, p.created_at,
+            `SELECT p.id, p.content, p.created_at, p.quoted_post_id,
               u.id as author_id,
               COALESCE(NULLIF(TRIM(u.display_name),''),
                 CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
               ) AS author_display_name,
               COALESCE(u.picture_url,'') AS author_picture_url,
-              (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comment_count
+              (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comment_count,
+              (SELECT COUNT(*) FROM post_logic_votes lv WHERE lv.post_id = p.id) as logical_count,
+              (SELECT COUNT(*) FROM post_quotes pq WHERE pq.source_post_id = p.id) as quote_count
             FROM posts p JOIN users u ON u.id = p.user_id
             WHERE p.user_id = ?1 AND COALESCE(u.banned,0) = 0
             ORDER BY p.created_at ASC LIMIT 200`

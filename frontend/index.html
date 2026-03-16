@@ -1179,6 +1179,115 @@
       fill: #ffffff !important;
       stroke: #ffffff !important;
     }
+    .rt-tag-menu{
+      position: absolute; top: 100%; left: 0; z-index: 100;
+      background: #fff; border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+      padding: 4px 0; min-width: 170px;
+    }
+    :root[data-theme="dark"] .rt-tag-menu{
+      background: #1a1a1a; border-color: rgba(255,255,255,0.12);
+    }
+    .rt-tag-option{
+      display: block; width: 100%; padding: 8px 14px; border: none;
+      background: none; cursor: pointer; font-size: 0.88rem;
+      text-align: left; color: inherit;
+    }
+    .rt-tag-option:hover{
+      background: rgba(87,25,41,0.08);
+    }
+    :root[data-theme="dark"] .rt-tag-option:hover{
+      background: rgba(255,255,255,0.08);
+    }
+    .tagged-segment{
+      border-radius: 3px; padding: 1px 3px; position: relative; cursor: default;
+    }
+    .tagged-segment[data-tag="question"]{
+      background: rgba(59,130,246,0.10); border-bottom: 2px solid rgba(59,130,246,0.5);
+    }
+    .tagged-segment[data-tag="clarification"]{
+      background: rgba(234,179,8,0.10); border-bottom: 2px solid rgba(234,179,8,0.5);
+    }
+    .tagged-segment[data-tag="sources"]{
+      background: rgba(34,197,94,0.10); border-bottom: 2px solid rgba(34,197,94,0.5);
+    }
+    .tagged-segment::after{
+      content: attr(data-tag-label);
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+      position: absolute; top: -14px; left: 2px;
+      opacity: 0; pointer-events: none; transition: opacity .15s;
+      padding: 1px 4px; border-radius: 3px; line-height: 1.2;
+    }
+    .tagged-segment:hover::after{ opacity: 0.7; }
+    .tagged-segment[data-tag="question"]::after{ content: "Question"; color: rgba(59,130,246,0.9); }
+    .tagged-segment[data-tag="clarification"]::after{ content: "Clarification"; color: rgba(180,130,8,0.9); }
+    .tagged-segment[data-tag="sources"]::after{ content: "Sources"; color: rgba(34,160,74,0.9); }
+
+    .tagged-segment .tag-remove{
+      display: none; position: absolute; top: -12px; right: -6px;
+      background: #e55; color: #fff; border: none; border-radius: 50%;
+      width: 14px; height: 14px; font-size: 10px; line-height: 14px;
+      text-align: center; cursor: pointer; padding: 0;
+    }
+    .tagged-segment:hover .tag-remove{ display: block; }
+
+    .tagged-segment-feed{
+      border-radius: 3px; padding: 1px 3px; position: relative; cursor: default;
+    }
+    .tagged-segment-feed[data-tag="question"]{
+      background: rgba(59,130,246,0.10); border-bottom: 2px solid rgba(59,130,246,0.4);
+    }
+    .tagged-segment-feed[data-tag="clarification"]{
+      background: rgba(234,179,8,0.10); border-bottom: 2px solid rgba(234,179,8,0.4);
+    }
+    .tagged-segment-feed[data-tag="sources"]{
+      background: rgba(34,197,94,0.10); border-bottom: 2px solid rgba(34,197,94,0.4);
+    }
+    .tagged-segment-feed::after{
+      content: attr(data-tag-label);
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+      position: absolute; top: -14px; left: 2px;
+      opacity: 0; pointer-events: none; transition: opacity .15s;
+      padding: 1px 4px; border-radius: 3px; line-height: 1.2;
+      white-space: nowrap;
+    }
+    .tagged-segment-feed:hover::after{ opacity: 0.7; }
+    .tagged-segment-feed[data-tag="question"]::after{ color: rgba(59,130,246,0.9); }
+    .tagged-segment-feed[data-tag="clarification"]::after{ color: rgba(180,130,8,0.9); }
+    .tagged-segment-feed[data-tag="sources"]::after{ color: rgba(34,160,74,0.9); }
+
+    .tag-report-btn{
+      display: none; position: absolute; top: -16px; right: -4px;
+      background: #fff; border: 1px solid rgba(0,0,0,0.15); border-radius: 4px;
+      padding: 1px 5px; font-size: 0.65rem; cursor: pointer;
+      color: #c44; z-index: 10; white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    :root[data-theme="dark"] .tag-report-btn{
+      background: #222; border-color: rgba(255,255,255,0.15); color: #f88;
+    }
+    .tagged-segment-feed:hover .tag-report-btn{ display: block; }
+
+    .tag-report-menu{
+      position: absolute; top: 100%; right: 0; z-index: 110;
+      background: #fff; border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+      padding: 4px 0; min-width: 180px;
+    }
+    :root[data-theme="dark"] .tag-report-menu{
+      background: #1a1a1a; border-color: rgba(255,255,255,0.12);
+    }
+    .tag-report-item{
+      display: block; width: 100%; padding: 7px 14px; border: none;
+      background: none; cursor: pointer; font-size: 0.82rem;
+      text-align: left; color: inherit;
+    }
+    .tag-report-item:hover{ background: rgba(200,50,50,0.08); }
+
+    .tagged-segment-feed[data-suspicious="true"]{
+      opacity: 0.5;
+    }
+
     .quoted-post-embed{
       background: rgba(87,25,41,0.04);
       border-left: 3px solid rgba(87,25,41,0.25);
@@ -1207,7 +1316,7 @@
     .quoted-post-body{
       color: inherit; opacity: 0.8; line-height: 1.4;
     }
-    
+
 
     .quote-preview-inner{
       background: rgba(87,25,41,0.06);
@@ -2423,6 +2532,16 @@
               <span class="rt-sep"></span>
 
               <button type="button" class="rt-btn" id="rtClear" title="Clear formatting">Tx</button>
+              <span class="rt-sep"></span>
+
+              <div class="rt-tag-wrap" style="position:relative;display:inline-block;">
+                <button type="button" class="rt-btn" id="rtTagBtn" title="Tag selection">🏷 Tag</button>
+                <div id="rtTagMenu" class="rt-tag-menu" style="display:none;">
+                  <button type="button" class="rt-tag-option" data-tag="question">❓ Question</button>
+                  <button type="button" class="rt-tag-option" data-tag="clarification">💡 Clarification</button>
+                  <button type="button" class="rt-tag-option" data-tag="sources">📚 Sources</button>
+                </div>
+              </div>
             </div>
 
 
@@ -3328,6 +3447,12 @@
         '"': "&quot;",
         "'": "&#039;"
       }[c]));
+    }
+
+    function stripHtml(html) {
+      const tmp = document.createElement("div");
+      tmp.innerHTML = html;
+      return (tmp.textContent || tmp.innerText || "").replace(/\s+/g, " ").trim();
     }
 
     function renderPostBodyWithMore(fullHtml, postId) {
@@ -4284,7 +4409,7 @@
                 <img class="comment-avatar" src="${escapeHtml(p.quoted_post.author_picture_url || '/avatar-default.png')}" style="width:20px;height:20px;" />
                 <span class="quoted-post-author">${escapeHtml(p.quoted_post.author_display_name || 'anon')}</span>
               </div>
-              <div class="quoted-post-body">${escapeHtml((p.quoted_post.content_text || p.quoted_post.content || '').substring(0, 300))}${((p.quoted_post.content_text || p.quoted_post.content || '').length > 300) ? '…' : ''}</div>
+              <div class="quoted-post-body">${escapeHtml(stripHtml(p.quoted_post.content_text || p.quoted_post.content || '').substring(0, 300))}${(stripHtml(p.quoted_post.content_text || p.quoted_post.content || '').length > 300) ? '…' : ''}</div>
             </div>
           ` : ''}
 
@@ -4431,6 +4556,9 @@ const logicalBtn = card.querySelector(".logical-btn");
           }
         });
 
+        // Applica i segmenti taggati al post
+        applySegmentsToCard(card, p.segments);
+
         commentBtn?.addEventListener("click", (e) => {
           e.stopPropagation();
           setActiveCard(key);
@@ -4540,6 +4668,256 @@ const logicalBtn = card.querySelector(".logical-btn");
         closeAllPostMenus();
       }
     });
+// ── TAG SYSTEM (editor) ─────────────────────────────────────────
+    const rtTagBtn = document.getElementById("rtTagBtn");
+    const rtTagMenu = document.getElementById("rtTagMenu");
+    let tagSavedRange = null;
+
+    rtTagBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      // Salva la selezione prima di aprire il menu
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+        const r = sel.getRangeAt(0);
+        if (createPostContent.contains(r.startContainer)) {
+          tagSavedRange = r.cloneRange();
+        }
+      }
+      if (!tagSavedRange || tagSavedRange.collapsed) {
+        alert("Select some text first, then click Tag.");
+        return;
+      }
+      const isOpen = rtTagMenu.style.display !== "none";
+      rtTagMenu.style.display = isOpen ? "none" : "block";
+    });
+
+    document.addEventListener("click", (e) => {
+      if (rtTagMenu && !rtTagMenu.contains(e.target) && e.target !== rtTagBtn) {
+        rtTagMenu.style.display = "none";
+      }
+    });
+
+    rtTagMenu?.querySelectorAll(".rt-tag-option").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const tagType = btn.dataset.tag;
+        rtTagMenu.style.display = "none";
+
+        if (!tagSavedRange || tagSavedRange.collapsed) return;
+
+        // Controlla che la selezione non sia già dentro un tag
+        let node = tagSavedRange.startContainer;
+        while (node && node !== createPostContent) {
+          if (node.nodeType === 1 && node.classList?.contains("tagged-segment")) {
+            alert("This text is already tagged. Remove the existing tag first.");
+            return;
+          }
+          node = node.parentNode;
+        }
+
+        const labelMap = { question: "Question", clarification: "Clarification", sources: "Sources" };
+        const span = document.createElement("span");
+        span.className = "tagged-segment";
+        span.setAttribute("data-tag", tagType);
+        span.setAttribute("data-tag-label", labelMap[tagType] || tagType);
+        span.setAttribute("contenteditable", "true");
+
+        // Pulsante per rimuovere il tag
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "tag-remove";
+        removeBtn.textContent = "✕";
+        removeBtn.setAttribute("contenteditable", "false");
+        removeBtn.addEventListener("click", (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          // Unwrap: sposta i contenuti fuori dallo span
+          const parent = span.parentNode;
+          while (span.firstChild) {
+            if (span.firstChild === removeBtn) { span.removeChild(removeBtn); continue; }
+            parent.insertBefore(span.firstChild, span);
+          }
+          parent.removeChild(span);
+        });
+
+        try {
+          tagSavedRange.surroundContents(span);
+          span.appendChild(removeBtn);
+        } catch(err) {
+          // surroundContents fallisce se la selezione attraversa nodi
+          // fallback: estrai, wrappa, reinserisci
+          const fragment = tagSavedRange.extractContents();
+          span.appendChild(fragment);
+          span.appendChild(removeBtn);
+          tagSavedRange.insertNode(span);
+        }
+
+        tagSavedRange = null;
+      });
+    });
+
+    // Funzione per estrarre i segmenti taggati dall'editor prima del publish
+    function extractTaggedSegments() {
+      const segments = [];
+      const allTags = createPostContent.querySelectorAll(".tagged-segment");
+      const fullText = getPostPlainText();
+
+      allTags.forEach(tagEl => {
+        const tagType = tagEl.getAttribute("data-tag");
+        // Prendi il testo del tag (escluso il pulsante remove)
+        const clone = tagEl.cloneNode(true);
+        const rmBtn = clone.querySelector(".tag-remove");
+        if (rmBtn) rmBtn.remove();
+        const tagText = (clone.textContent || "").trim();
+
+        if (!tagText || !tagType) return;
+
+        // Trova la posizione nel testo puro
+        const idx = fullText.indexOf(tagText);
+        if (idx === -1) return;
+
+        segments.push({
+          type: tagType,
+          start_offset: idx,
+          end_offset: idx + tagText.length,
+          text: tagText
+        });
+      });
+
+      return segments;
+    }
+
+    // ── Applica i tag visivi ai post nel feed ────────────────────────
+    function applySegmentsToCard(card, segments) {
+      if (!segments || !segments.length) return;
+      const bodyEl = card.querySelector(".post-body-inner") || card.querySelector(".post-body");
+      if (!bodyEl) return;
+
+      segments.forEach(seg => {
+        if (!seg.segment_text_snapshot || !seg.is_active) return;
+        const tagType = seg.segment_type;
+        const labelMap = { question: "Question", clarification: "Clarification", sources: "Sources" };
+        const searchText = seg.segment_text_snapshot.trim();
+        if (!searchText) return;
+
+        // Cerca nei text nodes
+        const walker = document.createTreeWalker(bodyEl, NodeFilter.SHOW_TEXT, null, false);
+        let found = false;
+        while (walker.nextNode() && !found) {
+          const tNode = walker.currentNode;
+          const idx = tNode.textContent.indexOf(searchText);
+          if (idx === -1) continue;
+
+          // Già dentro un tagged-segment? Skip
+          if (tNode.parentElement?.closest(".tagged-segment-feed")) continue;
+
+          const range = document.createRange();
+          range.setStart(tNode, idx);
+          range.setEnd(tNode, idx + searchText.length);
+
+          const span = document.createElement("span");
+          span.className = "tagged-segment-feed";
+          span.setAttribute("data-tag", tagType);
+          span.setAttribute("data-segment-id", seg.id || "");
+          span.setAttribute("data-tag-label", labelMap[tagType] || tagType);
+          span.setAttribute("data-report-count", seg.report_count || 0);
+
+          try { range.surroundContents(span); } catch(_) {}
+
+          // Segna come sospetto se >= 3 report
+          if ((seg.report_count || 0) >= 3) {
+            span.setAttribute("data-suspicious", "true");
+          }
+
+          // Pulsante Report (solo per utenti loggati, non autore)
+          if (getToken()) {
+            const reportBtn = document.createElement("button");
+            reportBtn.type = "button";
+            reportBtn.className = "tag-report-btn";
+            reportBtn.textContent = "⚑ Report";
+            reportBtn.addEventListener("click", (ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              openTagReportMenu(span, seg.id, ev);
+            });
+            span.appendChild(reportBtn);
+          }
+
+          found = true;
+        }
+      });
+    }
+
+    // ── Report tag menu ──────────────────────────────────────────────
+    let activeTagReportMenu = null;
+
+    function closeTagReportMenu() {
+      if (activeTagReportMenu) {
+        activeTagReportMenu.remove();
+        activeTagReportMenu = null;
+      }
+    }
+
+    document.addEventListener("click", (e) => {
+      if (activeTagReportMenu && !activeTagReportMenu.contains(e.target)) {
+        closeTagReportMenu();
+      }
+    });
+
+    function openTagReportMenu(spanEl, segmentId, ev) {
+      ev.stopPropagation();
+      closeTagReportMenu();
+
+      const menu = document.createElement("div");
+      menu.className = "tag-report-menu";
+
+      const reasons = [
+        { value: "not_a_question", label: "Not a question" },
+        { value: "not_a_clarification", label: "Not a clarification" },
+        { value: "not_a_source", label: "Not a source" },
+        { value: "random_incorrect", label: "Random / incorrect tag" }
+      ];
+
+      reasons.forEach(r => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "tag-report-item";
+        btn.textContent = r.label;
+        btn.addEventListener("click", async (e2) => {
+          e2.stopPropagation();
+          closeTagReportMenu();
+          try {
+            const res = await api("/api/segments/" + encodeURIComponent(segmentId) + "/report", {
+              method: "POST",
+              body: JSON.stringify({ reason: r.value })
+            });
+            if (res && res.ok) {
+              if (res.tag_deactivated) {
+                spanEl.style.display = "none";
+              } else if (res.report_count >= 3) {
+                spanEl.setAttribute("data-suspicious", "true");
+              }
+              alert("Report submitted. Thank you.");
+            }
+          } catch (err) {
+            const msg = err?.message || "";
+            if (msg.includes("already_reported")) {
+              alert("You already reported this tag.");
+            } else if (msg.includes("cannot_report_own_tag")) {
+              alert("You cannot report your own tag.");
+            } else {
+              alert("Report failed: " + msg);
+            }
+          }
+        });
+        menu.appendChild(btn);
+      });
+
+      spanEl.appendChild(menu);
+      activeTagReportMenu = menu;
+    }
 
     let pendingQuotedPost = null; // post object da citare
 
@@ -5319,7 +5697,8 @@ Try again after ${until.toLocaleTimeString()}.`);
             content: contentText,
             content_html: contentHtml,
             content_text: contentText,
-            quoted_post_id: pendingQuotedPost ? pendingQuotedPost.id : null
+            quoted_post_id: pendingQuotedPost ? pendingQuotedPost.id : null,
+            segments: extractTaggedSegments()
           })
         });
         spamSaveTs(Date.now());

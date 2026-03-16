@@ -1492,6 +1492,13 @@
       border:1px solid rgba(201,147,42,0.3);
       font-size:0.85rem;
     }
+    .award-item{
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .award-item.locked{ opacity: 0.25; filter: grayscale(1); }
+    .award-counter{
+      font-size: 0.72rem; font-weight: 600; opacity: 0.6;
+    }
 
     .award-icon{
       font-size:0.9rem;
@@ -1618,13 +1625,28 @@
 
               <div class="field" id="awardsSection">
                 <span>AWARDS</span>
-                <div class="awards-list">
+                  <div class="awards-list">
                   <div class="award">
-                    <img class="award-icon" src="item/Socrate_AW.png" alt="Socrates award">
-                    <img class="award-icon" src="item/DaVinci_AW.png" alt="Da Vinci award">
-                    <img class="award-icon" src="item/Alexandria_AW.png" alt="Library of Alexandria award">
-                    <img class="award-icon" src="item/Hypatia_AW.png" alt="Hypatia award">
-                    <img class="award-icon" src="item/Aristotele_AW.png" alt="Aristotle award">
+                    <div class="award-item" id="award-socrates" title="Socrates — Opens meaningful questions">
+                      <img class="award-icon" src="item/Socrate_AW.png" alt="Socrates award">
+                      <span class="award-counter" id="award-socrates-count"></span>
+                    </div>
+                    <div class="award-item" id="award-davinci" title="Da Vinci — Inspires new creations">
+                      <img class="award-icon" src="item/DaVinci_AW.png" alt="Da Vinci award">
+                      <span class="award-counter" id="award-davinci-count"></span>
+                    </div>
+                    <div class="award-item" id="award-alexandria" title="Alexandria — Brings useful sources">
+                      <img class="award-icon" src="item/Alexandria_AW.png" alt="Library of Alexandria award">
+                      <span class="award-counter" id="award-alexandria-count"></span>
+                    </div>
+                    <div class="award-item" id="award-hypatia" title="Hypatia — Clarifies with rigor">
+                      <img class="award-icon" src="item/Hypatia_AW.png" alt="Hypatia award">
+                      <span class="award-counter" id="award-hypatia-count"></span>
+                    </div>
+                    <div class="award-item" id="award-aristotle" title="Aristotle — Recognized as logical">
+                      <img class="award-icon" src="item/Aristotele_AW.png" alt="Aristotle award">
+                      <span class="award-counter" id="award-aristotle-count"></span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -2119,15 +2141,26 @@ async function refreshMe(){
   }
 }
 
-async function loadViewUser() {
-  if (!VIEW_USER_ID) return false;
+async function loadAwards(userId) {
   try {
-    const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(VIEW_USER_ID)}`);
+    const res = await fetch(`${API_BASE}/api/users/${encodeURIComponent(userId)}/awards`);
     const data = await res.json();
-    if (!data.ok) return false;
-    VIEW_USER = data.user;
-    return true;
-  } catch(e) { return false; }
+    if (!data || !data.ok) return;
+    const a = data.awards;
+    const items = {
+      socrates: a.socrates, davinci: a.davinci,
+      alexandria: a.alexandria, hypatia: a.hypatia, aristotle: a.aristotle
+    };
+    Object.entries(items).forEach(([key, val]) => {
+      const el = document.getElementById("award-" + key);
+      const countEl = document.getElementById("award-" + key + "-count");
+      if (el) {
+        if (!val.unlocked) el.classList.add("locked");
+        else el.classList.remove("locked");
+      }
+      if (countEl) countEl.textContent = val.count + " / 1000";
+    });
+  } catch(e) { console.warn("awards_load_failed:", e); }
 }
 
 async function fetchViewUserPosts() {
@@ -2650,6 +2683,7 @@ if (VIEW_USER_ID) {
     }
       profileAvatarPreview.style.visibility = "visible"; // ← mostra solo ora
   }
+    loadAwards(VIEW_USER_ID);
     document.documentElement.style.visibility = "visible";
   return;
 }
