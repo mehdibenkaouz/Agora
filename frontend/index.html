@@ -2275,6 +2275,9 @@
   border: 1px solid rgba(0,0,0,0.10);
   display: block;
   margin: 8px 0;
+  resize: both;
+  overflow: hidden;
+  cursor: nwse-resize;
 }
   </style>
 </head>
@@ -5345,6 +5348,9 @@ const logicalBtn = card.querySelector(".logical-btn");
         savedSrc = el.getAttribute("src");
         savedAlt = el.getAttribute("alt") || "Image";
       }
+      if (tag === "VIDEO") {
+        savedSrc = el.getAttribute("src");
+      }
 
       // rimuovi TUTTI gli attributi
       [...el.attributes].forEach(a => el.removeAttribute(a.name));
@@ -5365,9 +5371,19 @@ const logicalBtn = card.querySelector(".logical-btn");
           el.setAttribute("src", savedSrc);
         }
         el.setAttribute("alt", savedAlt || "Image");
-        // opzionale: evita che l'immagine rompa il layout
         el.style.maxWidth = "100%";
         if (!el.style.height) el.style.height = "auto";
+      }
+
+      if (tag === "VIDEO") {
+        if (savedSrc && !/^\s*javascript:/i.test(savedSrc)) {
+          el.setAttribute("src", savedSrc);
+        }
+        el.setAttribute("controls", "");
+        el.setAttribute("playsinline", "");
+        el.setAttribute("muted", "");
+        el.style.maxWidth = "100%";
+        el.style.borderRadius = "14px";
       }
     }
 
