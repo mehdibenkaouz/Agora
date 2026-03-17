@@ -2026,16 +2026,19 @@ if (accountBtn){
     accountMenu.classList.contains("open") ? closeMenu() : openMenu();
   });
 }
-document.addEventListener("click", ()=> closeMenu());
-// if (themeToggleBtn){
-//   themeToggleBtn.addEventListener("click", (e)=>{ e.stopPropagation(); toggleTheme(); });
-// }
+document.addEventListener("click", (e) => {
+  if (accountMenu && accountMenu.contains(e.target)) return;
+  if (accountBtn && accountBtn.contains(e.target)) return;
+  closeMenu();
+});
 
-
-const themeToggleBtn = document.getElementById("themeToggleBtn");
-if (themeToggleBtn){
-  themeToggleBtn.addEventListener("click", (e)=>{ e.stopPropagation(); });
+if (accountMenu){
+  accountMenu.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
 }
+
+
 
 /* ===== Auth modal ===== */
 const authModal = document.getElementById("authModal");
@@ -2051,6 +2054,7 @@ function openModal(){
   closeMenu();
   setTimeout(()=> emailInput && emailInput.focus(), 0);
 }
+
 function closeModal(){
   authModal.classList.remove("open");
   authModal.setAttribute("aria-hidden","true");
