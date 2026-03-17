@@ -476,62 +476,62 @@ function debounce(fn, delay = 140) {
 // ═══════════════════════════════════════════════════════════════════
 // THEME
 // ═══════════════════════════════════════════════════════════════════
-function buildMapStyle() {
-  const tiles = isDark
-    ? ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png","https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png","https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"]
-    : ["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png","https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png","https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"];
+// function buildMapStyle() {
+//   const tiles = isDark
+//     ? ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png","https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png","https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"]
+//     : ["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png","https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png","https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"];
 
-  return {
-    version: 8,
-    sources: {
-      carto: {
-        type: "raster",
-        tiles,
-        tileSize: 256,
-        attribution: '© OpenStreetMap contributors · © CARTO'
-      }
-    },
-    layers: [
-      {
-        id: "carto-base",
-        type: "raster",
-        source: "carto",
-        minzoom: 0,
-        maxzoom: 20
-      }
-    ]
-  };
-}
+//   return {
+//     version: 8,
+//     sources: {
+//       carto: {
+//         type: "raster",
+//         tiles,
+//         tileSize: 256,
+//         attribution: '© OpenStreetMap contributors · © CARTO'
+//       }
+//     },
+//     layers: [
+//       {
+//         id: "carto-base",
+//         type: "raster",
+//         source: "carto",
+//         minzoom: 0,
+//         maxzoom: 20
+//       }
+//     ]
+//   };
+// }
 
-function applyTheme(theme) {
-  isDark = theme === "dark";
-  document.documentElement[isDark ? "setAttribute" : "removeAttribute"]("data-theme", "dark");
-  localStorage.setItem(THEME_KEY, theme);
+// function applyTheme(theme) {
+//   isDark = theme === "dark";
+//   document.documentElement[isDark ? "setAttribute" : "removeAttribute"]("data-theme", "dark");
+//   localStorage.setItem(THEME_KEY, theme);
 
-  if (mapLoaded) {
-    const center = map.getCenter();
-    const zoom = map.getZoom();
-    map.setStyle(buildMapStyle());
-    map.once("style.load", () => {
-      ensureSourcesAndLayers();
-      updateSessionsSource();
-      refreshCultureStatus();
-      map.jumpTo({ center, zoom });
-    });
-  }
-}
+//   if (mapLoaded) {
+//     const center = map.getCenter();
+//     const zoom = map.getZoom();
+//     map.setStyle(buildMapStyle());
+//     map.once("style.load", () => {
+//       ensureSourcesAndLayers();
+//       updateSessionsSource();
+//       refreshCultureStatus();
+//       map.jumpTo({ center, zoom });
+//     });
+//   }
+// }
 
-(function initTheme() {
-  const saved = localStorage.getItem(THEME_KEY);
-  const next = (saved === "dark" || saved === "light")
-    ? saved
-    : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  applyTheme(next);
-})();
+// (function initTheme() {
+//   const saved = localStorage.getItem(THEME_KEY);
+//   const next = (saved === "dark" || saved === "light")
+//     ? saved
+//     : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+//   applyTheme(next);
+// })();
 
-document.getElementById("themeBtn").addEventListener("click", () => {
-  applyTheme(isDark ? "light" : "dark");
-});
+// document.getElementById("themeBtn").addEventListener("click", () => {
+//   applyTheme(isDark ? "light" : "dark");
+// });
 
 // ═══════════════════════════════════════════════════════════════════
 // MAPA MAPLIBRE

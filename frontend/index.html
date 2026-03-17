@@ -2599,43 +2599,43 @@
     const API_BASE = "https://agora-api.convergegame.workers.dev";
     const TOKEN_KEY = "agora_token";
 
-    function applyTheme(theme){
-      const root = document.documentElement;
-      const logo = document.getElementById("mainLogo");
+    // function applyTheme(theme){
+    //   const root = document.documentElement;
+    //   const logo = document.getElementById("mainLogo");
 
-      if (!logo) return;
+    //   if (!logo) return;
 
-      const lightSrc = logo.dataset.light;
-      const darkSrc  = logo.dataset.dark;
+    //   const lightSrc = logo.dataset.light;
+    //   const darkSrc  = logo.dataset.dark;
 
-      if (theme === "dark"){
-        root.setAttribute("data-theme", "dark");
-        logo.src = darkSrc;
-      } else {
-        root.removeAttribute("data-theme");
-        logo.src = lightSrc;
-      }
-    }
-    function getPreferredTheme(){
-      const saved = localStorage.getItem(THEME_KEY);
-      if (saved === "dark" || saved === "light") return saved;
-      // fallback: sistema
-      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    }
+    //   if (theme === "dark"){
+    //     root.setAttribute("data-theme", "dark");
+    //     logo.src = darkSrc;
+    //   } else {
+    //     root.removeAttribute("data-theme");
+    //     logo.src = lightSrc;
+    //   }
+    // }
+    // function getPreferredTheme(){
+    //   const saved = localStorage.getItem(THEME_KEY);
+    //   if (saved === "dark" || saved === "light") return saved;
+    //   // fallback: sistema
+    //   return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    // }
 
-    function toggleTheme(){
-      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      const next = isDark ? "light" : "dark";
-      localStorage.setItem(THEME_KEY, next);
-      applyTheme(next);
-      syncThemeUi();
-    }
+    // function toggleTheme(){
+    //   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    //   const next = isDark ? "light" : "dark";
+    //   localStorage.setItem(THEME_KEY, next);
+    //   applyTheme(next);
+    //   syncThemeUi();
+    // }
 
-    function syncThemeUi(){
-      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      const btn = document.getElementById("themeToggleBtn");
-      if (btn) btn.textContent = isDark ? "Light mode" : "Dark mode";
-    }
+    // function syncThemeUi(){
+    //   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    //   const btn = document.getElementById("themeToggleBtn");
+    //   if (btn) btn.textContent = isDark ? "Light mode" : "Dark mode";
+    // }
     // --- Auth state (do NOT rely on UI text) ---
     let CURRENT_USER = null; // lowercase, empty if not logged in
     function getCurrentUserEmail() {
