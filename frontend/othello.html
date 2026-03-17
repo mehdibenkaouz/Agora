@@ -521,23 +521,39 @@ function handleClick(e){
 }
 
 function playMove(r,c,flips){
-  const{board:nb}=applyMove(board,r,c,turn);
-  board=nb;
-  renderBoard(flips);
-  const next=turn===BLACK?WHITE:BLACK;
-  const hasCurrent=validMoves(board,next).length>0;
-  const hasTurn=validMoves(board,turn).length>0;
+  const current = turn;
+  const { board: nb } = applyMove(board, r, c, current);
+  board = nb;
 
-  if(!hasCurrent&&!hasTurn){
-    endGame();return;
-  }
-  if(!hasCurrent){
-    const name=next===BLACK?"Black":"White";
-    setStatus(`${name} has no moves — ${turn===BLACK?"Black":"White"} plays again`);
-    if(vsAI&&turn===WHITE){setTimeout(doAI,600);}
+  const next = current === BLACK ? WHITE : BLACK;
+  const nextHasMoves = validMoves(board, next).length > 0;
+  const currentHasMoves = validMoves(board, current).length > 0;
+
+  if (!nextHasMoves && !currentHasMoves) {
+    renderBoard(flips);
+    endGame();
     return;
   }
-  turn=next;
+
+  if (nextHasMoves) {
+    turn = next;
+  } else {
+    turn = current;
+  }
+
+  renderBoard(flips);
+
+  if (!nextHasMoves) {
+    const skipped = next === BLACK ? "Black" : "White";
+    const again = turn === BLACK ? "Black" : "White";
+    setStatus(`${skipped} has no moves — ${again} plays again`);
+    if (vsAI && turn === WHITE) {
+      aiThinking = true;
+      setTimeout(doAI, 600);
+    }
+    return;
+  }
+
   afterTurnUpdate();
 }
 
