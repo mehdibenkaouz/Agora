@@ -7,8 +7,11 @@
 
   <link rel="icon" type="image/png" sizes="32x32" href="item/Logoaagora.png">
   <link rel="apple-touch-icon" href="item/Logoagora.png">
-  <link rel="icon" sizes="32x32" href="/icon-32.png">
-  <link rel="icon" sizes="192x192" href="/icon-192.png">
+  <link rel="icon" sizes="32x32" href="/icon-light-64.png" media="(prefers-color-scheme: light)">
+  <link rel="icon" sizes="32x32" href="/icon-dark-64.png" media="(prefers-color-scheme: dark)">
+
+  <link rel="icon" sizes="192x192" href="/icon-light-192.png" media="(prefers-color-scheme: light)">
+  <link rel="icon" sizes="192x192" href="/icon-dark-192.png" media="(prefers-color-scheme: dark)">
   <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
 
   <style>
@@ -2605,6 +2608,7 @@
     function applyTheme(theme){
       const root = document.documentElement;
       const logo = document.getElementById("mainLogo");
+      const favicon = document.getElementById("site-favicon");
 
       if (!logo) return;
 
@@ -2614,9 +2618,17 @@
       if (theme === "dark"){
         root.setAttribute("data-theme", "dark");
         logo.src = darkSrc;
+
+        if (favicon) {
+          favicon.href = "/icon-dark-64.png?v=dark";
+        }
       } else {
         root.removeAttribute("data-theme");
         logo.src = lightSrc;
+
+        if (favicon) {
+          favicon.href = "/icon-light-64.png?v=light";
+        }
       }
     }
     function getPreferredTheme(){
