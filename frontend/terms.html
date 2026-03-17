@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AGORÀ • Terms of Service</title>
+
+  <link id="site-favicon" rel="icon" type="image/png" sizes="64x64" href="/icon-light-64.png?v=1">
+  <link rel="apple-touch-icon" href="item/Logoagora.png">
+  <script src="/shared-theme.js" defer></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:wght@400;500;600;700&family=Cinzel:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#e8e2d5;
+      --panel:#f5f0e8;
+      --panel-2:#faf7f2;
+      --text:#1a1008;
+      --muted:#6b5b48;
+      --line:rgba(87,25,41,0.12);
+      --brand:#571929;
+      --gold:#c9932a;
+      --gold-light:#e8c06b;
+      --shadow:0 20px 50px rgba(30,10,5,0.16);
+      --soft-shadow:0 10px 28px rgba(30,10,5,0.10);
+      --radius-xl:34px;
+      --radius-lg:24px;
+      --radius-md:16px;
+      --maxw:1040px;
+      --topbar-h:76px;
+    }
+
+    :root[data-theme="dark"]{
+      --bg:#000000;
+      --panel:#14110d;
+      --panel-2:#1c1812;
+      --text:#f0e8d8;
+      --muted:rgb(145, 183, 214);
+      --line:rgba(37,172,193,0.18);
+      --brand:#a8ebf68c;
+      --gold:#25acc1;
+      --gold-light:#7dd8e8;
+      --shadow:0 24px 60px rgba(0,0,0,0.52);
+      --soft-shadow:0 12px 30px rgba(0,0,0,0.36);
+    }
+
+    *{ box-sizing:border-box; }
+
+    html,body{
+      margin:0;
+      padding:0;
+      min-height:100%;
+      background:var(--bg);
+      color:var(--text);
+      font-family:'Lora', Georgia, serif;
+    }
+
+    body{
+      position:relative;
+      overflow-x:hidden;
+    }
+
+    :root[data-theme="dark"] body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:0;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,.95) 0px, rgba(255,255,255,.95) .9px, transparent 1.7px),
+        radial-gradient(circle, rgba(200,230,255,.80) 0px, rgba(200,230,255,.80) .8px, transparent 1.5px),
+        radial-gradient(circle, rgba(255,245,220,.72) 0px, rgba(255,245,220,.72) .75px, transparent 1.45px);
+      background-size: 170px 170px, 230px 230px, 310px 310px;
+      background-position: 0 0, 40px 80px, 120px 20px;
+      opacity:.38;
+    }
+
+    a{
+      color:inherit;
+      text-decoration:none;
+    }
+
+    .topbar{
+      height:var(--topbar-h);
+      background:#2a1208;
+      border-bottom:1px solid rgba(201,147,42,0.25);
+      box-shadow:0 4px 24px rgba(0,0,0,0.40);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:sticky;
+      top:0;
+      z-index:30;
+    }
+
+    :root[data-theme="dark"] .topbar{
+      background:#071019;
+      border-bottom:1px solid rgba(37,172,193,0.24);
+    }
+
+    .topbar-inner{
+      width:min(calc(100% - 24px), var(--maxw));
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .logo{
+      height:60px;
+      width:60px;
+      object-fit:contain;
+      display:block;
+    }
+
+    .brand-title{
+      font-family:'Cinzel', serif;
+      letter-spacing:.14em;
+      font-size:.9rem;
+      text-transform:uppercase;
+      color:rgba(201,147,42,.84);
+    }
+
+    :root[data-theme="dark"] .brand-title{
+      color:rgba(125,220,235,.88);
+    }
+
+    .top-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+    }
+
+    .ghost-btn, .primary-btn{
+      min-height:42px;
+      border-radius:12px;
+      padding:10px 16px;
+      cursor:pointer;
+      font-family:'Cinzel', serif;
+      font-size:.78rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      transition:.15s ease;
+    }
+
+    .ghost-btn{
+      border:1px solid rgba(201,147,42,0.25);
+      background:rgba(201,147,42,0.08);
+      color:var(--gold);
+    }
+
+    .ghost-btn:hover{
+      background:rgba(201,147,42,0.16);
+    }
+
+    .primary-btn{
+      border:1px solid rgba(201,147,42,0.40);
+      background:linear-gradient(135deg, #571929, #8b2239);
+      color:#f0d8a8;
+      box-shadow:0 6px 18px rgba(87,25,41,0.28);
+    }
+
+    :root[data-theme="dark"] .primary-btn{
+      border:1px solid rgba(37,172,193,0.36);
+      background:linear-gradient(135deg, #0f3b47, #1b6d7b);
+      color:#d8f8ff;
+      box-shadow:0 6px 18px rgba(0,190,220,0.18);
+    }
+
+    .primary-btn:hover{
+      transform:translateY(-1px);
+    }
+
+    .primary-btn:disabled{
+      opacity:.48;
+      cursor:not-allowed;
+      transform:none;
+    }
+
+    .page{
+      width:min(calc(100% - 24px), var(--maxw));
+      margin:0 auto;
+      padding:28px 0 56px;
+      position:relative;
+      z-index:1;
+    }
+
+    .hero{
+      margin-bottom:20px;
+      border-radius:var(--radius-xl);
+      padding:28px 28px 24px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0.16));
+      border:1px solid var(--line);
+      box-shadow:var(--soft-shadow);
+    }
+
+    :root[data-theme="dark"] .hero{
+      background:linear-gradient(180deg, rgba(10,22,30,0.82), rgba(14,20,26,0.72));
+    }
+
+    .eyebrow{
+      font-family:'Cinzel', serif;
+      font-size:.76rem;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      color:var(--gold);
+      margin-bottom:10px;
+    }
+
+    .hero h1{
+      margin:0;
+      font-family:'Cormorant Garamond', serif;
+      font-size:clamp(2rem, 4vw, 3.4rem);
+      line-height:.95;
+      font-weight:600;
+      color:var(--brand);
+    }
+
+    :root[data-theme="dark"] .hero h1{
+      color:var(--gold-light);
+    }
+
+    .hero p{
+      margin:14px 0 0;
+      max-width:720px;
+      color:var(--muted);
+      line-height:1.7;
+      font-size:1rem;
+    }
+
+    .terms-shell{
+      border-radius:var(--radius-xl);
+      overflow:hidden;
+      background:var(--panel);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+    }
+
+    .terms-head{
+      padding:22px 24px;
+      border-bottom:1px solid var(--line);
+      background:rgba(201,147,42,0.06);
+    }
+
+    :root[data-theme="dark"] .terms-head{
+      background:rgba(37,172,193,0.08);
+    }
+
+    .terms-head-title{
+      font-family:'Cinzel', serif;
+      letter-spacing:.08em;
+      font-size:1rem;
+      color:var(--gold);
+      text-transform:uppercase;
+    }
+
+    .terms-head-sub{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:.95rem;
+      line-height:1.6;
+    }
+
+    .terms-body{
+      padding:6px 0;
+    }
+
+    .section{
+      padding:22px 24px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .section:last-child{
+      border-bottom:0;
+    }
+
+    .section h2{
+      margin:0 0 10px;
+      font-family:'Cormorant Garamond', serif;
+      font-size:1.7rem;
+      font-weight:600;
+      color:var(--brand);
+    }
+
+    :root[data-theme="dark"] .section h2{
+      color:var(--gold-light);
+    }
+
+    .section p{
+      margin:0 0 12px;
+      line-height:1.78;
+      color:var(--text);
+    }
+
+    .section ul{
+      margin:0;
+      padding-left:22px;
+      line-height:1.8;
+    }
+
+    .section li{
+      margin:0 0 8px;
+    }
+
+    .accept-panel{
+      margin-top:22px;
+      border-radius:var(--radius-lg);
+      background:var(--panel);
+      border:1px solid var(--line);
+      box-shadow:var(--soft-shadow);
+      padding:22px;
+    }
+
+    .accept-row{
+      display:flex;
+      align-items:flex-start;
+      gap:14px;
+      margin-bottom:18px;
+    }
+
+    .accept-row input[type="checkbox"]{
+      width:18px;
+      height:18px;
+      margin-top:4px;
+      accent-color:var(--gold);
+      flex:0 0 auto;
+    }
+
+    .accept-text{
+      line-height:1.7;
+      color:var(--text);
+    }
+
+    .accept-text strong{
+      color:var(--brand);
+    }
+
+    :root[data-theme="dark"] .accept-text strong{
+      color:var(--gold-light);
+    }
+
+    .accept-actions{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+    }
+
+    .accept-note{
+      font-size:.9rem;
+      color:var(--muted);
+      line-height:1.6;
+    }
+
+    .footer-mini{
+      margin-top:16px;
+      text-align:center;
+      font-size:.82rem;
+      color:var(--muted);
+    }
+
+    @media (max-width: 700px){
+      .topbar-inner{
+        flex-wrap:wrap;
+        justify-content:center;
+      }
+
+      .hero,
+      .terms-head,
+      .section,
+      .accept-panel{
+        padding-left:18px;
+        padding-right:18px;
+      }
+
+      .accept-actions{
+        align-items:stretch;
+      }
+
+      .accept-actions .primary-btn,
+      .accept-actions .ghost-btn{
+        width:100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <a href="index.html">
+          <img
+            id="mainLogo"
+            src="item/Logoagora.png"
+            data-light="item/Logoagora.png"
+            data-dark="item/Logoagoradark.png"
+            class="logo"
+            alt="Agora"
+          >
+        </a>
+        <div class="brand-title">Terms of Service</div>
+      </div>
+
+      <div class="top-actions">
+        <button id="themeToggleBtn" class="ghost-btn" type="button">Dark mode</button>
+        <a class="ghost-btn" href="index.html">Back</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Agorà legal framework</div>
+      <h1>Use of the platform requires acceptance of these terms.</h1>
+      <p>
+        AGORÀ is built for thoughtful writing, civil dialogue, sources, clarification,
+        and logical contribution. By continuing, the user accepts the rules below
+        and agrees to use the platform in a lawful and responsible way.
+      </p>
+    </section>
+
+    <section class="terms-shell">
+      <div class="terms-head">
+        <div class="terms-head-title">Terms of Service</div>
+        <div class="terms-head-sub">
+          Effective date: <span id="effectiveDate">—</span><br>
+          These terms govern access to and use of AGORÀ.
+        </div>
+      </div>
+
+      <div class="terms-body">
+        <section class="section">
+          <h2>1. Purpose of AGORÀ</h2>
+          <p>
+            AGORÀ is a social platform oriented toward reflection, culture, dialogue,
+            reasoned discussion, and sharing of ideas. The service is not intended
+            for spam, manipulation, harassment, fraud, or unlawful activity.
+          </p>
+        </section>
+
+        <section class="section">
+          <h2>2. User responsibility</h2>
+          <p>By using AGORÀ, the user agrees to:</p>
+          <ul>
+            <li>provide truthful information where required;</li>
+            <li>avoid impersonation of other persons or entities;</li>
+            <li>not publish unlawful, violent, defamatory, deceptive, or abusive content;</li>
+            <li>respect other users and the functioning of the platform;</li>
+            <li>not attempt to damage, overload, or bypass the technical systems of AGORÀ.</li>
+          </ul>
+        </section>
+
+        <section class="section">
+          <h2>3. Content and conduct</h2>
+          <p>
+            The user remains responsible for all content posted, saved, shared, or otherwise
+            made available through the platform. AGORÀ may limit, hide, remove, or moderate
+            content that violates these terms, applicable law, or the integrity of the service.
+          </p>
+          <p>
+            Repeated abuse may result in suspension, restriction, or permanent removal
+            of access to the platform.
+          </p>
+        </section>
+
+        <section class="section">
+          <h2>4. Intellectual property</h2>
+          <p>
+            Users retain rights over their original content, to the extent permitted by law.
+            By publishing content on AGORÀ, the user grants the platform a non-exclusive,
+            limited, technical license to host, display, process, and distribute that content
+            as necessary to operate the service.
+          </p>
+        </section>
+
+        <section class="section">
+          <h2>5. Privacy and data</h2>
+          <p>
+            AGORÀ may process account, usage, and technical data as necessary to provide
+            authentication, security, moderation, analytics, and platform features.
+            Use of the service also implies acceptance of the platform’s privacy rules.
+          </p>
+        </section>
+
+        <section class="section">
+          <h2>6. Availability of service</h2>
+          <p>
+            AGORÀ may evolve over time. Features may be changed, improved, limited, or removed.
+            Temporary interruptions, maintenance, or technical errors may occur.
+            The platform is provided on an “as available” basis.
+          </p>
+        </section>
+
+        <section class="section">
+          <h2>7. Termination and enforcement</h2>
+          <p>
+            Access may be suspended or terminated where reasonably necessary to protect
+            users, comply with law, stop abuse, or preserve the proper functioning of AGORÀ.
+          </p>
+        </section>
+
+        <section class="section">
+          <h2>8. Changes to these terms</h2>
+          <p>
+            These terms may be updated. Continued use of AGORÀ after an update may require
+            renewed acceptance of the modified terms.
+          </p>
+        </section>
+
+        <section class="section">
+          <h2>9. Contact</h2>
+          <p>
+            For platform, legal, or moderation questions, AGORÀ may provide a dedicated contact
+            or support channel in a later version of the service.
+          </p>
+        </section>
+      </div>
+    </section>
+
+    <section class="accept-panel">
+      <label class="accept-row">
+        <input id="acceptCheckbox" type="checkbox">
+        <div class="accept-text">
+          I have read and accept the <strong>Terms of Service</strong> of AGORÀ.
+        </div>
+      </label>
+
+      <div class="accept-actions">
+        <div class="accept-note" id="acceptStatus">
+          You must accept the terms before continuing.
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <a class="ghost-btn" href="index.html">Decline</a>
+          <button id="acceptBtn" class="primary-btn" type="button" disabled>
+            Accept and continue
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-mini">
+      AGORÀ • thoughtful discourse, responsible use
+    </div>
+  </main>
+
+  <script>
+    const TERMS_VERSION = "2026-03-17";
+    const TERMS_ACCEPT_KEY = "agora_terms_accepted_v1";
+
+    const acceptCheckbox = document.getElementById("acceptCheckbox");
+    const acceptBtn = document.getElementById("acceptBtn");
+    const acceptStatus = document.getElementById("acceptStatus");
+    const effectiveDate = document.getElementById("effectiveDate");
+
+    effectiveDate.textContent = TERMS_VERSION;
+
+    function refreshAcceptUi(){
+      const checked = !!acceptCheckbox.checked;
+      acceptBtn.disabled = !checked;
+      acceptStatus.textContent = checked
+        ? "Ready. Press the button to continue."
+        : "You must accept the terms before continuing.";
+    }
+
+    acceptCheckbox.addEventListener("change", refreshAcceptUi);
+
+    acceptBtn.addEventListener("click", () => {
+      if (!acceptCheckbox.checked) return;
+
+      const payload = {
+        accepted: true,
+        version: TERMS_VERSION,
+        accepted_at: new Date().toISOString()
+      };
+
+      localStorage.setItem(TERMS_ACCEPT_KEY, JSON.stringify(payload));
+      window.location.href = "index.html";
+    });
+    refreshAcceptUi();
+  </script>
+</body>
+</html>
