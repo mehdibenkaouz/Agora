@@ -675,6 +675,9 @@ const API_BASE="https://agora-api.convergegame.workers.dev";
 const TOKEN_KEY="agora_token";
 let sessions=[];
 function isDarkTheme(){
+  const saved = localStorage.getItem("agora_theme");
+  if (saved === "dark") return true;
+  if (saved === "light") return false;
   return document.documentElement.getAttribute("data-theme") === "dark";
 }
 
@@ -751,15 +754,13 @@ const snapCtrl = L.Control.extend({
 new snapCtrl().addTo(map);
 
 function getTileUrl(){
-  if (isDarkTheme()) {
-    return "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
-  }
-
   if (hasMapTilerKey()) {
-    return `https://api.maptiler.com/maps/${MAPTILER_LIGHT_MAP_ID}/256/{z}/{x}/{y}.png?key=${encodeURIComponent(MAPTILER_API_KEY)}`;
+    return `https://api.maptiler.com/maps/${getActiveMapTilerMapId()}/256/{z}/{x}/{y}.png?key=${encodeURIComponent(MAPTILER_API_KEY)}`;
   }
 
-  return "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
+  return isDarkTheme()
+    ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+    : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 }
 
 function updateTiles(){
@@ -773,6 +774,12 @@ function updateTiles(){
   }).addTo(map);
 }
 updateTiles();
+
+window.onAgoraThemeApplied = function () {
+  updateTiles();
+  if (typeof refresh === "function") refresh();
+  if (typeof rerenderPOIMarkersForTheme === "function") rerenderPOIMarkersForTheme();
+};
 
 // ── CUSTOM MARKER ICONS ────────────────────────────────────────────
 function makeIcon(type,tags){

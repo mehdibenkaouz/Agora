@@ -376,7 +376,6 @@ a{color:inherit;}
 // ═══════════════════════════════════════════════════════════════════
 const API_BASE = "https://agora-api.convergegame.workers.dev";
 const TOKEN_KEY = "agora_token";
-const THEME_KEY = "agora_theme";
 
 // 1) SE HAI IL TUO ARCHIVIO PMTiles: lascia mode="pmtiles" e cambia url.
 // 2) SE HAI UN WORKER/TileJSON: usa mode="tilejson" e url="https://.../culture.json".
@@ -414,6 +413,13 @@ let userLng = 11.347;
 let userPopup = null;
 let pendingLat = null;
 let pendingLng = null;
+
+function isDarkTheme(){
+  const saved = localStorage.getItem("agora_theme");
+  if (saved === "dark") return true;
+  if (saved === "light") return false;
+  return document.documentElement.getAttribute("data-theme") === "dark";
+}
 
 // PMTiles protocol deve essere registrato una sola volta.
 const pmtilesProtocol = new pmtiles.Protocol();
@@ -477,6 +483,7 @@ function debounce(fn, delay = 140) {
 // THEME
 // ═══════════════════════════════════════════════════════════════════
 function buildMapStyle() {
+  const dark = isDarkTheme();
   const tiles = isDark
     ? ["https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png","https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png","https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"]
     : ["https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png","https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png","https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png"];
@@ -503,35 +510,21 @@ function buildMapStyle() {
   };
 }
 
-function applyTheme(theme) {
-  isDark = theme === "dark";
-  document.documentElement[isDark ? "setAttribute" : "removeAttribute"]("data-theme", "dark");
-  localStorage.setItem(THEME_KEY, theme);
+window.onAgoraThemeApplied = function () {
+  if (!mapLoaded) return;
 
-  if (mapLoaded) {
-    const center = map.getCenter();
-    const zoom = map.getZoom();
-    map.setStyle(buildMapStyle());
-    map.once("style.load", () => {
-      ensureSourcesAndLayers();
-      updateSessionsSource();
-      refreshCultureStatus();
-      map.jumpTo({ center, zoom });
-    });
-  }
-}
+  const center = map.getCenter();
+  const zoom = map.getZoom();
 
-(function initTheme() {
-  const saved = localStorage.getItem(THEME_KEY);
-  const next = (saved === "dark" || saved === "light")
-    ? saved
-    : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-  applyTheme(next);
-})();
+  map.setStyle(buildMapStyle());
+  map.once("style.load", () => {
+    ensureSourcesAndLayers();
+    updateSessionsSource();
+    refreshCultureStatus();
+    map.jumpTo({ center, zoom });
+  });
 
-document.getElementById("themeBtn").addEventListener("click", () => {
-  applyTheme(isDark ? "light" : "dark");
-});
+};
 
 // ═══════════════════════════════════════════════════════════════════
 // MAPA MAPLIBRE
