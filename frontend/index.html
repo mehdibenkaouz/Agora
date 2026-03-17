@@ -7,6 +7,9 @@
 
   <link id="site-favicon" rel="icon" type="image/png" sizes="64x64" href="/icon-light-64.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
+  <link id="site-favicon" rel="icon" type="image/png" sizes="64x64" href="/icon-light-64.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
+  <script src="/shared-theme.js" defer></script>
   <style>
     :root {
       --bg: #e8e5de;
@@ -2598,47 +2601,7 @@
     const TOKEN_KEY = "agora_token";
     const THEME_KEY = "agora_theme";
 
-    function applyTheme(theme){
-      const root = document.documentElement;
-      const logo = document.getElementById("mainLogo");
-      const favicon = document.getElementById("site-favicon");
 
-      if (theme === "dark"){
-        root.setAttribute("data-theme", "dark");
-        if (logo) logo.src = logo.dataset.dark;
-
-        if (favicon) {
-          favicon.setAttribute("href", "/icon-dark-64.png?v=2");
-        }
-      } else {
-        root.removeAttribute("data-theme");
-        if (logo) logo.src = logo.dataset.light;
-
-        if (favicon) {
-          favicon.setAttribute("href", "/icon-light-64.png?v=2");
-        }
-      }
-    }
-    function getPreferredTheme(){
-      const saved = localStorage.getItem(THEME_KEY);
-      if (saved === "dark" || saved === "light") return saved;
-      // fallback: sistema
-      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    }
-
-    function toggleTheme(){
-      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      const next = isDark ? "light" : "dark";
-      localStorage.setItem(THEME_KEY, next);
-      applyTheme(next);
-      syncThemeUi();
-    }
-
-    function syncThemeUi(){
-      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      const btn = document.getElementById("themeToggleBtn");
-      if (btn) btn.textContent = isDark ? "Light mode" : "Dark mode";
-    }
     // --- Auth state (do NOT rely on UI text) ---
     let CURRENT_USER = null; // lowercase, empty if not logged in
     function getCurrentUserEmail() {

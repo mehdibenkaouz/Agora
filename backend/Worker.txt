@@ -646,10 +646,11 @@ export default {
         if (!file || typeof file.arrayBuffer !== "function") return json({ ok: false, error: "missing_file" }, 400, ALLOWED_ORIGIN);
 
         const mime = file.type || "";
-        if (!mime.startsWith("image/")) return json({ ok: false, error: "not_image" }, 400, ALLOWED_ORIGIN);
+        if (!mime.startsWith("image/") && !mime.startsWith("video/")) return json({ ok: false, error: "not_image_or_video" }, 400, ALLOWED_ORIGIN);
 
         const buf = await file.arrayBuffer();
-        if (buf.byteLength > 8 * 1024 * 1024) return json({ ok: false, error: "too_big" }, 400, ALLOWED_ORIGIN);
+        const maxSize = mime.startsWith("video/") ? 50 * 1024 * 1024 : 8 * 1024 * 1024;
+        if (buf.byteLength > maxSize) return json({ ok: false, error: "too_big" }, 400, ALLOWED_ORIGIN);
 
         const ext = (mime.split("/")[1] || "bin").replace(/[^a-z0-9]/gi, "");
         const key = `u/${session.user_id}/${crypto.randomUUID()}.${ext}`;
@@ -1518,6 +1519,56 @@ export default {
         const adm = await requireAdmin(request);
         if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
         await env.dbagora.prepare("DELETE FROM releases WHERE id = ?1").bind(releaseDeleteMatch[1]).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+
+      // GET /api/admin/tag-reports — lista segnalazioni tag
+      if (url.pathname === "/api/admin/tag-reports" && request.method === "GET") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        const rows = await env.dbagora.prepare(`
+          SELECT sr.id, sr.reason, sr.created_at,
+            sr.segment_id,
+            ps.segment_type, ps.segment_text_snapshot, ps.is_active, ps.post_id,
+            ru.email AS reporter_email,
+            COALESCE(NULLIF(TRIM(ru.display_name),''),
+              CASE WHEN instr(ru.email,'@')>1 THEN substr(ru.email,1,instr(ru.email,'@')-1) ELSE ru.email END
+            ) AS reporter_name,
+            COALESCE(ru.picture_url,'') AS reporter_picture,
+            au.email AS author_email,
+            COALESCE(NULLIF(TRIM(au.display_name),''),
+              CASE WHEN instr(au.email,'@')>1 THEN substr(au.email,1,instr(au.email,'@')-1) ELSE au.email END
+            ) AS author_name,
+            (SELECT COUNT(*) FROM segment_reports sr2 WHERE sr2.segment_id = sr.segment_id) AS total_reports
+          FROM segment_reports sr
+          JOIN post_segments ps ON ps.id = sr.segment_id
+          JOIN users ru ON ru.id = sr.reporter_user_id
+          JOIN users au ON au.id = ps.author_user_id
+          ORDER BY sr.created_at DESC LIMIT 200
+        `).all();
+        return json({ ok: true, reports: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
+      // POST /api/admin/segments/:id/deactivate — admin disattiva tag
+      const adminSegDeactivate = url.pathname.match(/^\/api\/admin\/segments\/([^/]+)\/deactivate$/);
+      if (adminSegDeactivate && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        await env.dbagora.prepare(
+          "UPDATE post_segments SET is_active = 0 WHERE id = ?1"
+        ).bind(adminSegDeactivate[1]).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // POST /api/admin/segments/:id/activate — admin riattiva tag
+      const adminSegActivate = url.pathname.match(/^\/api\/admin\/segments\/([^/]+)\/activate$/);
+      if (adminSegActivate && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        await env.dbagora.prepare(
+          "UPDATE post_segments SET is_active = 1 WHERE id = ?1"
+        ).bind(adminSegActivate[1]).run();
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
