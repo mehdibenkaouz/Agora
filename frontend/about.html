@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AGORÀ • About</title>
+
+  <link id="site-favicon" rel="icon" type="image/png" sizes="64x64" href="/icon-light-64.png?v=1">
+  <link rel="apple-touch-icon" href="item/Logoagora.png">
+  <script src="/shared-theme.js" defer></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:wght@400;500;600;700&family=Cinzel:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#e8e2d5;
+      --panel:#f5f0e8;
+      --panel-2:#faf7f2;
+      --text:#1a1008;
+      --muted:#6b5b48;
+      --line:rgba(87,25,41,0.12);
+      --brand:#571929;
+      --gold:#c9932a;
+      --gold-light:#e8c06b;
+      --shadow:0 20px 50px rgba(30,10,5,0.16);
+      --soft-shadow:0 10px 28px rgba(30,10,5,0.10);
+      --radius-xl:34px;
+      --radius-lg:24px;
+      --radius-md:16px;
+      --maxw:1120px;
+      --topbar-h:76px;
+    }
+
+    :root[data-theme="dark"]{
+      --bg:#000000;
+      --panel:#14110d;
+      --panel-2:#1c1812;
+      --text:#f0e8d8;
+      --muted:rgb(145, 183, 214);
+      --line:rgba(37,172,193,0.18);
+      --brand:#a8ebf68c;
+      --gold:#25acc1;
+      --gold-light:#7dd8e8;
+      --shadow:0 24px 60px rgba(0,0,0,0.52);
+      --soft-shadow:0 12px 30px rgba(0,0,0,0.36);
+    }
+
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;min-height:100%;background:var(--bg);color:var(--text);font-family:'Lora', Georgia, serif}
+    body{position:relative;overflow-x:hidden}
+
+    :root[data-theme="dark"] body::before{
+      content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,.95) 0px, rgba(255,255,255,.95) .9px, transparent 1.7px),
+        radial-gradient(circle, rgba(200,230,255,.80) 0px, rgba(200,230,255,.80) .8px, transparent 1.5px),
+        radial-gradient(circle, rgba(255,245,220,.72) 0px, rgba(255,245,220,.72) .75px, transparent 1.45px);
+      background-size:170px 170px,230px 230px,310px 310px;
+      background-position:0 0,40px 80px,120px 20px;opacity:.38;
+    }
+
+    a{color:inherit;text-decoration:none}
+
+    .topbar{
+      height:var(--topbar-h);background:#2a1208;border-bottom:1px solid rgba(201,147,42,0.25);
+      box-shadow:0 4px 24px rgba(0,0,0,0.40);display:flex;align-items:center;justify-content:center;
+      position:sticky;top:0;z-index:30;
+    }
+    :root[data-theme="dark"] .topbar{background:#071019;border-bottom:1px solid rgba(37,172,193,0.24)}
+
+    .topbar-inner{
+      width:min(calc(100% - 24px), var(--maxw));display:flex;align-items:center;justify-content:space-between;gap:16px;
+    }
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{height:60px;width:60px;object-fit:contain;display:block}
+    .brand-title{font-family:'Cinzel', serif;letter-spacing:.14em;font-size:.9rem;text-transform:uppercase;color:rgba(201,147,42,.84)}
+    :root[data-theme="dark"] .brand-title{color:rgba(125,220,235,.88)}
+
+    .top-links{display:flex;align-items:center;gap:20px;font-family:'Cinzel', serif;font-size:.76rem;letter-spacing:.12em;text-transform:uppercase;color:rgba(201,147,42,0.82)}
+    :root[data-theme="dark"] .top-links{color:rgba(125,220,235,.82)}
+    .top-links a:hover{color:var(--gold-light)}
+
+    .top-actions{display:flex;align-items:center;gap:10px}
+
+    .ghost-btn,.primary-btn{
+      min-height:42px;border-radius:12px;padding:10px 16px;cursor:pointer;font-family:'Cinzel', serif;
+      font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;transition:.15s ease;
+    }
+    .ghost-btn{border:1px solid rgba(201,147,42,0.25);background:rgba(201,147,42,0.08);color:var(--gold)}
+    .ghost-btn:hover{background:rgba(201,147,42,0.16)}
+    .primary-btn{border:1px solid rgba(201,147,42,0.40);background:linear-gradient(135deg, #571929, #8b2239);color:#f0d8a8;box-shadow:0 6px 18px rgba(87,25,41,0.28)}
+    :root[data-theme="dark"] .primary-btn{border:1px solid rgba(37,172,193,0.36);background:linear-gradient(135deg, #0f3b47, #1b6d7b);color:#d8f8ff;box-shadow:0 6px 18px rgba(0,190,220,0.18)}
+    .primary-btn:hover{transform:translateY(-1px)}
+
+    .page{width:min(calc(100% - 24px), var(--maxw));margin:0 auto;padding:28px 0 56px;position:relative;z-index:1}
+
+    .hero{margin-bottom:20px;border-radius:var(--radius-xl);padding:28px 28px 24px;background:linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0.16));border:1px solid var(--line);box-shadow:var(--soft-shadow)}
+    :root[data-theme="dark"] .hero{background:linear-gradient(180deg, rgba(10,22,30,0.82), rgba(14,20,26,0.72))}
+
+    .eyebrow{font-family:'Cinzel', serif;font-size:.76rem;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
+    .hero h1{margin:0;font-family:'Cormorant Garamond', serif;font-size:clamp(2rem, 4vw, 3.4rem);line-height:.95;font-weight:600;color:var(--brand)}
+    :root[data-theme="dark"] .hero h1{color:var(--gold-light)}
+    .hero p{margin:14px 0 0;max-width:760px;color:var(--muted);line-height:1.7;font-size:1rem}
+
+    .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:20px;margin-bottom:20px}
+    .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius-xl);box-shadow:var(--shadow);overflow:hidden}
+    .panel-head{padding:20px 24px;border-bottom:1px solid var(--line);background:rgba(201,147,42,0.06)}
+    :root[data-theme="dark"] .panel-head{background:rgba(37,172,193,0.08)}
+    .panel-title{font-family:'Cinzel', serif;letter-spacing:.08em;font-size:1rem;color:var(--gold);text-transform:uppercase}
+    .panel-sub{margin-top:8px;color:var(--muted);font-size:.95rem;line-height:1.6}
+    .panel-body{padding:22px 24px}
+
+    .panel-body h2{margin:0 0 10px;font-family:'Cormorant Garamond', serif;font-size:1.7rem;font-weight:600;color:var(--brand)}
+    :root[data-theme="dark"] .panel-body h2{color:var(--gold-light)}
+    .panel-body p{margin:0 0 14px;line-height:1.8}
+    .panel-body ul{margin:0;padding-left:22px;line-height:1.8}
+    .panel-body li{margin-bottom:8px}
+
+    .cards{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    .card-link{display:block;padding:18px;border-radius:18px;background:var(--panel-2);border:1px solid var(--line);box-shadow:var(--soft-shadow);transition:.15s ease}
+    .card-link:hover{transform:translateY(-2px)}
+    .card-kicker{font-family:'Cinzel', serif;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold)}
+    .card-title{margin-top:8px;font-family:'Cormorant Garamond', serif;font-size:1.5rem;font-weight:600;color:var(--brand)}
+    :root[data-theme="dark"] .card-title{color:var(--gold-light)}
+    .card-text{margin-top:8px;color:var(--muted);line-height:1.65;font-size:.95rem}
+
+    .footer-links{margin-top:10px;display:flex;justify-content:center;gap:18px;flex-wrap:wrap;font-size:.88rem;color:var(--muted)}
+    .footer-links a:hover{text-decoration:underline}
+
+    @media (max-width: 900px){
+      .grid{grid-template-columns:1fr}
+    }
+    @media (max-width: 720px){
+      .topbar-inner{flex-wrap:wrap;justify-content:center}
+      .top-links{width:100%;justify-content:center;order:3}
+      .cards{grid-template-columns:1fr}
+      .hero,.panel-head,.panel-body{padding-left:18px;padding-right:18px}
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <a href="index.html">
+          <img id="mainLogo" src="item/Logoagora.png" data-light="item/Logoagora.png" data-dark="item/Logoagoradark.png" class="logo" alt="Agora">
+        </a>
+        <div class="brand-title">About AGORÀ</div>
+      </div>
+
+      <nav class="top-links">
+        <a href="index.html">Home</a>
+        <a href="principles.html">Principles</a>
+        <a href="manifesto.html">Manifesto</a>
+        <a href="account.html">Account</a>
+      </nav>
+
+      <div class="top-actions">
+        <button id="themeToggleBtn" class="ghost-btn" type="button">Dark mode</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Agorà identity</div>
+      <h1>A place for thought, clarity, culture, and responsible discourse.</h1>
+      <p>
+        AGORÀ is designed as a more reflective kind of social platform: a place where ideas,
+        sources, explanations, and serious discussion can have structure, memory, and public value.
+        It is not intended to optimize noise. It is intended to reward meaning.
+      </p>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">What AGORÀ is</div>
+          <div class="panel-sub">Core orientation of the platform</div>
+        </div>
+        <div class="panel-body">
+          <h2>A civic and cultural social space</h2>
+          <p>
+            AGORÀ is built around writing, interpretation, clarification, and reasoned contribution.
+            Instead of treating every post as equivalent noise, the platform is structured to value
+            useful questions, meaningful clarifications, sources, and logical force.
+          </p>
+          <p>
+            The aim is not to remove disagreement, but to improve its quality. Users should be able
+            to express ideas, challenge one another, and develop positions in a way that produces
+            more understanding rather than less.
+          </p>
+          <ul>
+            <li>culture over impulse;</li>
+            <li>clarity over confusion;</li>
+            <li>sources over empty assertion;</li>
+            <li>responsibility over anonymity-driven abuse.</li>
+          </ul>
+        </div>
+      </article>
+
+      <aside class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Legal and policy hub</div>
+          <div class="panel-sub">The documents users should always be able to access</div>
+        </div>
+        <div class="panel-body">
+          <div class="cards">
+            <a class="card-link" href="terms.html">
+              <div class="card-kicker">Legal</div>
+              <div class="card-title">Terms of Service</div>
+              <div class="card-text">Rules of access, age requirement, acceptable use, moderation, account responsibility, and core platform conditions.</div>
+            </a>
+
+            <a class="card-link" href="privacy.html">
+              <div class="card-kicker">Data</div>
+              <div class="card-title">Privacy Policy</div>
+              <div class="card-text">How AGORÀ collects, stores, uses, secures, and processes user and technical data.</div>
+            </a>
+
+            <a class="card-link" href="cookies.html">
+              <div class="card-kicker">Storage</div>
+              <div class="card-title">Cookies & Storage Notice</div>
+              <div class="card-text">Local storage, essential cookies, session data, theme preferences, security tokens, and device-side persistence.</div>
+            </a>
+
+            <a class="card-link" href="contact.html">
+              <div class="card-kicker">Support</div>
+              <div class="card-title">Contact & Legal Info</div>
+              <div class="card-text">Contact channels, moderation communication, legal notices, and information about the service operator.</div>
+            </a>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Why these pages are separate</div>
+        <div class="panel-sub">The structure is clearer and legally safer this way</div>
+      </div>
+      <div class="panel-body">
+        <h2>Terms are not the same as Privacy</h2>
+        <p>
+          The <strong>Terms of Service</strong> explain the rules of use: who may access the platform,
+          what conduct is allowed, what may lead to restriction or removal, and what responsibilities
+          users accept when joining AGORÀ.
+        </p>
+        <p>
+          The <strong>Privacy Policy</strong> is separate because it serves a different function: it explains
+          what data is processed, why it is processed, on what basis it is processed, how long it may be
+          retained, and what rights users may exercise regarding their personal data.
+        </p>
+        <p>
+          The <strong>Cookies / Storage Notice</strong> is also distinct. It explains browser-side storage,
+          session mechanisms, local preferences such as theme choice, and any future analytics or device-level
+          persistence. Finally, <strong>Contact / Legal Info</strong> gives users and authorities a stable way to
+          identify or reach the service operator.
+        </p>
+      </div>
+    </section>
+
+    <div class="footer-links">
+      <a href="terms.html">Terms</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="cookies.html">Cookies & Storage</a>
+      <a href="contact.html">Contact & Legal</a>
+    </div>
+  </main>
+</body>
+</html>

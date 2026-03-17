@@ -769,33 +769,33 @@
     }
 
     // ── THEME ────────────────────────────────────────────────
-    function applyTheme(theme) {
-      const root = document.documentElement;
-      const logo = document.getElementById("mainLogo");
-      if (theme === "dark") {
-        root.setAttribute("data-theme","dark");
-        if (logo) logo.src = logo.dataset.dark;
-      } else {
-        root.removeAttribute("data-theme");
-        if (logo) logo.src = logo.dataset.light;
-      }
-    }
-    function getPreferredTheme() {
-      const saved = localStorage.getItem(THEME_KEY);
-      if (saved === "dark" || saved === "light") return saved;
-      return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    }
-    function syncThemeUi() {
-      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      if (themeToggleBtn) themeToggleBtn.textContent = isDark ? "Light mode" : "Dark mode";
-    }
-    function toggleTheme() {
-      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      const next = isDark ? "light" : "dark";
-      localStorage.setItem(THEME_KEY, next);
-      applyTheme(next);
-      syncThemeUi();
-    }
+    // function applyTheme(theme) {
+    //   const root = document.documentElement;
+    //   const logo = document.getElementById("mainLogo");
+    //   if (theme === "dark") {
+    //     root.setAttribute("data-theme","dark");
+    //     if (logo) logo.src = logo.dataset.dark;
+    //   } else {
+    //     root.removeAttribute("data-theme");
+    //     if (logo) logo.src = logo.dataset.light;
+    //   }
+    // }
+    // function getPreferredTheme() {
+    //   const saved = localStorage.getItem(THEME_KEY);
+    //   if (saved === "dark" || saved === "light") return saved;
+    //   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    // }
+    // function syncThemeUi() {
+    //   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    //   if (themeToggleBtn) themeToggleBtn.textContent = isDark ? "Light mode" : "Dark mode";
+    // }
+    // function toggleTheme() {
+    //   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+    //   const next = isDark ? "light" : "dark";
+    //   localStorage.setItem(THEME_KEY, next);
+    //   applyTheme(next);
+    //   syncThemeUi();
+    // }
 
     // ── MENU ─────────────────────────────────────────────────
     function openMenu()  { accountMenu.classList.add("open"); accountBtn.setAttribute("aria-expanded","true"); accountMenu.setAttribute("aria-hidden","false"); }
