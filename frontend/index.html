@@ -4645,10 +4645,10 @@ const logicalBtn = card.querySelector(".logical-btn");
     });
 
     document.addEventListener("click", () => { closeMenu(); closeAllPostMenus(); });
-    document.getElementById("themeToggleBtn")?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      toggleTheme();
-    });
+    // document.getElementById("themeToggleBtn")?.addEventListener("click", (e) => {
+    //   e.stopPropagation();
+    //   toggleTheme();
+    // });
     menuPrimaryAction.addEventListener("click", async () => {
       if (getToken()) {
         localStorage.removeItem(TOKEN_KEY);
