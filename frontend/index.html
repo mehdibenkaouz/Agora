@@ -5,15 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AGORÀ</title>
 
-  <link rel="icon" type="image/png" sizes="32x32" href="item/Logoaagora.png">
-  <link rel="apple-touch-icon" href="item/Logoagora.png">
-  <link rel="icon" sizes="64x64" href="/icon-light-64.png" media="(prefers-color-scheme: light)">
-  <link rel="icon" sizes="64x64" href="/icon-dark-64.png" media="(prefers-color-scheme: dark)">
-
-  <link rel="icon" sizes="192x192" href="/icon-light-192.png" media="(prefers-color-scheme: light)">
-  <link rel="icon" sizes="192x192" href="/icon-dark-192.png" media="(prefers-color-scheme: dark)">
+  <link id="site-favicon" rel="icon" type="image/png" sizes="64x64" href="/icon-light-64.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png">
-
   <style>
     :root {
       --bg: #e8e5de;
@@ -2610,24 +2603,19 @@
       const logo = document.getElementById("mainLogo");
       const favicon = document.getElementById("site-favicon");
 
-      if (!logo) return;
-
-      const lightSrc = logo.dataset.light;
-      const darkSrc  = logo.dataset.dark;
-
       if (theme === "dark"){
         root.setAttribute("data-theme", "dark");
-        logo.src = darkSrc;
+        if (logo) logo.src = logo.dataset.dark;
 
         if (favicon) {
-          favicon.href = "/icon-dark-64.png?v=dark";
+          favicon.setAttribute("href", "/icon-dark-64.png?v=2");
         }
       } else {
-        root.removeAttribute("data-theme", "light");
-        logo.src = lightSrc;
+        root.removeAttribute("data-theme");
+        if (logo) logo.src = logo.dataset.light;
 
         if (favicon) {
-          favicon.href = "/icon-light-64.png?v=light";
+          favicon.setAttribute("href", "/icon-light-64.png?v=2");
         }
       }
     }
