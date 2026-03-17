@@ -339,19 +339,19 @@ html,body{
 
 <script>
 // ── Theme ──────────────────────────────────────────────────────────
-const THEME_KEY = "agora_theme";
-function applyTheme(t){
-  document.documentElement[t==="dark"?"setAttribute":"removeAttribute"]("data-theme","dark");
-  localStorage.setItem(THEME_KEY,t);
-}
-(function(){
-  const s=localStorage.getItem(THEME_KEY);
-  const t=(s==="dark"||s==="light")?s:(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
-  applyTheme(t);
-})();
-document.getElementById("themeBtn").addEventListener("click",()=>{
-  applyTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");
-});
+// const THEME_KEY = "agora_theme";
+// function applyTheme(t){
+//   document.documentElement[t==="dark"?"setAttribute":"removeAttribute"]("data-theme","dark");
+//   localStorage.setItem(THEME_KEY,t);
+// }
+// (function(){
+//   const s=localStorage.getItem(THEME_KEY);
+//   const t=(s==="dark"||s==="light")?s:(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light");
+//   applyTheme(t);
+// })();
+// document.getElementById("themeBtn").addEventListener("click",()=>{
+//   applyTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");
+// });
 
 // ── Game constants ─────────────────────────────────────────────────
 const EMPTY=0,BLACK=1,WHITE=2;
