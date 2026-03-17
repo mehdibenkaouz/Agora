@@ -317,10 +317,10 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
 
 <script>
 // ── Theme ──────────────────────────────────────────────────────────
-const THEME_KEY="agora_theme";
-function applyTheme(t){document.documentElement[t==="dark"?"setAttribute":"removeAttribute"]("data-theme","dark");localStorage.setItem(THEME_KEY,t);}
-(function(){const s=localStorage.getItem(THEME_KEY);applyTheme((s==="dark"||s==="light")?s:(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"));})();
-document.getElementById("themeBtn").addEventListener("click",()=>{applyTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");});
+// const THEME_KEY="agora_theme";
+// function applyTheme(t){document.documentElement[t==="dark"?"setAttribute":"removeAttribute"]("data-theme","dark");localStorage.setItem(THEME_KEY,t);}
+// (function(){const s=localStorage.getItem(THEME_KEY);applyTheme((s==="dark"||s==="light")?s:(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"));})();
+// document.getElementById("themeBtn").addEventListener("click",()=>{applyTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");});
 
 // ── Piece definitions ──────────────────────────────────────────────
 const PIECE_INFO={

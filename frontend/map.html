@@ -674,6 +674,9 @@ const TOPIC_COLORS={
 const API_BASE="https://agora-api.convergegame.workers.dev";
 const TOKEN_KEY="agora_token";
 let sessions=[];
+function isDarkTheme(){
+  return document.documentElement.getAttribute("data-theme") === "dark";
+}
 
 async function loadSessions(){
   document.getElementById("sessionCount").textContent="Caricamento…";
@@ -694,7 +697,7 @@ function hasMapTilerKey(){
   return !!MAPTILER_API_KEY && MAPTILER_API_KEY !== MAPTILER_KEY_PLACEHOLDER;
 }
 function getActiveMapTilerMapId(){
-  return isDark ? MAPTILER_DARK_MAP_ID : MAPTILER_LIGHT_MAP_ID;
+  return isDarkTheme() ? MAPTILER_DARK_MAP_ID : MAPTILER_LIGHT_MAP_ID;
 }
 
 // ── State ──────────────────────────────────────────────────────────
@@ -748,7 +751,7 @@ const snapCtrl = L.Control.extend({
 new snapCtrl().addTo(map);
 
 function getTileUrl(){
-  if (isDark) {
+  if (isDarkTheme()) {
     return "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
   }
 
@@ -775,7 +778,7 @@ updateTiles();
 function makeIcon(type,tags){
   const color=type==="persona"?"#571929":"#c9932a";
   const darkColor=type==="persona"?"#a8ebf6":"#25acc1";
-  const c=isDark?darkColor:color;
+  const c = isDarkTheme() ? darkColor : color;
   const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="36" height="44" viewBox="0 0 36 44">
     <path d="M18 2C10.3 2 4 8.3 4 16c0 10 14 26 14 26S32 26 32 16C32 8.3 25.7 2 18 2z" fill="${c}" stroke="white" stroke-width="2"/>
     <circle cx="18" cy="16" r="6" fill="white" opacity="0.9"/>
@@ -1217,7 +1220,7 @@ function _poiVisibleItems(bounds) {
 }
 
 function _poiIcon(item) {
-  const color = isDark ? "#25acc1" : "#c9932a";
+  const color = isDarkTheme() ? "#25acc1" : "#c9932a";
   const emoji = _poiEmoji(item);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">
     <path d="M16 2C9 2 3.5 7.4 3.5 14.1c0 8.3 12.5 23.7 12.5 23.7s12.5-15.4 12.5-23.7C28.5 7.4 23 2 16 2z" fill="${color}" stroke="white" stroke-width="2"/>
@@ -1229,7 +1232,7 @@ function _poiIcon(item) {
 
 function _poiPopup(item) {
   return `<div class="popup-inner">
-    <div class="popup-type" style="font-weight:600;color:${isDark ? '#7dd8e8' : '#571929'}">${_poiKindLabel(item)}</div>
+    <div class="popup-type" style="font-weight:600;color:${isDarkTheme() ? '#7dd8e8' : '#571929'}">${_poiKindLabel(item)}</div>
     <div class="popup-name">${item.name}</div>
     <div class="popup-topic" style="font-size:.72rem">${item.placeName}</div>
     <div class="popup-meta">Provider: MapTiler Search</div>
