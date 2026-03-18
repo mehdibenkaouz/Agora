@@ -769,17 +769,17 @@
     }
 
     // ── THEME ────────────────────────────────────────────────
-    // function applyTheme(theme) {
-    //   const root = document.documentElement;
-    //   const logo = document.getElementById("mainLogo");
-    //   if (theme === "dark") {
-    //     root.setAttribute("data-theme","dark");
-    //     if (logo) logo.src = logo.dataset.dark;
-    //   } else {
-    //     root.removeAttribute("data-theme");
-    //     if (logo) logo.src = logo.dataset.light;
-    //   }
-    // }
+    function applyTheme(theme) {
+      const root = document.documentElement;
+      const logo = document.getElementById("mainLogo");
+      if (theme === "dark") {
+        root.setAttribute("data-theme","dark");
+        if (logo) logo.src = logo.dataset.dark;
+      } else {
+        root.removeAttribute("data-theme");
+        if (logo) logo.src = logo.dataset.light;
+      }
+    }
     // function getPreferredTheme() {
     //   const saved = localStorage.getItem(THEME_KEY);
     //   if (saved === "dark" || saved === "light") return saved;
