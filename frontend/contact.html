@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AGORÀ • Contact & Legal Info</title>
+
+  <link id="site-favicon" rel="icon" type="image/png" sizes="64x64" href="/icon-light-64.png?v=1">
+  <link rel="apple-touch-icon" href="item/Logoagora.png">
+  <script src="/shared-theme.js" defer></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:wght@400;500;600;700&family=Cinzel:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#e8e2d5;
+      --panel:#f5f0e8;
+      --panel-2:#faf7f2;
+      --text:#1a1008;
+      --muted:#6b5b48;
+      --line:rgba(87,25,41,0.12);
+      --brand:#571929;
+      --gold:#c9932a;
+      --gold-light:#e8c06b;
+      --shadow:0 20px 50px rgba(30,10,5,0.16);
+      --soft-shadow:0 10px 28px rgba(30,10,5,0.10);
+      --radius-xl:34px;
+      --radius-lg:24px;
+      --radius-md:16px;
+      --maxw:1120px;
+      --topbar-h:76px;
+    }
+
+    :root[data-theme="dark"]{
+      --bg:#000000;
+      --panel:#14110d;
+      --panel-2:#1c1812;
+      --text:#f0e8d8;
+      --muted:rgb(145, 183, 214);
+      --line:rgba(37,172,193,0.18);
+      --brand:#a8ebf68c;
+      --gold:#25acc1;
+      --gold-light:#7dd8e8;
+      --shadow:0 24px 60px rgba(0,0,0,0.52);
+      --soft-shadow:0 12px 30px rgba(0,0,0,0.36);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{
+      margin:0;
+      padding:0;
+      min-height:100%;
+      background:var(--bg);
+      color:var(--text);
+      font-family:'Lora', Georgia, serif;
+    }
+
+    body{ position:relative; overflow-x:hidden; }
+
+    :root[data-theme="dark"] body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:0;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,.95) 0px, rgba(255,255,255,.95) .9px, transparent 1.7px),
+        radial-gradient(circle, rgba(200,230,255,.80) 0px, rgba(200,230,255,.80) .8px, transparent 1.5px),
+        radial-gradient(circle, rgba(255,245,220,.72) 0px, rgba(255,245,220,.72) .75px, transparent 1.45px);
+      background-size:170px 170px, 230px 230px, 310px 310px;
+      background-position:0 0, 40px 80px, 120px 20px;
+      opacity:.38;
+    }
+
+    a{ color:inherit; text-decoration:none; }
+
+    .topbar{
+      height:var(--topbar-h);
+      background:#2a1208;
+      border-bottom:1px solid rgba(201,147,42,0.25);
+      box-shadow:0 4px 24px rgba(0,0,0,0.40);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:sticky;
+      top:0;
+      z-index:30;
+    }
+
+    :root[data-theme="dark"] .topbar{
+      background:#071019;
+      border-bottom:1px solid rgba(37,172,193,0.24);
+    }
+
+    .topbar-inner{
+      width:min(calc(100% - 24px), var(--maxw));
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+
+    .logo{
+      height:60px;
+      width:60px;
+      object-fit:contain;
+      display:block;
+      flex:0 0 auto;
+    }
+
+    .brand-stack{ min-width:0; }
+
+    .brand-title{
+      font-family:'Cinzel', serif;
+      letter-spacing:.14em;
+      font-size:.9rem;
+      text-transform:uppercase;
+      color:rgba(201,147,42,.84);
+    }
+
+    .brand-subtitle{
+      margin-top:4px;
+      color:rgba(240,220,185,.72);
+      font-size:.86rem;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    :root[data-theme="dark"] .brand-title{ color:rgba(125,220,235,.88); }
+    :root[data-theme="dark"] .brand-subtitle{ color:rgba(170,220,232,.78); }
+
+    .top-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .ghost-btn{
+      min-height:42px;
+      border-radius:12px;
+      padding:10px 16px;
+      cursor:pointer;
+      font-family:'Cinzel', serif;
+      font-size:.78rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      transition:.15s ease;
+      border:1px solid rgba(201,147,42,0.25);
+      background:rgba(201,147,42,0.08);
+      color:var(--gold);
+    }
+
+    .ghost-btn:hover{ background:rgba(201,147,42,0.16); }
+
+    .page{
+      width:min(calc(100% - 24px), var(--maxw));
+      margin:0 auto;
+      padding:28px 0 56px;
+      position:relative;
+      z-index:1;
+    }
+
+    .hero{
+      margin-bottom:20px;
+      border-radius:var(--radius-xl);
+      padding:28px 28px 24px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0.16));
+      border:1px solid var(--line);
+      box-shadow:var(--soft-shadow);
+    }
+
+    :root[data-theme="dark"] .hero{
+      background:linear-gradient(180deg, rgba(10,22,30,0.82), rgba(14,20,26,0.72));
+    }
+
+    .eyebrow{
+      font-family:'Cinzel', serif;
+      font-size:.76rem;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      color:var(--gold);
+      margin-bottom:10px;
+    }
+
+    .hero h1{
+      margin:0;
+      font-family:'Cormorant Garamond', serif;
+      font-size:clamp(2rem, 4vw, 3.4rem);
+      line-height:.95;
+      font-weight:600;
+      color:var(--brand);
+      max-width:900px;
+    }
+
+    :root[data-theme="dark"] .hero h1{ color:var(--gold-light); }
+
+    .hero p{
+      margin:14px 0 0;
+      max-width:860px;
+      color:var(--muted);
+      line-height:1.7;
+      font-size:1rem;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:20px;
+      margin-bottom:20px;
+    }
+
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius-xl);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .panel-head{
+      padding:20px 24px;
+      border-bottom:1px solid var(--line);
+      background:rgba(201,147,42,0.06);
+    }
+
+    :root[data-theme="dark"] .panel-head{ background:rgba(37,172,193,0.08); }
+
+    .panel-title{
+      font-family:'Cinzel', serif;
+      letter-spacing:.08em;
+      font-size:1rem;
+      color:var(--gold);
+      text-transform:uppercase;
+    }
+
+    .panel-sub{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:.95rem;
+      line-height:1.6;
+    }
+
+    .panel-body{
+      padding:22px 24px;
+    }
+
+    .panel-body h2{
+      margin:0 0 10px;
+      font-family:'Cormorant Garamond', serif;
+      font-size:1.7rem;
+      font-weight:600;
+      color:var(--brand);
+    }
+
+    :root[data-theme="dark"] .panel-body h2{ color:var(--gold-light); }
+
+    .panel-body p{
+      margin:0 0 12px;
+      line-height:1.82;
+    }
+
+    .panel-body ul{
+      margin:0;
+      padding-left:22px;
+      line-height:1.8;
+    }
+
+    .panel-body li{ margin-bottom:8px; }
+
+    .stack{
+      display:grid;
+      gap:18px;
+    }
+
+    .card{
+      padding:18px;
+      border-radius:20px;
+      background:var(--panel-2);
+      border:1px solid var(--line);
+      box-shadow:var(--soft-shadow);
+    }
+
+    .card-kicker{
+      font-family:'Cinzel', serif;
+      font-size:.72rem;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:var(--gold);
+    }
+
+    .card-title{
+      margin-top:8px;
+      font-family:'Cormorant Garamond', serif;
+      font-size:1.5rem;
+      font-weight:600;
+      color:var(--brand);
+    }
+
+    :root[data-theme="dark"] .card-title{ color:var(--gold-light); }
+
+    .card-text{
+      margin-top:8px;
+      color:var(--muted);
+      line-height:1.7;
+      font-size:.95rem;
+    }
+
+    .codeish{
+      margin-top:8px;
+      padding:12px 14px;
+      border-radius:14px;
+      background:rgba(255,255,255,0.18);
+      border:1px solid var(--line);
+      font-family:ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size:.92rem;
+      line-height:1.7;
+      white-space:pre-wrap;
+      word-break:break-word;
+    }
+
+    :root[data-theme="dark"] .codeish{ background:rgba(255,255,255,0.03); }
+
+    .wide{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius-xl);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .wide-head{
+      padding:22px 24px;
+      border-bottom:1px solid var(--line);
+      background:rgba(201,147,42,0.06);
+    }
+
+    :root[data-theme="dark"] .wide-head{ background:rgba(37,172,193,0.08); }
+
+    .wide-head-title{
+      font-family:'Cinzel', serif;
+      letter-spacing:.08em;
+      font-size:1rem;
+      color:var(--gold);
+      text-transform:uppercase;
+    }
+
+    .wide-head-sub{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:.95rem;
+      line-height:1.7;
+    }
+
+    .wide-body{
+      padding:24px;
+    }
+
+    .wide-body h2{
+      margin:0 0 10px;
+      font-family:'Cormorant Garamond', serif;
+      font-size:1.8rem;
+      font-weight:600;
+      color:var(--brand);
+    }
+
+    :root[data-theme="dark"] .wide-body h2{ color:var(--gold-light); }
+
+    .wide-body p{
+      margin:0 0 12px;
+      line-height:1.82;
+    }
+
+    .wide-body ul{
+      margin:0;
+      padding-left:22px;
+      line-height:1.8;
+    }
+
+    .mini-links{
+      margin-top:18px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .mini-link{
+      display:inline-flex;
+      align-items:center;
+      min-height:40px;
+      padding:9px 14px;
+      border-radius:999px;
+      background:var(--panel-2);
+      border:1px solid var(--line);
+      box-shadow:var(--soft-shadow);
+      font-size:.92rem;
+      color:var(--muted);
+    }
+
+    .mini-link:hover{ color:var(--brand); }
+    :root[data-theme="dark"] .mini-link:hover{ color:var(--gold-light); }
+
+    .warning{
+      margin-top:16px;
+      padding:14px 16px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(201,147,42,0.08);
+      box-shadow:var(--soft-shadow);
+    }
+
+    :root[data-theme="dark"] .warning{ background:rgba(37,172,193,0.08); }
+
+    .footer-mini{
+      margin-top:16px;
+      text-align:center;
+      font-size:.82rem;
+      color:var(--muted);
+      line-height:1.6;
+    }
+
+    @media (max-width: 900px){
+      .grid{ grid-template-columns:1fr; }
+    }
+
+    @media (max-width: 700px){
+      .topbar-inner{ flex-wrap:wrap; justify-content:center; }
+      .hero,.panel-head,.panel-body,.wide-head,.wide-body{ padding-left:18px; padding-right:18px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <a href="index.html">
+          <img
+            id="mainLogo"
+            src="item/Logoagora.png"
+            data-light="item/Logoagora.png"
+            data-dark="item/Logoagoradark.png"
+            class="logo"
+            alt="Agora"
+          >
+        </a>
+        <div class="brand-stack">
+          <div class="brand-title">Contact &amp; Legal Info</div>
+          <div class="brand-subtitle">AGORÀ support channels, notices, legal identity, and reporting routes</div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button id="themeToggleBtn" class="ghost-btn" type="button">Dark mode</button>
+        <a class="ghost-btn" href="about.html">Back</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Agorà operator transparency</div>
+      <h1>Users, rights holders, and authorities should always be able to identify and contact the operator of AGORÀ.</h1>
+      <p>
+        This page provides a central place for support contact details, moderation or legal notices,
+        privacy-related requests, copyright notices, and the service operator’s legal identity.
+        Replace all placeholders before making this page public.
+      </p>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Service operator</div>
+          <div class="panel-sub">The legal identity behind the service</div>
+        </div>
+        <div class="panel-body">
+          <h2>Operator details</h2>
+          <p>Please replace the block below with the real operator data of AGORÀ:</p>
+
+          <div class="codeish">Operator: Mehdi Benkaouz
+Country of operation: Italy
+General contact: contact@agora-site.com
+Legal notices: legal@agora-site.com
+Privacy requests: privacy@agora-site.com
+Abuse reports: abuse@agora-site.com</div>
+
+          <div class="warning">
+            Do not leave placeholder identity data on a public legal page. Replace it before launch.
+          </div>
+        </div>
+      </article>
+
+      <aside class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Main channels</div>
+          <div class="panel-sub">Suggested contact structure for a platform like AGORÀ</div>
+        </div>
+        <div class="panel-body">
+          <div class="stack">
+            <div class="card">
+              <div class="card-kicker">General</div>
+              <div class="card-title">Support</div>
+              <div class="card-text">
+                For ordinary questions about access, accounts, features, or platform use:<br><br>
+                <strong>[support@yourdomain.com]</strong>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-kicker">Safety</div>
+              <div class="card-title">Moderation / Abuse Reports</div>
+              <div class="card-text">
+                For reports concerning harassment, impersonation, illegal content, abuse, or urgent platform misuse:<br><br>
+                <strong>[abuse@yourdomain.com]</strong>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-kicker">Privacy</div>
+              <div class="card-title">Data Requests</div>
+              <div class="card-text">
+                For access, deletion, correction, objection, portability, or privacy questions:<br><br>
+                <strong>[privacy@yourdomain.com]</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="wide">
+      <div class="wide-head">
+        <div class="wide-head-title">Legal and notice framework</div>
+        <div class="wide-head-sub">
+          Suggested structure for official communications, rights-holder notices, and compliance contacts.
+        </div>
+      </div>
+
+      <div class="wide-body">
+        <h2>Recommended legal notice sections</h2>
+        <p>
+          AGORÀ may publish the following legal contact channels and internal handling rules:
+        </p>
+        <ul>
+          <li><strong>General support</strong> — for normal user assistance and platform questions;</li>
+          <li><strong>Moderation / abuse reporting</strong> — for user reports, safety concerns, harassment, impersonation, or platform misuse;</li>
+          <li><strong>Privacy requests</strong> — for personal-data related requests and privacy complaints;</li>
+          <li><strong>Copyright / IP notices</strong> — for rights holders who believe content infringes copyright or other protected rights;</li>
+          <li><strong>Legal notices</strong> — for formal communications from lawyers, regulators, courts, or authorities;</li>
+          <li><strong>Business / press contact</strong> — optional, for partnership or media inquiries if you want a separate route.</li>
+        </ul>
+
+        <h2 style="margin-top:26px;">Suggested text for formal notices</h2>
+        <p>
+          The following is a simple legal-facing text block you can keep on the page:
+        </p>
+
+        <div class="codeish">For legal notices concerning AGORÀ, including privacy requests, intellectual property complaints,
+moderation-related communications, or lawful official requests, please contact:
+
+Legal contact: [legal@yourdomain.com]
+Privacy contact: [privacy@yourdomain.com]
+Abuse / moderation contact: [abuse@yourdomain.com]
+
+Please include sufficient detail to identify the account, content, or issue concerned, together with any
+supporting information reasonably necessary to review the request.</div>
+
+        <h2 style="margin-top:26px;">Copyright / IP complaint guidance</h2>
+        <p>
+          If you want, you can include this rights-holder section:
+        </p>
+
+        <div class="codeish">If you believe content on AGORÀ infringes your copyright or other legal rights, please send a notice
+to [legal@yourdomain.com] containing:
+
+1. your full name and contact details;
+2. identification of the protected work or right claimed;
+3. identification of the content at issue;
+4. the reason for the complaint;
+5. a statement that the information submitted is accurate to the best of your knowledge;
+6. any other information reasonably necessary for review.</div>
+
+        <h2 style="margin-top:26px;">Jurisdiction and legal transparency</h2>
+        <p>
+          You may also include a basic legal statement such as:
+        </p>
+
+        <div class="codeish">AGORÀ is operated by [Insert legal name], established in [Insert country].
+Any mandatory rights available to users under applicable law remain unaffected by the publication of this page.
+Additional legal details may be provided in the Terms of Service and Privacy Policy.</div>
+
+        <h2 style="margin-top:26px;">Response expectations</h2>
+        <p>
+          It is usually safer to avoid promising exact response times unless you are sure you can meet them.
+          A safer public formulation is:
+        </p>
+
+        <div class="codeish">AGORÀ will review incoming requests within a reasonable time, taking into account the nature,
+urgency, legal basis, and complexity of the request.</div>
+
+        <div class="mini-links">
+          <a class="mini-link" href="terms.html">Terms of Service</a>
+          <a class="mini-link" href="privacy.html">Privacy Policy</a>
+          <a class="mini-link" href="cookies.html">Cookies &amp; Storage Notice</a>
+          <a class="mini-link" href="about.html">About</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="footer-mini">
+      AGORÀ • operator identification, support, and legal contact transparency<br>
+      Replace all bracketed placeholders before launch, especially emails, address, and legal entity data.
+    </div>
+  </main>
+</body>
+</html>
