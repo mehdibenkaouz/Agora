@@ -884,8 +884,10 @@
 
     acceptCheckbox.addEventListener("change", refreshAcceptUi);
 
-    acceptBtn.addEventListener("click", () => {
+    acceptBtn.addEventListener("click", async () => {
       if (!acceptCheckbox.checked) return;
+      acceptBtn.disabled = true;
+      acceptStatus.textContent = "Saving…";
 
       const payload = {
         accepted: true,
@@ -894,7 +896,26 @@
         accepted_at: new Date().toISOString()
       };
 
+      // Salva sempre in localStorage (fallback per utenti non loggati)
       localStorage.setItem(TERMS_ACCEPT_KEY, JSON.stringify(payload));
+
+      // Se l'utente è loggato, salva anche nel DB
+      const token = localStorage.getItem("agora_token");
+      if (token) {
+        try {
+          await fetch("https://agora-api.convergegame.workers.dev/api/terms/accept", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": "Bearer " + token
+            },
+            body: JSON.stringify({ version: TERMS_ACCEPT_KEY })
+          });
+        } catch (e) {
+          console.warn("Terms accept API failed, localStorage fallback used", e);
+        }
+      }
+
       window.location.href = "index.html";
     });
 

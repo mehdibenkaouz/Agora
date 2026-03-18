@@ -6148,25 +6148,28 @@ async function runSearch() {
 }   
     // init
     (async () => {
-      const accepted = localStorage.getItem(TERMS_ACCEPT_KEY);
-      if (!accepted) {
-        window.location.href = "terms.html";
-        return;
-      }
       // applyTheme(getPreferredTheme());
       // syncThemeUi();
       await refreshMe();
+
+      // Se l'utente è loggato, verifica accettazione terms lato server
+      if (CURRENT_USER) {
+        const meRes = CURRENT_USER;
+        if (!meRes.terms_accepted_version || meRes.terms_accepted_version !== TERMS_ACCEPT_KEY) {
+          window.location.href = "terms.html";
+          return;
+        }
+      } else {
+        // Utente non loggato: usa localStorage come fallback per il primo accesso
+        const accepted = localStorage.getItem(TERMS_ACCEPT_KEY);
+        if (!accepted) {
+          window.location.href = "terms.html";
+          return;
+        }
+      }
+
       await loadFeed();
       startNotifPolling();
-    })();
-    hideThreadPanel();
-    updatePostCounterAndPublish();
-
-    // Infinite scroll sentinel
-    (function(){
-      const s = document.getElementById("feedSentinel");
-      if (!s) return;
-      new IntersectionObserver(entries => { if (entries[0].isIntersecting) loadFeed(true); }, { rootMargin:"200px" }).observe(s);
     })();
 
     // ── Column resizer ────────────────────────────────────────
