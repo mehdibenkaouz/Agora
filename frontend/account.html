@@ -1124,7 +1124,49 @@
     }
     .unblock-btn:hover { background: rgba(220,60,60,0.10); border-color: rgba(160,0,0,0.30); color: rgba(160,0,0,0.9); }
     :root[data-theme="dark"] .unblock-btn { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.14); color: #fff; }
-    .blocked-empty { color: var(--muted); font-size: .9rem; padding: 8px 0; }
+.blocked-empty { color: var(--muted); font-size: .9rem; padding: 8px 0; }
+
+    /* ===== Danger zone ===== */
+    .danger-zone {
+      margin-top: 32px;
+      padding: 20px 22px;
+      border: 1.5px solid rgba(200,50,50,0.30);
+      border-radius: var(--radius-md);
+      background: rgba(200,50,50,0.04);
+    }
+    :root[data-theme="dark"] .danger-zone {
+      background: rgba(200,50,50,0.06);
+      border-color: rgba(220,60,60,0.28);
+    }
+    .danger-zone-title {
+      font-family: 'Cinzel', serif;
+      font-size: .85rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #c04040;
+      margin-bottom: 10px;
+    }
+    .danger-zone-desc {
+      font-size: .88rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin: 0 0 14px;
+    }
+    .danger-zone-desc strong { color: var(--text); }
+    .danger-zone-btn {
+      padding: 10px 22px;
+      border-radius: 10px;
+      border: 1px solid rgba(200,50,50,0.40);
+      background: rgba(200,50,50,0.08);
+      color: #e07070;
+      font-family: 'Cinzel', serif;
+      font-size: .8rem;
+      letter-spacing: 0.06em;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .danger-zone-btn:hover { background: rgba(200,50,50,0.18); color: #ff5050; }
+    .danger-zone-btn:disabled { opacity: .5; cursor: not-allowed; }
 
     /* ==========================================
        LIGHT THEME FIELD ADJUSTMENTS (for light modals)
@@ -1829,8 +1871,16 @@
         <div class="blocked-list" id="blockedList">
           <div class="blocked-empty">Caricamento…</div>
         </div>
-      </div>
+</div>
 
+      <!-- Danger Zone -->
+      <div class="danger-zone" id="dangerZone" style="display:none;">
+        <div class="danger-zone-title">Danger zone</div>
+        <div class="danger-zone-body">
+          <p class="danger-zone-desc">Deleting your account is <strong>permanent and irreversible</strong>. All your posts, comments, saved items, media, blocks, and notifications will be erased.</p>
+          <button id="deleteAccountBtn" class="danger-zone-btn" type="button">Delete my account</button>
+        </div>
+      </div>
 
     </div>
   </section>
@@ -2712,7 +2762,7 @@ if (VIEW_USER_ID) {
   }
 
   // Nascondi sezioni personali
-  ["profileForm", "profilePickAvatarBtn", "blockedSection", "savedBookSection"].forEach(id => {
+  ["profileForm", "profilePickAvatarBtn", "blockedSection", "savedBookSection", "dangerZone"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = "none";
   });
@@ -2742,6 +2792,8 @@ if (VIEW_USER_ID) {
   try{
     const posts = await fetchMyPosts();
     await loadBlockedUsers();
+    const dangerZone = document.getElementById("dangerZone");
+    if (dangerZone) dangerZone.style.display = "block";
     POSTS = normalizePosts(posts || []);
     spreadIndex = 0;
     renderSpread();
@@ -2850,7 +2902,80 @@ if (profileForm){
   });
 }
 
+/* ===== Delete Account ===== */
+(function initDeleteAccount(){
+  const btn = document.getElementById("deleteAccountBtn");
+  const modal = document.getElementById("confirmModal");
+  const title = document.getElementById("confirmTitle");
+  const text  = document.getElementById("confirmText");
+  const ok    = document.getElementById("confirmOk");
+  const cancel= document.getElementById("confirmCancel");
+  const backdrop = document.getElementById("confirmBackdrop");
+  if (!btn || !modal) return;
 
+  let cleanup = null;
+
+  function closeConfirm(){
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden","true");
+    if (cleanup){ cleanup(); cleanup = null; }
+  }
+
+  function openConfirm(t, msg, okLabel, onOk){
+    title.textContent = t;
+    text.innerHTML = msg;
+    ok.textContent = okLabel;
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden","false");
+
+    const onCancel = ()=> closeConfirm();
+    const onOkClick = ()=>{ closeConfirm(); onOk(); };
+    const onBackdrop = ()=> closeConfirm();
+
+    ok.addEventListener("click", onOkClick, { once: true });
+    cancel.addEventListener("click", onCancel, { once: true });
+    backdrop.addEventListener("click", onBackdrop, { once: true });
+
+    cleanup = ()=>{
+      ok.removeEventListener("click", onOkClick);
+      cancel.removeEventListener("click", onCancel);
+      backdrop.removeEventListener("click", onBackdrop);
+    };
+  }
+
+  btn.addEventListener("click", ()=>{
+    if (!CURRENT_USER) return;
+    openConfirm(
+      "Delete account?",
+      "This will <strong>permanently erase</strong> all your data: posts, comments, saved items, media, study sessions, blocks, and notifications.<br><br>This action <strong>cannot be undone</strong>.",
+      "Yes, delete everything",
+      ()=>{
+        openConfirm(
+          "Are you absolutely sure?",
+          "Your account <strong>" + escapeHtml(CURRENT_USER.email) + "</strong> and all associated data will be deleted forever.",
+          "Delete my account permanently",
+          async ()=>{
+            btn.disabled = true;
+            btn.textContent = "Deleting…";
+            try {
+              await api("/api/account", {
+                method: "DELETE",
+                body: JSON.stringify({ confirm: "DELETE_MY_ACCOUNT" })
+              });
+              localStorage.removeItem(TOKEN_KEY);
+              CURRENT_USER = null;
+              window.location.href = "/";
+            } catch(err){
+              btn.disabled = false;
+              btn.textContent = "Delete my account";
+              alert("Error: " + (err?.message || err));
+            }
+          }
+        );
+      }
+    );
+  });
+})();
 
 (function StarfieldEngine(){
   const canvas = document.getElementById("starCanvas");
