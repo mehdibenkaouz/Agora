@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AGORÀ • Privacy Policy</title>
+
+  <link id="site-favicon" rel="icon" type="image/png" sizes="64x64" href="/icon-light-64.png?v=1">
+  <link rel="apple-touch-icon" href="item/Logoagora.png">
+  <script src="/shared-theme.js" defer></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:wght@400;500;600;700&family=Cinzel:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#e8e2d5;
+      --panel:#f5f0e8;
+      --panel-2:#faf7f2;
+      --text:#1a1008;
+      --muted:#6b5b48;
+      --line:rgba(87,25,41,0.12);
+      --brand:#571929;
+      --gold:#c9932a;
+      --gold-light:#e8c06b;
+      --shadow:0 20px 50px rgba(30,10,5,0.16);
+      --soft-shadow:0 10px 28px rgba(30,10,5,0.10);
+      --radius-xl:34px;
+      --radius-lg:24px;
+      --radius-md:16px;
+      --maxw:1120px;
+      --topbar-h:76px;
+    }
+
+    :root[data-theme="dark"]{
+      --bg:#000000;
+      --panel:#14110d;
+      --panel-2:#1c1812;
+      --text:#f0e8d8;
+      --muted:rgb(145, 183, 214);
+      --line:rgba(37,172,193,0.18);
+      --brand:#a8ebf68c;
+      --gold:#25acc1;
+      --gold-light:#7dd8e8;
+      --shadow:0 24px 60px rgba(0,0,0,0.52);
+      --soft-shadow:0 12px 30px rgba(0,0,0,0.36);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{
+      margin:0;
+      padding:0;
+      min-height:100%;
+      background:var(--bg);
+      color:var(--text);
+      font-family:'Lora', Georgia, serif;
+    }
+
+    body{ position:relative; overflow-x:hidden; }
+
+    :root[data-theme="dark"] body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:0;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,.95) 0px, rgba(255,255,255,.95) .9px, transparent 1.7px),
+        radial-gradient(circle, rgba(200,230,255,.80) 0px, rgba(200,230,255,.80) .8px, transparent 1.5px),
+        radial-gradient(circle, rgba(255,245,220,.72) 0px, rgba(255,245,220,.72) .75px, transparent 1.45px);
+      background-size:170px 170px, 230px 230px, 310px 310px;
+      background-position:0 0, 40px 80px, 120px 20px;
+      opacity:.38;
+    }
+
+    a{ color:inherit; text-decoration:none; }
+
+    .topbar{
+      height:var(--topbar-h);
+      background:#2a1208;
+      border-bottom:1px solid rgba(201,147,42,0.25);
+      box-shadow:0 4px 24px rgba(0,0,0,0.40);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:sticky;
+      top:0;
+      z-index:30;
+    }
+
+    :root[data-theme="dark"] .topbar{
+      background:#071019;
+      border-bottom:1px solid rgba(37,172,193,0.24);
+    }
+
+    .topbar-inner{
+      width:min(calc(100% - 24px), var(--maxw));
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+
+    .logo{
+      height:60px;
+      width:60px;
+      object-fit:contain;
+      display:block;
+      flex:0 0 auto;
+    }
+
+    .brand-stack{ min-width:0; }
+
+    .brand-title{
+      font-family:'Cinzel', serif;
+      letter-spacing:.14em;
+      font-size:.9rem;
+      text-transform:uppercase;
+      color:rgba(201,147,42,.84);
+    }
+
+    .brand-subtitle{
+      margin-top:4px;
+      color:rgba(240,220,185,.72);
+      font-size:.86rem;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    :root[data-theme="dark"] .brand-title{ color:rgba(125,220,235,.88); }
+    :root[data-theme="dark"] .brand-subtitle{ color:rgba(170,220,232,.78); }
+
+    .top-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .ghost-btn,.primary-btn{
+      min-height:42px;
+      border-radius:12px;
+      padding:10px 16px;
+      cursor:pointer;
+      font-family:'Cinzel', serif;
+      font-size:.78rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      transition:.15s ease;
+    }
+
+    .ghost-btn{
+      border:1px solid rgba(201,147,42,0.25);
+      background:rgba(201,147,42,0.08);
+      color:var(--gold);
+    }
+
+    .ghost-btn:hover{ background:rgba(201,147,42,0.16); }
+
+    .page{
+      width:min(calc(100% - 24px), var(--maxw));
+      margin:0 auto;
+      padding:28px 0 56px;
+      position:relative;
+      z-index:1;
+    }
+
+    .hero{
+      margin-bottom:20px;
+      border-radius:var(--radius-xl);
+      padding:28px 28px 24px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0.16));
+      border:1px solid var(--line);
+      box-shadow:var(--soft-shadow);
+    }
+
+    :root[data-theme="dark"] .hero{
+      background:linear-gradient(180deg, rgba(10,22,30,0.82), rgba(14,20,26,0.72));
+    }
+
+    .eyebrow{
+      font-family:'Cinzel', serif;
+      font-size:.76rem;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      color:var(--gold);
+      margin-bottom:10px;
+    }
+
+    .hero h1{
+      margin:0;
+      font-family:'Cormorant Garamond', serif;
+      font-size:clamp(2rem, 4vw, 3.4rem);
+      line-height:.95;
+      font-weight:600;
+      color:var(--brand);
+      max-width:900px;
+    }
+
+    :root[data-theme="dark"] .hero h1{ color:var(--gold-light); }
+
+    .hero p{
+      margin:14px 0 0;
+      max-width:860px;
+      color:var(--muted);
+      line-height:1.7;
+      font-size:1rem;
+    }
+
+    .info-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+      margin-top:18px;
+    }
+
+    .info-chip{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,0.18);
+      border-radius:18px;
+      padding:14px 16px;
+      box-shadow:var(--soft-shadow);
+    }
+
+    :root[data-theme="dark"] .info-chip{ background:rgba(255,255,255,0.03); }
+
+    .info-chip strong{
+      display:block;
+      font-family:'Cinzel', serif;
+      font-size:.76rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--gold);
+      margin-bottom:6px;
+    }
+
+    .info-chip span{
+      color:var(--text);
+      line-height:1.65;
+      font-size:.95rem;
+    }
+
+    .shell{
+      border-radius:var(--radius-xl);
+      overflow:hidden;
+      background:var(--panel);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+    }
+
+    .shell-head{
+      padding:22px 24px;
+      border-bottom:1px solid var(--line);
+      background:rgba(201,147,42,0.06);
+    }
+
+    :root[data-theme="dark"] .shell-head{ background:rgba(37,172,193,0.08); }
+
+    .shell-head-title{
+      font-family:'Cinzel', serif;
+      letter-spacing:.08em;
+      font-size:1rem;
+      color:var(--gold);
+      text-transform:uppercase;
+    }
+
+    .shell-head-sub{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:.95rem;
+      line-height:1.7;
+    }
+
+    .toc{
+      padding:18px 24px 8px;
+      background:var(--panel-2);
+      border-bottom:1px solid var(--line);
+    }
+
+    .toc-title{
+      font-family:'Cinzel', serif;
+      font-size:.8rem;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:var(--gold);
+      margin-bottom:12px;
+    }
+
+    .toc-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px 20px;
+    }
+
+    .toc a{
+      display:block;
+      padding:6px 0;
+      color:var(--text);
+      opacity:.92;
+    }
+
+    .toc a:hover{ color:var(--brand); }
+    :root[data-theme="dark"] .toc a:hover{ color:var(--gold-light); }
+
+    .body{ padding:6px 0; }
+
+    .section{
+      padding:24px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .section:last-child{ border-bottom:0; }
+
+    .section h2{
+      margin:0 0 10px;
+      font-family:'Cormorant Garamond', serif;
+      font-size:1.85rem;
+      font-weight:600;
+      color:var(--brand);
+      scroll-margin-top:96px;
+    }
+
+    :root[data-theme="dark"] .section h2{ color:var(--gold-light); }
+
+    .section p{
+      margin:0 0 12px;
+      line-height:1.82;
+      color:var(--text);
+    }
+
+    .section ul{
+      margin:0;
+      padding-left:22px;
+      line-height:1.8;
+    }
+
+    .section li{ margin:0 0 8px; }
+
+    .callout{
+      margin:14px 0 4px;
+      padding:14px 16px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(201,147,42,0.08);
+      box-shadow:var(--soft-shadow);
+    }
+
+    :root[data-theme="dark"] .callout{ background:rgba(37,172,193,0.08); }
+
+    .mini-links{
+      margin-top:18px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .mini-link{
+      display:inline-flex;
+      align-items:center;
+      min-height:40px;
+      padding:9px 14px;
+      border-radius:999px;
+      background:var(--panel-2);
+      border:1px solid var(--line);
+      box-shadow:var(--soft-shadow);
+      font-size:.92rem;
+      color:var(--muted);
+    }
+
+    .mini-link:hover{ color:var(--brand); }
+    :root[data-theme="dark"] .mini-link:hover{ color:var(--gold-light); }
+
+    .footer-mini{
+      margin-top:16px;
+      text-align:center;
+      font-size:.82rem;
+      color:var(--muted);
+      line-height:1.6;
+    }
+
+    @media (max-width: 900px){
+      .info-grid,.toc-grid{ grid-template-columns:1fr; }
+    }
+
+    @media (max-width: 700px){
+      .topbar-inner{ flex-wrap:wrap; justify-content:center; }
+      .hero,.shell-head,.toc,.section{ padding-left:18px; padding-right:18px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <a href="index.html">
+          <img
+            id="mainLogo"
+            src="item/Logoagora.png"
+            data-light="item/Logoagora.png"
+            data-dark="item/Logoagoradark.png"
+            class="logo"
+            alt="Agora"
+          >
+        </a>
+        <div class="brand-stack">
+          <div class="brand-title">Privacy Policy</div>
+          <div class="brand-subtitle">AGORÀ data handling, storage, rights, and transparency</div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button id="themeToggleBtn" class="ghost-btn" type="button">Dark mode</button>
+        <a class="ghost-btn" href="about.html">Back</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Agorà data transparency</div>
+      <h1>This Privacy Policy explains how AGORÀ may collect, use, store, and protect personal data.</h1>
+      <p>
+        AGORÀ is designed for public discourse, profiles, posts, moderation, and related platform features.
+        Because the service processes account information, user content, and technical data, users should be
+        able to understand what is collected, why it is processed, how long it may be kept, and what rights
+        may be available under applicable law.
+      </p>
+
+      <div class="info-grid">
+        <div class="info-chip">
+          <strong>Minimum age</strong>
+          <span>AGORÀ is intended only for users aged <strong>16 and over</strong>, consistent with the platform rules.</span>
+        </div>
+        <div class="info-chip">
+          <strong>Public content</strong>
+          <span>Posts, profile elements, and public interactions may be visible to other users depending on platform settings.</span>
+        </div>
+        <div class="info-chip">
+          <strong>User rights</strong>
+          <span>Depending on applicable law, users may request access, correction, deletion, restriction, objection, or portability.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="shell">
+      <div class="shell-head">
+        <div class="shell-head-title">Privacy Policy</div>
+        <div class="shell-head-sub">
+          Effective date: 2026-03-18<br>
+          Version: 2026-03-18-v1<br>
+          This policy is a platform privacy draft and should be completed with the final legal identity,
+          technical stack, jurisdictions, and real operational practices of the live service.
+        </div>
+      </div>
+
+      <div class="toc">
+        <div class="toc-title">Contents</div>
+        <div class="toc-grid">
+          <a href="#controller">1. Service operator / controller</a>
+          <a href="#scope">2. Scope of this policy</a>
+          <a href="#data-we-collect">3. Data we may collect</a>
+          <a href="#public-content">4. Public content and visibility</a>
+          <a href="#purposes">5. Why data may be processed</a>
+          <a href="#legal-bases">6. Legal bases</a>
+          <a href="#retention">7. Retention periods</a>
+          <a href="#sharing">8. Sharing and disclosure</a>
+          <a href="#international">9. International transfers</a>
+          <a href="#security">10. Security and safeguards</a>
+          <a href="#rights">11. User rights</a>
+          <a href="#children">12. Children and minimum age</a>
+          <a href="#changes">13. Policy updates</a>
+          <a href="#contact">14. Contact for privacy matters</a>
+        </div>
+      </div>
+
+      <div class="body">
+        <section class="section" id="controller">
+          <h2>1. Service operator / controller</h2>
+          <p>
+            The controller or service operator of AGORÀ is:
+          </p>
+          <p>
+            <strong>[Insert legal name / full name / company name]</strong><br>
+            <strong>[Insert registered address or business address]</strong><br>
+            <strong>[Insert country of establishment]</strong><br>
+            <strong>[Insert legal contact email]</strong>
+          </p>
+          <p>
+            If AGORÀ later appoints a data protection contact, representative, or other designated legal contact,
+            this page may be updated accordingly.
+          </p>
+        </section>
+
+        <section class="section" id="scope">
+          <h2>2. Scope of this policy</h2>
+          <p>
+            This Privacy Policy describes how AGORÀ may process personal data when users visit the website,
+            create an account, sign in, publish posts, interact with other users, use platform tools, contact support,
+            submit reports, or otherwise use the service.
+          </p>
+          <p>
+            This policy applies to personal data processed through the AGORÀ website and related platform functions.
+            It should be read together with the Terms of Service and the Cookies &amp; Storage Notice.
+          </p>
+        </section>
+
+        <section class="section" id="data-we-collect">
+          <h2>3. Data we may collect</h2>
+          <p>Depending on how AGORÀ is used, the platform may process categories of data such as:</p>
+          <ul>
+            <li><strong>Account and identity data</strong> — such as username, display name, login identifier, email address, profile data, and authentication-related records;</li>
+            <li><strong>User-generated content</strong> — such as posts, comments, replies, profile text, saved items, uploaded media, reports, moderation appeals, or other content submitted by users;</li>
+            <li><strong>Technical and device data</strong> — such as IP address, browser type, operating system, device identifiers, session information, timestamps, request logs, and security events;</li>
+            <li><strong>Usage data</strong> — such as pages visited, features used, interactions, account actions, navigation events, saved preferences, and platform activity patterns;</li>
+            <li><strong>Support and communication data</strong> — such as messages sent to support, legal notices, abuse reports, or correspondence with AGORÀ;</li>
+            <li><strong>Moderation and trust &amp; safety data</strong> — such as reports, enforcement records, restriction history, anti-abuse signals, and investigation notes reasonably necessary to protect the platform and users;</li>
+            <li><strong>Local storage and browser-side data</strong> — such as theme preferences, acceptance records, session continuity markers, or other device-side data described in the Cookies &amp; Storage Notice.</li>
+          </ul>
+
+          <div class="callout">
+            AGORÀ should collect and retain only the data reasonably necessary to operate, secure, improve,
+            and legally maintain the service.
+          </div>
+        </section>
+
+        <section class="section" id="public-content">
+          <h2>4. Public content and visibility</h2>
+          <p>
+            AGORÀ is designed as a public or semi-public discussion platform. This means that some profile
+            information, posts, comments, reactions, or other user activity may be visible to other users or,
+            depending on platform design, to the wider public.
+          </p>
+          <p>
+            Users should assume that content intentionally published to the platform may be viewed, copied,
+            quoted, screenshotted, archived, or discussed by others, even if AGORÀ later limits or removes access.
+            AGORÀ cannot guarantee that third parties will not reproduce or retain content they have already seen.
+          </p>
+        </section>
+
+        <section class="section" id="purposes">
+          <h2>5. Why data may be processed</h2>
+          <p>AGORÀ may process personal data for purposes including:</p>
+          <ul>
+            <li>creating and maintaining user accounts;</li>
+            <li>authenticating users and keeping sessions secure;</li>
+            <li>publishing, displaying, storing, and delivering user content and profile information;</li>
+            <li>operating features such as posts, comments, saved items, maps, games, discovery, or future modules;</li>
+            <li>detecting, preventing, and investigating spam, abuse, fraud, platform misuse, or security incidents;</li>
+            <li>reviewing reports, moderating content, and enforcing the Terms of Service;</li>
+            <li>communicating with users about the service, updates, security matters, or policy changes;</li>
+            <li>fulfilling legal obligations, defending rights, responding to lawful requests, or preserving evidence where necessary;</li>
+            <li>improving reliability, performance, accessibility, and user experience;</li>
+            <li>maintaining internal logs, backups, business continuity, and administrative records.</li>
+          </ul>
+        </section>
+
+        <section class="section" id="legal-bases">
+          <h2>6. Legal bases</h2>
+          <p>
+            Where data protection law such as the GDPR applies, AGORÀ may rely on one or more legal bases depending
+            on the context of processing. These may include:
+          </p>
+          <ul>
+            <li><strong>Performance of a contract</strong> — when processing is necessary to provide the service requested by the user;</li>
+            <li><strong>Legitimate interests</strong> — when reasonably necessary to protect platform security, prevent abuse, improve the service, operate moderation systems, or defend legal rights, provided such interests are not overridden by the user’s rights where the law requires balancing;</li>
+            <li><strong>Consent</strong> — where the law requires consent, including for some non-essential cookies, storage, or comparable technologies;</li>
+            <li><strong>Legal obligation</strong> — when AGORÀ must retain, disclose, or process data to comply with applicable law;</li>
+            <li><strong>Protection of vital interests or public-interest grounds</strong> — only where applicable and legally justified.</li>
+          </ul>
+          <p>
+            AGORÀ should identify the correct basis for each processing activity in actual operation and should not
+            rely on consent where another legal basis is the proper one.
+          </p>
+        </section>
+
+        <section class="section" id="retention">
+          <h2>7. Retention periods</h2>
+          <p>
+            AGORÀ may retain personal data only for as long as reasonably necessary for the purposes for which it
+            was collected, including operation of the service, account continuity, moderation, fraud prevention,
+            backup integrity, dispute handling, legal compliance, and evidentiary preservation.
+          </p>
+          <p>Retention periods may vary by category. For example:</p>
+          <ul>
+            <li>account data may be retained while the account remains active and for a limited period afterwards where reasonably necessary;</li>
+            <li>public content may remain visible until deleted by the user, removed by AGORÀ, or otherwise archived under platform rules;</li>
+            <li>security logs and moderation records may be retained longer where abuse prevention, investigations, or legal preservation require it;</li>
+            <li>backup copies may persist temporarily even after deletion from active systems.</li>
+          </ul>
+        </section>
+
+        <section class="section" id="sharing">
+          <h2>8. Sharing and disclosure</h2>
+          <p>AGORÀ may disclose data only where reasonably necessary, such as:</p>
+          <ul>
+            <li>to infrastructure, hosting, authentication, security, analytics, or support providers acting on AGORÀ’s behalf;</li>
+            <li>to moderators, administrators, or trusted operational personnel who need access to perform their roles;</li>
+            <li>to other users or the public where the user intentionally publishes content or profile information;</li>
+            <li>to legal, regulatory, or enforcement authorities where required by law or lawful process;</li>
+            <li>to advisors, auditors, insurers, or acquirers where reasonably necessary and lawfully permitted;</li>
+            <li>to protect the rights, safety, property, or integrity of AGORÀ, its users, or third parties.</li>
+          </ul>
+          <p>
+            AGORÀ should not sell personal data in a manner inconsistent with its actual practices or its public disclosures.
+          </p>
+        </section>
+
+        <section class="section" id="international">
+          <h2>9. International transfers</h2>
+          <p>
+            Depending on hosting, delivery networks, third-party services, or support operations, data may be processed
+            in countries other than the user’s own country.
+          </p>
+          <p>
+            Where applicable law requires safeguards for international data transfers, AGORÀ should use appropriate legal
+            mechanisms and organizational measures before transferring protected personal data across borders.
+          </p>
+        </section>
+
+        <section class="section" id="security">
+          <h2>10. Security and safeguards</h2>
+          <p>
+            AGORÀ should use reasonable technical and organizational measures designed to protect personal data against
+            unauthorized access, unlawful disclosure, misuse, destruction, or accidental loss.
+          </p>
+          <p>
+            These measures may include access controls, authentication controls, rate limits, logging, secure transport,
+            backup measures, anti-abuse systems, internal permissions, and other security practices appropriate to the
+            size and risk profile of the service.
+          </p>
+          <p>
+            No online system can guarantee absolute security. Users should also protect their accounts, devices, and
+            credentials appropriately.
+          </p>
+        </section>
+
+        <section class="section" id="rights">
+          <h2>11. User rights</h2>
+          <p>
+            Depending on applicable law, users may have rights such as:
+          </p>
+          <ul>
+            <li>the right to request access to personal data;</li>
+            <li>the right to request correction of inaccurate or incomplete data;</li>
+            <li>the right to request deletion of data in certain circumstances;</li>
+            <li>the right to request restriction of processing in certain circumstances;</li>
+            <li>the right to object to certain processing, especially where based on legitimate interests;</li>
+            <li>the right to data portability where the law provides it;</li>
+            <li>the right to withdraw consent where processing relies on consent;</li>
+            <li>the right to lodge a complaint with a competent supervisory authority where the law provides that right.</li>
+          </ul>
+          <p>
+            AGORÀ may need to verify identity before acting on certain requests and may refuse or limit a request where
+            applicable law permits or requires such limitation.
+          </p>
+        </section>
+
+        <section class="section" id="children">
+          <h2>12. Children and minimum age</h2>
+          <p>
+            AGORÀ is not intended for users under the age of <strong>16</strong>. The platform’s own rules require users to be at least 16.
+            If AGORÀ becomes aware that it has collected personal data from a person below the permitted minimum age in violation
+            of its platform rules, AGORÀ may restrict or remove the account and take reasonable steps to delete or limit the related data,
+            subject to legal retention requirements.
+          </p>
+        </section>
+
+        <section class="section" id="changes">
+          <h2>13. Policy updates</h2>
+          <p>
+            AGORÀ may update this Privacy Policy from time to time to reflect legal, operational, technical, or product changes.
+            The most recent version should be made available on this page, together with an updated effective date.
+          </p>
+          <p>
+            Where required by law or appropriate for the importance of the change, AGORÀ may provide additional notice or request
+            renewed acknowledgment.
+          </p>
+        </section>
+
+        <section class="section" id="contact">
+          <h2>14. Contact for privacy matters</h2>
+          <p>
+            Privacy-related requests, notices, or questions may be sent to:
+          </p>
+          <p>
+            <strong>[Insert privacy email address]</strong>
+          </p>
+          <p>
+            If AGORÀ later publishes a specific legal or data protection contact form, that channel may be used instead or in addition.
+          </p>
+
+          <div class="mini-links">
+            <a class="mini-link" href="terms.html">Terms of Service</a>
+            <a class="mini-link" href="cookies.html">Cookies &amp; Storage Notice</a>
+            <a class="mini-link" href="contact.html">Contact &amp; Legal Info</a>
+            <a class="mini-link" href="about.html">About</a>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <div class="footer-mini">
+      AGORÀ • privacy, transparency, and data responsibility<br>
+      Replace all bracketed placeholders before publishing this page publicly.
+    </div>
+  </main>
+</body>
+</html>
