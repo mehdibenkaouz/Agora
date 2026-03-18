@@ -1634,7 +1634,7 @@
             <div class="form-note" style="margin-bottom:12px;">Code sent to <strong id="otpEmailDisplay"></strong></div>
             <label class="field">
               <span>Verification code</span>
-              <input id="otpCodeInput" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autocomplete="one-time-code" required />
+              <input id="otpCodeInput" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code" />
             </label>
             <button id="otpVerifyBtn" class="primary-btn" type="button" style="width:100%;">Verify and sign in</button>
             <div class="form-note" id="otpVerifyNote"></div>
@@ -2150,6 +2150,7 @@ if (emailLoginForm){
         body: JSON.stringify({ email })
       });
       otpPendingEmail = email;
+      emailLoginForm.setAttribute("novalidate", "");
       document.getElementById("otpStep1").style.display = "none";
       document.getElementById("otpStep2").style.display = "block";
       document.getElementById("otpEmailDisplay").textContent = email;
@@ -2186,6 +2187,7 @@ if (emailLoginForm){
       setToken(data.token);
       otpPendingEmail = "";
       closeModal();
+      emailLoginForm.removeAttribute("novalidate");
       document.getElementById("otpStep1").style.display = "block";
       document.getElementById("otpStep2").style.display = "none";
       location.reload();
