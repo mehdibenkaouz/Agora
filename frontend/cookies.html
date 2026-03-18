@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AGORÀ • Cookies & Storage Notice</title>
+
+  <link id="site-favicon" rel="icon" type="image/png" sizes="64x64" href="/icon-light-64.png?v=1">
+  <link rel="apple-touch-icon" href="item/Logoagora.png">
+  <script src="/shared-theme.js" defer></script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:wght@400;500;600;700&family=Cinzel:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --bg:#e8e2d5;
+      --panel:#f5f0e8;
+      --panel-2:#faf7f2;
+      --text:#1a1008;
+      --muted:#6b5b48;
+      --line:rgba(87,25,41,0.12);
+      --brand:#571929;
+      --gold:#c9932a;
+      --gold-light:#e8c06b;
+      --shadow:0 20px 50px rgba(30,10,5,0.16);
+      --soft-shadow:0 10px 28px rgba(30,10,5,0.10);
+      --radius-xl:34px;
+      --radius-lg:24px;
+      --radius-md:16px;
+      --maxw:1120px;
+      --topbar-h:76px;
+    }
+
+    :root[data-theme="dark"]{
+      --bg:#000000;
+      --panel:#14110d;
+      --panel-2:#1c1812;
+      --text:#f0e8d8;
+      --muted:rgb(145, 183, 214);
+      --line:rgba(37,172,193,0.18);
+      --brand:#a8ebf68c;
+      --gold:#25acc1;
+      --gold-light:#7dd8e8;
+      --shadow:0 24px 60px rgba(0,0,0,0.52);
+      --soft-shadow:0 12px 30px rgba(0,0,0,0.36);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{
+      margin:0;
+      padding:0;
+      min-height:100%;
+      background:var(--bg);
+      color:var(--text);
+      font-family:'Lora', Georgia, serif;
+    }
+
+    body{ position:relative; overflow-x:hidden; }
+
+    :root[data-theme="dark"] body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      pointer-events:none;
+      z-index:0;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,.95) 0px, rgba(255,255,255,.95) .9px, transparent 1.7px),
+        radial-gradient(circle, rgba(200,230,255,.80) 0px, rgba(200,230,255,.80) .8px, transparent 1.5px),
+        radial-gradient(circle, rgba(255,245,220,.72) 0px, rgba(255,245,220,.72) .75px, transparent 1.45px);
+      background-size:170px 170px, 230px 230px, 310px 310px;
+      background-position:0 0, 40px 80px, 120px 20px;
+      opacity:.38;
+    }
+
+    a{ color:inherit; text-decoration:none; }
+
+    .topbar{
+      height:var(--topbar-h);
+      background:#2a1208;
+      border-bottom:1px solid rgba(201,147,42,0.25);
+      box-shadow:0 4px 24px rgba(0,0,0,0.40);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      position:sticky;
+      top:0;
+      z-index:30;
+    }
+
+    :root[data-theme="dark"] .topbar{
+      background:#071019;
+      border-bottom:1px solid rgba(37,172,193,0.24);
+    }
+
+    .topbar-inner{
+      width:min(calc(100% - 24px), var(--maxw));
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+
+    .logo{
+      height:60px;
+      width:60px;
+      object-fit:contain;
+      display:block;
+      flex:0 0 auto;
+    }
+
+    .brand-stack{ min-width:0; }
+
+    .brand-title{
+      font-family:'Cinzel', serif;
+      letter-spacing:.14em;
+      font-size:.9rem;
+      text-transform:uppercase;
+      color:rgba(201,147,42,.84);
+    }
+
+    .brand-subtitle{
+      margin-top:4px;
+      color:rgba(240,220,185,.72);
+      font-size:.86rem;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    :root[data-theme="dark"] .brand-title{ color:rgba(125,220,235,.88); }
+    :root[data-theme="dark"] .brand-subtitle{ color:rgba(170,220,232,.78); }
+
+    .top-actions{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+
+    .ghost-btn{
+      min-height:42px;
+      border-radius:12px;
+      padding:10px 16px;
+      cursor:pointer;
+      font-family:'Cinzel', serif;
+      font-size:.78rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      transition:.15s ease;
+      border:1px solid rgba(201,147,42,0.25);
+      background:rgba(201,147,42,0.08);
+      color:var(--gold);
+    }
+
+    .ghost-btn:hover{ background:rgba(201,147,42,0.16); }
+
+    .page{
+      width:min(calc(100% - 24px), var(--maxw));
+      margin:0 auto;
+      padding:28px 0 56px;
+      position:relative;
+      z-index:1;
+    }
+
+    .hero{
+      margin-bottom:20px;
+      border-radius:var(--radius-xl);
+      padding:28px 28px 24px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.30), rgba(255,255,255,0.16));
+      border:1px solid var(--line);
+      box-shadow:var(--soft-shadow);
+    }
+
+    :root[data-theme="dark"] .hero{
+      background:linear-gradient(180deg, rgba(10,22,30,0.82), rgba(14,20,26,0.72));
+    }
+
+    .eyebrow{
+      font-family:'Cinzel', serif;
+      font-size:.76rem;
+      letter-spacing:.16em;
+      text-transform:uppercase;
+      color:var(--gold);
+      margin-bottom:10px;
+    }
+
+    .hero h1{
+      margin:0;
+      font-family:'Cormorant Garamond', serif;
+      font-size:clamp(2rem, 4vw, 3.4rem);
+      line-height:.95;
+      font-weight:600;
+      color:var(--brand);
+      max-width:900px;
+    }
+
+    :root[data-theme="dark"] .hero h1{ color:var(--gold-light); }
+
+    .hero p{
+      margin:14px 0 0;
+      max-width:860px;
+      color:var(--muted);
+      line-height:1.7;
+      font-size:1rem;
+    }
+
+    .chips{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+      margin-top:18px;
+    }
+
+    .chip{
+      border:1px solid var(--line);
+      background:rgba(255,255,255,0.18);
+      border-radius:18px;
+      padding:14px 16px;
+      box-shadow:var(--soft-shadow);
+    }
+
+    :root[data-theme="dark"] .chip{ background:rgba(255,255,255,0.03); }
+
+    .chip strong{
+      display:block;
+      font-family:'Cinzel', serif;
+      font-size:.76rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--gold);
+      margin-bottom:6px;
+    }
+
+    .chip span{
+      color:var(--text);
+      line-height:1.65;
+      font-size:.95rem;
+    }
+
+    .shell{
+      border-radius:var(--radius-xl);
+      overflow:hidden;
+      background:var(--panel);
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+    }
+
+    .shell-head{
+      padding:22px 24px;
+      border-bottom:1px solid var(--line);
+      background:rgba(201,147,42,0.06);
+    }
+
+    :root[data-theme="dark"] .shell-head{ background:rgba(37,172,193,0.08); }
+
+    .shell-head-title{
+      font-family:'Cinzel', serif;
+      letter-spacing:.08em;
+      font-size:1rem;
+      color:var(--gold);
+      text-transform:uppercase;
+    }
+
+    .shell-head-sub{
+      margin-top:8px;
+      color:var(--muted);
+      font-size:.95rem;
+      line-height:1.7;
+    }
+
+    .toc{
+      padding:18px 24px 8px;
+      background:var(--panel-2);
+      border-bottom:1px solid var(--line);
+    }
+
+    .toc-title{
+      font-family:'Cinzel', serif;
+      font-size:.8rem;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+      color:var(--gold);
+      margin-bottom:12px;
+    }
+
+    .toc-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px 20px;
+    }
+
+    .toc a{
+      display:block;
+      padding:6px 0;
+      color:var(--text);
+      opacity:.92;
+    }
+
+    .toc a:hover{ color:var(--brand); }
+    :root[data-theme="dark"] .toc a:hover{ color:var(--gold-light); }
+
+    .body{ padding:6px 0; }
+
+    .section{
+      padding:24px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .section:last-child{ border-bottom:0; }
+
+    .section h2{
+      margin:0 0 10px;
+      font-family:'Cormorant Garamond', serif;
+      font-size:1.85rem;
+      font-weight:600;
+      color:var(--brand);
+      scroll-margin-top:96px;
+    }
+
+    :root[data-theme="dark"] .section h2{ color:var(--gold-light); }
+
+    .section p{
+      margin:0 0 12px;
+      line-height:1.82;
+      color:var(--text);
+    }
+
+    .section ul{
+      margin:0;
+      padding-left:22px;
+      line-height:1.8;
+    }
+
+    .section li{ margin:0 0 8px; }
+
+    .table-wrap{
+      margin-top:12px;
+      overflow:auto;
+      border-radius:18px;
+      border:1px solid var(--line);
+      box-shadow:var(--soft-shadow);
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:720px;
+      background:var(--panel-2);
+    }
+
+    th,td{
+      text-align:left;
+      padding:14px 14px;
+      border-bottom:1px solid var(--line);
+      vertical-align:top;
+      line-height:1.65;
+    }
+
+    th{
+      font-family:'Cinzel', serif;
+      font-size:.74rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--gold);
+      background:rgba(201,147,42,0.06);
+    }
+
+    :root[data-theme="dark"] th{ background:rgba(37,172,193,0.08); }
+
+    .callout{
+      margin:14px 0 4px;
+      padding:14px 16px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(201,147,42,0.08);
+      box-shadow:var(--soft-shadow);
+    }
+
+    :root[data-theme="dark"] .callout{ background:rgba(37,172,193,0.08); }
+
+    .mini-links{
+      margin-top:18px;
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+
+    .mini-link{
+      display:inline-flex;
+      align-items:center;
+      min-height:40px;
+      padding:9px 14px;
+      border-radius:999px;
+      background:var(--panel-2);
+      border:1px solid var(--line);
+      box-shadow:var(--soft-shadow);
+      font-size:.92rem;
+      color:var(--muted);
+    }
+
+    .mini-link:hover{ color:var(--brand); }
+    :root[data-theme="dark"] .mini-link:hover{ color:var(--gold-light); }
+
+    .footer-mini{
+      margin-top:16px;
+      text-align:center;
+      font-size:.82rem;
+      color:var(--muted);
+      line-height:1.6;
+    }
+
+    @media (max-width: 900px){
+      .chips,.toc-grid{ grid-template-columns:1fr; }
+    }
+
+    @media (max-width: 700px){
+      .topbar-inner{ flex-wrap:wrap; justify-content:center; }
+      .hero,.shell-head,.toc,.section{ padding-left:18px; padding-right:18px; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <a href="index.html">
+          <img
+            id="mainLogo"
+            src="item/Logoagora.png"
+            data-light="item/Logoagora.png"
+            data-dark="item/Logoagoradark.png"
+            class="logo"
+            alt="Agora"
+          >
+        </a>
+        <div class="brand-stack">
+          <div class="brand-title">Cookies &amp; Storage Notice</div>
+          <div class="brand-subtitle">AGORÀ browser storage, local data, and consent information</div>
+        </div>
+      </div>
+
+      <div class="top-actions">
+        <button id="themeToggleBtn" class="ghost-btn" type="button">Dark mode</button>
+        <a class="ghost-btn" href="about.html">Back</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Agorà storage transparency</div>
+      <h1>This notice explains how AGORÀ may use cookies, local storage, and similar client-side technologies.</h1>
+      <p>
+        AGORÀ may store small amounts of information on a user’s device or access information already stored there
+        in order to run the service, keep sessions secure, remember choices, and support platform functionality.
+        Some storage is strictly necessary for the service to work. Other storage may require consent where law requires it.
+      </p>
+
+      <div class="chips">
+        <div class="chip">
+          <strong>Strictly necessary</strong>
+          <span>Some storage may be required for login, security, session continuity, and delivery of requested features.</span>
+        </div>
+        <div class="chip">
+          <strong>Preferences</strong>
+          <span>AGORÀ may remember user choices such as theme, language, interface state, or legal acknowledgment state.</span>
+        </div>
+        <div class="chip">
+          <strong>Consent-based</strong>
+          <span>If AGORÀ later enables non-essential analytics, advertising, or optional tracking, consent should be obtained where required by law.</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="shell">
+      <div class="shell-head">
+        <div class="shell-head-title">Cookies &amp; Storage Notice</div>
+        <div class="shell-head-sub">
+          Effective date: 2026-03-18<br>
+          Version: 2026-03-18-v1<br>
+          This page should be aligned with the real technologies and storage keys used by the live service.
+        </div>
+      </div>
+
+      <div class="toc">
+        <div class="toc-title">Contents</div>
+        <div class="toc-grid">
+          <a href="#what-it-is">1. What this notice covers</a>
+          <a href="#what-we-use">2. Types of storage AGORÀ may use</a>
+          <a href="#categories">3. Categories of cookies and storage</a>
+          <a href="#current-uses">4. Current or expected AGORÀ uses</a>
+          <a href="#third-parties">5. Third-party services</a>
+          <a href="#choices">6. User choices and controls</a>
+          <a href="#consent">7. Consent and withdrawal</a>
+          <a href="#changes">8. Changes to this notice</a>
+        </div>
+      </div>
+
+      <div class="body">
+        <section class="section" id="what-it-is">
+          <h2>1. What this notice covers</h2>
+          <p>
+            This page explains how AGORÀ may use browser cookies, local storage, session storage, or similar device-side technologies.
+            These technologies may be used to recognize a browser session, preserve settings, keep security state, and support requested features.
+          </p>
+          <p>
+            This notice should be read together with the Privacy Policy and Terms of Service.
+          </p>
+        </section>
+
+        <section class="section" id="what-we-use">
+          <h2>2. Types of storage AGORÀ may use</h2>
+          <ul>
+            <li><strong>Cookies</strong> — small text files stored by the browser;</li>
+            <li><strong>Local storage</strong> — browser-based key/value storage that may persist beyond the session;</li>
+            <li><strong>Session storage</strong> — storage that may last only for the current browser session;</li>
+            <li><strong>Similar technologies</strong> — comparable methods used to store or access data on the device where technically applicable.</li>
+          </ul>
+          <p>
+            AGORÀ may use one or more of these methods depending on how the platform is implemented over time.
+          </p>
+        </section>
+
+        <section class="section" id="categories">
+          <h2>3. Categories of cookies and storage</h2>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Purpose</th>
+                  <th>Typical examples</th>
+                  <th>Consent status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Strictly necessary</strong></td>
+                  <td>Needed to provide the service requested by the user or to ensure basic security and technical operation.</td>
+                  <td>Authentication state, CSRF protection, login continuity, abuse prevention, load balancing, essential session handling.</td>
+                  <td>Usually not consent-based where the law recognizes them as technically necessary.</td>
+                </tr>
+                <tr>
+                  <td><strong>Preferences</strong></td>
+                  <td>Remember user choices for convenience and interface continuity.</td>
+                  <td>Theme mode, language, accessibility settings, dismissed notices, UI layout preferences.</td>
+                  <td>May be treated as essential or consent-based depending on necessity and local law.</td>
+                </tr>
+                <tr>
+                  <td><strong>Functional</strong></td>
+                  <td>Support optional platform features requested by the user.</td>
+                  <td>Saved draft continuity, remembered view state, interactive feature persistence.</td>
+                  <td>Depends on whether the function is necessary for the requested service.</td>
+                </tr>
+                <tr>
+                  <td><strong>Analytics / measurement</strong></td>
+                  <td>Understand usage patterns and improve the service.</td>
+                  <td>Traffic measurement, page interaction metrics, feature usage statistics.</td>
+                  <td>Consent should be obtained where required before activation.</td>
+                </tr>
+                <tr>
+                  <td><strong>Advertising / tracking</strong></td>
+                  <td>Deliver ads, limit repetition, or measure advertising performance.</td>
+                  <td>Ad-related identifiers, attribution signals, cross-context tracking technologies.</td>
+                  <td>Consent should be obtained where required before activation.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="section" id="current-uses">
+          <h2>4. Current or expected AGORÀ uses</h2>
+          <p>
+            Based on the current AGORÀ pages and expected service design, AGORÀ may use or later use storage for items such as:
+          </p>
+          <ul>
+            <li><strong>Theme preference</strong> — for example remembering light or dark mode;</li>
+            <li><strong>Terms acknowledgment state</strong> — for example storing whether a user has accepted a displayed legal version;</li>
+            <li><strong>Session continuity</strong> — where needed to keep the user signed in or preserve a valid session state;</li>
+            <li><strong>Security state</strong> — to help prevent abuse, replay, or unauthorized use;</li>
+            <li><strong>Feature continuity</strong> — such as preserving a requested user interface state or unfinished draft interactions where implemented.</li>
+          </ul>
+
+          <div class="callout">
+            If AGORÀ later enables analytics, advertising, or optional cross-site tracking tools, the live service should display an appropriate
+            consent mechanism before activating them where the law requires it.
+          </div>
+        </section>
+
+        <section class="section" id="third-parties">
+          <h2>5. Third-party services</h2>
+          <p>
+            AGORÀ may rely on third-party services for hosting, authentication, maps, content delivery, security, or future features.
+            Some third-party services may independently store or access information on the user’s device, or receive technical information
+            from the browser as part of delivering their service.
+          </p>
+          <p>
+            If AGORÀ uses such services, the live version of this page should name them clearly where appropriate and should explain
+            whether they are strictly necessary, optional, or consent-based under the applicable legal framework.
+          </p>
+        </section>
+
+        <section class="section" id="choices">
+          <h2>6. User choices and controls</h2>
+          <p>
+            Users may manage some storage technologies through browser settings, privacy tools, or device controls.
+            Depending on the browser, users may be able to delete cookies, block certain storage, clear local storage,
+            or limit some tracking technologies.
+          </p>
+          <p>
+            Blocking or deleting storage may affect platform functionality. For example, users may need to sign in again,
+            reselect preferences, or lose continuity in requested features.
+          </p>
+        </section>
+
+        <section class="section" id="consent">
+          <h2>7. Consent and withdrawal</h2>
+          <p>
+            Where AGORÀ relies on consent for non-essential cookies or similar technologies, users should be able to grant,
+            refuse, or later withdraw that consent through an appropriate mechanism.
+          </p>
+          <p>
+            Withdrawal of consent should be as easy as giving it, subject to the technical constraints of the live implementation.
+            Strictly necessary storage may still remain active where required to provide the requested service or protect the platform.
+          </p>
+        </section>
+
+        <section class="section" id="changes">
+          <h2>8. Changes to this notice</h2>
+          <p>
+            AGORÀ may update this Cookies &amp; Storage Notice to reflect changes in technology, legal requirements, or platform functionality.
+            The current version should always be available on this page.
+          </p>
+
+          <div class="mini-links">
+            <a class="mini-link" href="terms.html">Terms of Service</a>
+            <a class="mini-link" href="privacy.html">Privacy Policy</a>
+            <a class="mini-link" href="contact.html">Contact &amp; Legal Info</a>
+            <a class="mini-link" href="about.html">About</a>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <div class="footer-mini">
+      AGORÀ • cookies, local storage, and transparent user control<br>
+      Update the examples on this page if you later add analytics, ads, or other optional third-party technologies.
+    </div>
+  </main>
+</body>
+</html>
