@@ -1113,6 +1113,33 @@
       background:rgba(248,247,243,0.92); font-weight:700; cursor:pointer;
     }
     :root[data-theme="dark"] .block-card{ background:var(--panel); }
+    /* ===== Report modal ===== */
+    .report-modal{ position:fixed; inset:0; display:none; z-index:2150; }
+    .report-modal.open{ display:block; }
+    .report-backdrop{ position:absolute; inset:0; background:rgba(0,0,0,0.40); backdrop-filter:blur(8px); }
+    .report-card{
+      position:relative; max-width:440px; width:calc(100% - 32px);
+      margin:10vh auto 0; background:var(--panel,rgba(255,255,255,0.97));
+      border:1px solid rgba(0,0,0,0.10); border-radius:22px;
+      padding:22px; box-shadow:0 22px 50px rgba(0,0,0,0.25);
+      display:flex; flex-direction:column; gap:14px;
+    }
+    :root[data-theme="dark"] .report-card{ background:var(--panel); }
+    .report-card-header{ display:flex; justify-content:space-between; align-items:center; }
+    .report-card-title{ font-weight:900; font-size:1.1rem; }
+    .report-close-btn{ background:none; border:none; cursor:pointer; font-size:1.5rem; opacity:.45; line-height:1; padding:0; color:var(--text); }
+    .report-reason-list{ display:flex; flex-direction:column; gap:6px; }
+    .report-reason-btn{
+      width:100%; text-align:left; padding:12px 14px; border-radius:14px;
+      background:rgba(248,247,243,0.92); border:1px solid rgba(0,0,0,0.08);
+      cursor:pointer; font-weight:700; font-size:.92rem; transition: background .15s;
+    }
+    .report-reason-btn:hover{ background:rgba(0,0,0,0.06); }
+    :root[data-theme="dark"] .report-reason-btn{
+      background:rgba(255,255,255,0.06); border-color:rgba(255,255,255,0.10); color:var(--text);
+    }
+    :root[data-theme="dark"] .report-reason-btn:hover{ background:rgba(255,255,255,0.12); }
+    .report-note{ font-size:.82rem; opacity:.55; text-align:center; }
     :root[data-theme="dark"] .block-side{ border-color:rgba(255,255,255,0.12); }
     :root[data-theme="dark"] .block-side.selected{ background:rgba(168,235,246,0.07); }
     :root[data-theme="dark"] .block-reason textarea{ background:var(--panel-2); border-color:rgba(255,255,255,0.14); color:var(--text); }
@@ -4489,6 +4516,21 @@
       for (const it of selectedImages) {
         if (it.uploadedUrl) continue;
 
+
+        // NSFW pre-screening (solo immagini)
+        if (it.file && it.file.type && it.file.type.startsWith("image/")) {
+          try {
+            const nsfwResult = await checkImageNSFW(it.file);
+            if (nsfwResult && nsfwResult.nsfw) {
+              const node = createPostContent.querySelector(`[data-img-id="${it.id}"]`);
+              if (node) node.remove();
+              it.blocked = true;
+              alert("⚠️ Image blocked: flagged as inappropriate content (NSFW).");
+              continue;
+            }
+          } catch (err) { console.warn("NSFW check error:", err); }
+        }
+
         const up = await uploadImageToR2(it.file);
         it.uploadedKey = up.key;
         it.uploadedUrl = up.url;
@@ -4500,6 +4542,9 @@
         // Sostituisci src nell'editor: video
         const vidNode = createPostContent.querySelector(`.video-node[data-img-id="${it.id}"] video`);
         if (vidNode) vidNode.src = it.uploadedUrl;
+      }
+      for (let i = selectedImages.length - 1; i >= 0; i--) {
+        if (selectedImages[i].blocked) selectedImages.splice(i, 1);
       }
     }
 
@@ -5391,6 +5436,83 @@
         backdrop.onclick   = () => { cleanup(); close(); };
         document.addEventListener("keydown", onKey);
       }
+
+      /* ===== Report Post Modal ===== */
+      const REPORT_REASONS = [
+        { value: "nsfw_porn",      label: "🔞 NSFW / Pornography" },
+        { value: "spam",           label: "📨 Spam / Advertising" },
+        { value: "hate_speech",    label: "🚫 Hate speech / Discrimination" },
+        { value: "harassment",     label: "⚠️ Harassment / Threats" },
+        { value: "violence",       label: "🩸 Graphic violence" },
+        { value: "misinformation", label: "❌ Misinformation" },
+        { value: "other",          label: "📝 Other" }
+      ];
+
+      function openReportModal(postId) {
+        const modal    = document.getElementById("reportModal");
+        const list     = document.getElementById("reportReasonList");
+        const closeBtn = document.getElementById("reportCloseBtn");
+        const backdrop = document.getElementById("reportBackdrop");
+
+        list.innerHTML = "";
+        REPORT_REASONS.forEach(r => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "report-reason-btn";
+          btn.textContent = r.label;
+          btn.addEventListener("click", async () => {
+            btn.disabled = true;
+            btn.textContent = "Sending…";
+            try {
+              const res = await api("/api/posts/" + encodeURIComponent(postId) + "/report", {
+                method: "POST",
+                body: JSON.stringify({ reason: r.value })
+              });
+              close();
+              if (res && res.post_hidden) {
+                alert("Report submitted. The post has been hidden pending review.");
+                await loadFeed();
+              } else {
+                alert("Report submitted. Thank you.");
+              }
+            } catch (err) {
+              btn.disabled = false;
+              btn.textContent = r.label;
+              const msg = err?.message || "";
+              if (msg.includes("already_reported")) {
+                alert("You have already reported this post.");
+                close();
+              } else {
+                alert("Report failed: " + msg);
+              }
+            }
+          });
+          list.appendChild(btn);
+        });
+
+        function open()  { modal.classList.add("open");    modal.setAttribute("aria-hidden", "false"); }
+        function close() { modal.classList.remove("open"); modal.setAttribute("aria-hidden", "true");
+          document.removeEventListener("keydown", onKey);
+        }
+        const onKey = (e) => { if (e.key === "Escape") close(); };
+        open();
+        closeBtn.onclick  = () => close();
+        backdrop.onclick  = () => close();
+        document.addEventListener("keydown", onKey);
+      }
+
+      /* ===== NSFW Pre-check ===== */
+      async function checkImageNSFW(file) {
+        try {
+          const fd = new FormData();
+          fd.append("file", file, file.name || "image.png");
+          const res = await api("/api/media/nsfw-check", { method: "POST", body: fd });
+          return res;
+        } catch (err) {
+          console.warn("NSFW check failed (allowing upload):", err);
+          return { nsfw: false, confidence: 0, label: "safe" };
+        }
+      }
       
     function renderPosts(posts, savedIds = new Set(), append = false) {
       if (!append) {
@@ -5446,9 +5568,11 @@
               </svg>
             </button>
             <div class="post-menu" role="menu" aria-hidden="true">
-              <button class="post-menu-item post-menu-block" type="button" role="menuitem"
-                data-author-email="${escapeHtml(p.author_email || "")}"
-                data-author-name="${escapeHtml(p.author_display_name || p.author_email || "utente")}">Blocca</button>
+            <button class="post-menu-item post-menu-report" type="button" role="menuitem"
+              data-post-id="${escapeHtml(p.id)}">Report</button>
+            <button class="post-menu-item post-menu-block" type="button" role="menuitem"
+              data-author-email="${escapeHtml(p.author_email || "")}"
+              data-author-name="${escapeHtml(p.author_display_name || p.author_email || "utente")}">Blocca</button>
             </div>
           </div>
         ` : "";
@@ -5777,6 +5901,7 @@ const logicalBtn = card.querySelector(".logical-btn");
         const menu = card.querySelector(".post-menu");
         const delPostBtn = card.querySelector(".post-menu-delete");
         const blockPostBtn = card.querySelector(".post-menu-block");
+        const reportPostBtn = card.querySelector(".post-menu-report");
 
         menuBtn?.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -5819,6 +5944,11 @@ const logicalBtn = card.querySelector(".logical-btn");
             authorEmail: blockPostBtn.dataset.authorEmail,
             authorName:  blockPostBtn.dataset.authorName
           });
+        });
+        reportPostBtn?.addEventListener("click", (e) => {
+          e.stopPropagation();
+          closeAllPostMenus();
+          openReportModal(p.id);
         });
         logicalBtn?.addEventListener("click", async (e) => {
           e.stopPropagation();
@@ -7708,6 +7838,19 @@ document.addEventListener("DOMContentLoaded", function () {
 });
     
   </script>
+
+  <!-- Report Post Modal -->
+  <div id="reportModal" class="report-modal" aria-hidden="true">
+    <div class="report-backdrop" id="reportBackdrop"></div>
+    <div class="report-card" role="dialog" aria-modal="true" aria-labelledby="reportModalTitle">
+      <div class="report-card-header">
+        <div class="report-card-title" id="reportModalTitle">Report post</div>
+        <button class="report-close-btn" id="reportCloseBtn" aria-label="Close">&times;</button>
+      </div>
+      <div class="report-reason-list" id="reportReasonList"></div>
+      <div class="report-note">After 3 reports a post is automatically hidden pending review.</div>
+    </div>
+  </div>
 
   <div id="blockModal" class="block-modal" aria-hidden="true">
     <div class="block-backdrop" id="blockBackdrop"></div>

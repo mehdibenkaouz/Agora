@@ -1,7 +1,8 @@
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const origin = request.headers.get("Origin") || "";
-    const ALLOWED_ORIGIN = origin.endsWith(".pages.dev") ? origin : "https://agora-bce.pages.dev";
+    const ALLOWED = ["https://agorapolis.org", "https://www.agorapolis.org"];
+    const ALLOWED_ORIGIN = origin.endsWith(".pages.dev") || ALLOWED.includes(origin) ? origin : ALLOWED[0];
     const url = new URL(request.url);
 
     // --- CORS ---
@@ -14,6 +15,7 @@ export default {
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
+// ── LOGIN: STEP 1 — Invia OTP via email ─────────────────────────
       if (url.pathname === "/api/login" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
         const emailRaw = String(body.email || "").trim().toLowerCase();
@@ -21,32 +23,122 @@ export default {
           return json({ ok: false, error: "invalid_email" }, 400, ALLOWED_ORIGIN);
         }
 
-        const now = new Date().toISOString();
-        const userId = crypto.randomUUID();
+        // Rate limit: max 3 OTP per email ogni 15 minuti
+        const fifteenAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+        const recentOtps = await env.dbagora.prepare(
+          "SELECT COUNT(*) as cnt FROM otp_codes WHERE email = ?1 AND created_at > ?2"
+        ).bind(emailRaw, fifteenAgo).first();
+        if ((recentOtps?.cnt || 0) >= 3) {
+          return json({ ok: false, error: "too_many_otps" }, 429, ALLOWED_ORIGIN);
+        }
 
+        // Genera codice a 6 cifre
+        const code = String(Math.floor(100000 + Math.random() * 900000));
+        const now = new Date().toISOString();
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString(); // 10 min
+
+        await env.dbagora.prepare(
+          "INSERT INTO otp_codes (id, email, code, attempts, created_at, expires_at, used) VALUES (?1,?2,?3,0,?4,?5,0)"
+        ).bind(crypto.randomUUID(), emailRaw, code, now, expiresAt).run();
+
+        // Invia email via Resend
+        try {
+          const emailRes = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              "Authorization": "Bearer " + env.RESEND_API_KEY,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              from: env.OTP_FROM_EMAIL || "AGORÀ <noreply@agorapolis.org>",
+              to: [emailRaw],
+              subject: "Your AGORÀ login code",
+              html: `<div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;padding:32px;background:#f5f0e8;border-radius:16px;">
+                <h2 style="color:#571929;font-family:'Cinzel',serif;margin:0 0 16px;">AGORÀ</h2>
+                <p style="color:#1a1008;font-size:16px;line-height:1.6;">Your verification code is:</p>
+                <div style="background:#fff;border:2px solid #571929;border-radius:12px;padding:20px;text-align:center;margin:20px 0;">
+                  <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:#571929;">${code}</span>
+                </div>
+                <p style="color:#6b5b48;font-size:14px;">This code expires in 10 minutes. If you didn't request this, ignore this email.</p>
+              </div>`
+            })
+          });
+          if (!emailRes.ok) {
+            const errBody = await emailRes.text().catch(() => "");
+            return json({ ok: false, error: "email_send_failed", detail: errBody }, 500, ALLOWED_ORIGIN);
+          }
+        } catch (e) {
+          return json({ ok: false, error: "email_send_failed", detail: String(e?.message || e) }, 500, ALLOWED_ORIGIN);
+        }
+
+        return json({ ok: true, message: "otp_sent" }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── LOGIN: STEP 2 — Verifica OTP e crea sessione ────────────────
+      if (url.pathname === "/api/login/verify" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const emailRaw = String(body.email || "").trim().toLowerCase();
+        const code = String(body.code || "").trim();
+
+        if (!emailRaw || !code || code.length !== 6) {
+          return json({ ok: false, error: "invalid_input" }, 400, ALLOWED_ORIGIN);
+        }
+
+        // Trova l'OTP più recente non usato per questa email
+        const otp = await env.dbagora.prepare(
+          "SELECT id, code, attempts, expires_at FROM otp_codes WHERE email = ?1 AND used = 0 ORDER BY created_at DESC LIMIT 1"
+        ).bind(emailRaw).first();
+
+        if (!otp) {
+          return json({ ok: false, error: "no_otp_found" }, 404, ALLOWED_ORIGIN);
+        }
+
+        // Scaduto?
+        if (new Date(otp.expires_at) < new Date()) {
+          await env.dbagora.prepare("UPDATE otp_codes SET used = 1 WHERE id = ?1").bind(otp.id).run();
+          return json({ ok: false, error: "otp_expired" }, 410, ALLOWED_ORIGIN);
+        }
+
+        // Troppi tentativi?
+        if ((otp.attempts || 0) >= 5) {
+          await env.dbagora.prepare("UPDATE otp_codes SET used = 1 WHERE id = ?1").bind(otp.id).run();
+          return json({ ok: false, error: "too_many_attempts" }, 429, ALLOWED_ORIGIN);
+        }
+
+        // Codice sbagliato?
+        if (otp.code !== code) {
+          await env.dbagora.prepare(
+            "UPDATE otp_codes SET attempts = attempts + 1 WHERE id = ?1"
+          ).bind(otp.id).run();
+          return json({ ok: false, error: "wrong_code", remaining: 4 - (otp.attempts || 0) }, 401, ALLOWED_ORIGIN);
+        }
+
+        // Codice corretto — segna come usato
+        await env.dbagora.prepare("UPDATE otp_codes SET used = 1 WHERE id = ?1").bind(otp.id).run();
+
+        // Crea o trova l'utente
+        const now = new Date().toISOString();
         const existing = await env.dbagora.prepare(
-          "SELECT id, email FROM users WHERE email = ?1"
+          "SELECT id FROM users WHERE email = ?1"
         ).bind(emailRaw).first();
 
         let finalUserId = existing?.id;
         if (!finalUserId) {
+          finalUserId = crypto.randomUUID();
           await env.dbagora.prepare(
             "INSERT INTO users (id, email, created_at) VALUES (?1, ?2, ?3)"
-          ).bind(userId, emailRaw, now).run();
-          finalUserId = userId;
+          ).bind(finalUserId, emailRaw, now).run();
         }
 
         const token = crypto.randomUUID();
-        const createdAt = now;
         const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30).toISOString();
-
         await env.dbagora.prepare(
           "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)"
-        ).bind(token, finalUserId, createdAt, expiresAt).run();
+        ).bind(token, finalUserId, now, expiresAt).run();
 
         return json({ ok: true, token, user: { id: finalUserId, email: emailRaw } }, 200, ALLOWED_ORIGIN);
       }
-
+      
       const singleCommentMatch = url.pathname.match(/^\/api\/comments\/([^/]+)$/);
       if (singleCommentMatch && request.method === "GET") {
         const commentId = decodeURIComponent(singleCommentMatch[1]).trim();
@@ -81,7 +173,8 @@ export default {
               END
             ) AS display_name,
             COALESCE(u.picture_url, '') AS picture_url,
-            COALESCE(u.banned, 0) AS banned
+            COALESCE(u.banned, 0) AS banned,
+            COALESCE(u.terms_accepted_version, '') AS terms_accepted_version
           FROM sessions s
           JOIN users u ON u.id = s.user_id
           WHERE s.token = ?1
@@ -90,7 +183,7 @@ export default {
 
         if (!row) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
         if (row.banned) return json({ ok: false, error: "banned" }, 403, ALLOWED_ORIGIN);
-        return json({ ok: true, user: { id: row.id, email: row.email, display_name: row.display_name, picture_url: row.picture_url } }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true, user: { id: row.id, email: row.email, display_name: row.display_name, picture_url: row.picture_url, terms_accepted_version: row.terms_accepted_version } }, 200, ALLOWED_ORIGIN);
       }
 
       if (url.pathname === "/api/profile" && request.method === "POST") {
@@ -121,6 +214,133 @@ export default {
 
         return json({ ok: true, user: { id: session.user_id, email: session.email || "", display_name, picture_url } }, 200, ALLOWED_ORIGIN);
       }
+
+
+      // ── DELETE ACCOUNT ───────────────────────────────────────────────
+      if (url.pathname === "/api/account" && request.method === "DELETE") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const uid = session.user_id;
+
+        // Confirm phrase required
+        const body = await request.json().catch(() => ({}));
+        if (String(body.confirm || "") !== "DELETE_MY_ACCOUNT") {
+          return json({ ok: false, error: "confirmation_required" }, 400, ALLOWED_ORIGIN);
+        }
+
+        // ── Delete R2 media ──
+        try {
+          const prefix = `u/${uid}/`;
+          let cursor = undefined;
+          do {
+            const listed = await env.AGORA_MEDIA.list({ prefix, cursor, limit: 500 });
+            if (listed.objects.length) {
+              await Promise.allSettled(listed.objects.map(o => env.AGORA_MEDIA.delete(o.key)));
+            }
+            cursor = listed.truncated ? listed.cursor : undefined;
+          } while (cursor);
+        } catch (_) {}
+
+        // ── Delete DB data (order respects implicit FK) ──
+        // Segment reports on user's segments
+        await env.dbagora.prepare(
+          `DELETE FROM segment_reports WHERE segment_id IN
+           (SELECT id FROM post_segments WHERE author_user_id = ?1)`
+        ).bind(uid).run();
+        // Segment reports filed by user
+        await env.dbagora.prepare(
+          "DELETE FROM segment_reports WHERE reporter_user_id = ?1"
+        ).bind(uid).run();
+        // Post segments on user's posts
+        await env.dbagora.prepare(
+          `DELETE FROM post_segments WHERE post_id IN
+           (SELECT id FROM posts WHERE user_id = ?1)`
+        ).bind(uid).run();
+        // Post segments authored by user (on others' posts)
+        await env.dbagora.prepare(
+          "DELETE FROM post_segments WHERE author_user_id = ?1"
+        ).bind(uid).run();
+        // Logic votes by user
+        await env.dbagora.prepare(
+          "DELETE FROM post_logic_votes WHERE user_id = ?1"
+        ).bind(uid).run();
+        // Logic votes on user's posts
+        await env.dbagora.prepare(
+          `DELETE FROM post_logic_votes WHERE post_id IN
+           (SELECT id FROM posts WHERE user_id = ?1)`
+        ).bind(uid).run();
+        // Post quotes by user
+        await env.dbagora.prepare(
+          "DELETE FROM post_quotes WHERE author_user_id = ?1"
+        ).bind(uid).run();
+        // Post quotes referencing user's posts
+        await env.dbagora.prepare(
+          `DELETE FROM post_quotes WHERE source_post_id IN
+           (SELECT id FROM posts WHERE user_id = ?1)`
+        ).bind(uid).run();
+        // Comments on user's posts
+        await env.dbagora.prepare(
+          `DELETE FROM comments WHERE post_id IN
+           (SELECT id FROM posts WHERE user_id = ?1)`
+        ).bind(uid).run();
+        // Comments by user
+        await env.dbagora.prepare(
+          "DELETE FROM comments WHERE user_id = ?1"
+        ).bind(uid).run();
+        // Saved posts
+        await env.dbagora.prepare(
+          "DELETE FROM saved_posts WHERE user_id = ?1"
+        ).bind(uid).run();
+        // Posts
+        await env.dbagora.prepare(
+          "DELETE FROM posts WHERE user_id = ?1"
+        ).bind(uid).run();
+        // Block complaints
+        await env.dbagora.prepare(
+          "DELETE FROM block_complaints WHERE complainant_id = ?1"
+        ).bind(uid).run();
+        // Blocks (as blocker or blocked)
+        await env.dbagora.prepare(
+          "DELETE FROM blocks WHERE blocker_id = ?1 OR blocked_id = ?1"
+        ).bind(uid).run();
+        // Notifications
+        await env.dbagora.prepare(
+          "DELETE FROM notifications WHERE user_id = ?1"
+        ).bind(uid).run();
+        // Study sessions
+        await env.dbagora.prepare(
+          "DELETE FROM study_sessions WHERE user_id = ?1"
+        ).bind(uid).run();
+        // Spam tracking
+        await env.dbagora.prepare(
+          "DELETE FROM action_timestamps WHERE user_id = ?1"
+        ).bind(uid).run();
+        await env.dbagora.prepare(
+          "DELETE FROM spam_flags WHERE user_id = ?1"
+        ).bind(uid).run();
+        // Bug reports
+        await env.dbagora.prepare(
+          "DELETE FROM bug_reports WHERE user_id = ?1"
+        ).bind(uid).run();
+        // Sessions
+        await env.dbagora.prepare(
+          "DELETE FROM sessions WHERE user_id = ?1"
+        ).bind(uid).run();
+        // User row
+        await env.dbagora.prepare(
+          "DELETE FROM users WHERE id = ?1"
+        ).bind(uid).run();
+
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+      
 
       // ── POSTS: POST ──────────────────────────────────────────────────
       if (url.pathname === "/api/posts" && request.method === "POST") {
@@ -234,7 +454,7 @@ export default {
                 END
               ) AS author_display_name,
               COALESCE(u.picture_url, '') AS author_picture_url,
-              (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comment_count,
+              (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) as comment_count,
               (SELECT COUNT(*) FROM post_logic_votes lv WHERE lv.post_id = p.id) as logical_count,
               (SELECT COUNT(*) FROM post_quotes pq WHERE pq.source_post_id = p.id) as quote_count
           FROM posts p
@@ -286,9 +506,17 @@ export default {
           }
         }
 
+      // Pulizia soft-deleted comments ~1% delle richieste (retention 30 giorni)
+        if (Math.random() < 0.01) {
+          ctx.waitUntil(
+            env.dbagora.prepare(
+              `DELETE FROM comments WHERE deleted_at IS NOT NULL AND deleted_at < DATETIME('now', '-30 days')`
+            ).run()
+          );
+        }
+
         return json({ ok: true, posts }, 200, ALLOWED_ORIGIN);
       }
-
 
       // ── MY POSTS: GET /api/my/posts ──────────────────────────────────
       if (url.pathname === "/api/my/posts" && request.method === "GET") {
@@ -356,6 +584,7 @@ export default {
                 OR (b.block_type = 1 AND b.blocker_id = c.user_id AND b.blocked_id = ?2)
             ))
             AND (?3 IS NULL OR c.created_at > ?3)
+            AND c.deleted_at IS NULL
           ORDER BY c.created_at ASC`
         ).bind(postId, feedUidC, since, parentId).all();
 
@@ -485,6 +714,72 @@ export default {
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
+      // ── DELETE ALL MY POSTS ──────────────────────────────────────────
+      if (url.pathname === "/api/my/posts" && request.method === "DELETE") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const body = await request.json().catch(() => ({}));
+        if (String(body.confirm || "") !== "DELETE_ALL_MY_POSTS") {
+          return json({ ok: false, error: "confirmation_required" }, 400, ALLOWED_ORIGIN);
+        }
+
+        const uid = session.user_id;
+
+        // Soft-delete dei commenti altrui sui tuoi post (retention legale)
+        await env.dbagora.prepare(
+          `UPDATE comments SET deleted_at = CURRENT_TIMESTAMP, content = ''
+           WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?1)
+             AND user_id != ?1
+             AND deleted_at IS NULL`
+        ).bind(uid).run();
+
+        // Hard-delete dei tuoi stessi commenti sui tuoi post
+        await env.dbagora.prepare(
+          `DELETE FROM comments
+           WHERE post_id IN (SELECT id FROM posts WHERE user_id = ?1)
+             AND user_id = ?1`
+        ).bind(uid).run();
+
+        // Hard-delete dei tuoi post
+        await env.dbagora.prepare(
+          "DELETE FROM posts WHERE user_id = ?1"
+        ).bind(uid).run();
+
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── DELETE ALL MY COMMENTS ───────────────────────────────────────
+      if (url.pathname === "/api/my/comments" && request.method === "DELETE") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const body = await request.json().catch(() => ({}));
+        if (String(body.confirm || "") !== "DELETE_ALL_MY_COMMENTS") {
+          return json({ ok: false, error: "confirmation_required" }, 400, ALLOWED_ORIGIN);
+        }
+
+        // Soft-delete: nasconde il testo ma mantiene la riga per retention legale
+        await env.dbagora.prepare(
+          `UPDATE comments SET deleted_at = CURRENT_TIMESTAMP, content = ''
+           WHERE user_id = ?1 AND deleted_at IS NULL`
+        ).bind(session.user_id).run();
+
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
       // ── DELETE POST ──────────────────────────────────────────────────
       if (url.pathname.startsWith("/api/posts/") && request.method === "DELETE") {
         const auth = request.headers.get("Authorization") || "";
@@ -516,6 +811,48 @@ export default {
           }
           await Promise.allSettled([...keys].map(k => env.AGORA_MEDIA.delete(k)));
         } catch (_) {}
+
+        await env.dbagora.prepare("DELETE FROM comments WHERE post_id = ?1").bind(postId).run();
+        const del = await env.dbagora.prepare(
+          "DELETE FROM posts WHERE id = ?1 AND user_id = ?2"
+        ).bind(postId, session.user_id).run();
+
+        if ((del?.meta?.changes ?? 0) === 0) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }  
+
+      // ── DELETE POST ──────────────────────────────────────────────────
+      if (url.pathname.startsWith("/api/posts/") && request.method === "DELETE") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const postId = decodeURIComponent(url.pathname.slice("/api/posts/".length)).trim();
+        if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
+
+        const row = await env.dbagora.prepare(
+          "SELECT content FROM posts WHERE id = ?1 AND user_id = ?2"
+        ).bind(postId, session.user_id).first();
+        if (!row) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
+
+        try {
+          const prefix = `u/${session.user_id}/`;
+          const html = String(row.content || "");
+          const re = /\/media\/([^"'<> \n\r\t\)]+)/g;
+          const keys = new Set();
+          let m;
+          while ((m = re.exec(html))) {
+            const k = decodeURIComponent(m[1] || "");
+            if (k && k.startsWith(prefix)) keys.add(k);
+          }
+          await Promise.allSettled([...keys].map(k => env.AGORA_MEDIA.delete(k)));
+        } catch (_) {}
+
 
         await env.dbagora.prepare("DELETE FROM comments WHERE post_id = ?1").bind(postId).run();
         const del = await env.dbagora.prepare(
@@ -888,7 +1225,7 @@ export default {
           SELECT COUNT(DISTINCT p.id) as cnt FROM posts p
           WHERE p.user_id = ?1
             AND EXISTS (SELECT 1 FROM post_segments ps WHERE ps.post_id = p.id AND ps.segment_type = 'question' AND ps.is_active = 1)
-            AND (SELECT COUNT(DISTINCT c.user_id) FROM comments c WHERE c.post_id = p.id AND c.user_id != p.user_id) >= 50
+            AND (SELECT COUNT(DISTINCT c.user_id) FROM comments c WHERE c.post_id = p.id AND c.user_id != p.user_id AND c.deleted_at IS NULL) >= 50
         `).bind(userId).first();
 
         // Hypatia: post con Clarification valido + >=50 commentatori distinti
@@ -896,7 +1233,7 @@ export default {
           SELECT COUNT(DISTINCT p.id) as cnt FROM posts p
           WHERE p.user_id = ?1
             AND EXISTS (SELECT 1 FROM post_segments ps WHERE ps.post_id = p.id AND ps.segment_type = 'clarification' AND ps.is_active = 1)
-            AND (SELECT COUNT(DISTINCT c.user_id) FROM comments c WHERE c.post_id = p.id AND c.user_id != p.user_id) >= 50
+            AND (SELECT COUNT(DISTINCT c.user_id) FROM comments c WHERE c.post_id = p.id AND c.user_id != p.user_id AND c.deleted_at IS NULL) >= 50
         `).bind(userId).first();
 
         // Alexandria: post con Sources valido + >=50 commentatori distinti
@@ -904,7 +1241,7 @@ export default {
           SELECT COUNT(DISTINCT p.id) as cnt FROM posts p
           WHERE p.user_id = ?1
             AND EXISTS (SELECT 1 FROM post_segments ps WHERE ps.post_id = p.id AND ps.segment_type = 'sources' AND ps.is_active = 1)
-            AND (SELECT COUNT(DISTINCT c.user_id) FROM comments c WHERE c.post_id = p.id AND c.user_id != p.user_id) >= 50
+            AND (SELECT COUNT(DISTINCT c.user_id) FROM comments c WHERE c.post_id = p.id AND c.user_id != p.user_id AND c.deleted_at IS NULL) >= 50
         `).bind(userId).first();
 
         // Da Vinci: citazioni ricevute da altri utenti
@@ -1135,7 +1472,7 @@ export default {
                 CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
               ) AS author_display_name,
               COALESCE(u.picture_url,'') AS author_picture_url,
-              (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id) as comment_count,
+              (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) as comment_count,
               (SELECT COUNT(*) FROM post_logic_votes lv WHERE lv.post_id = p.id) as logical_count,
               (SELECT COUNT(*) FROM post_quotes pq WHERE pq.source_post_id = p.id) as quote_count
             FROM posts p JOIN users u ON u.id = p.user_id
@@ -1523,6 +1860,8 @@ export default {
       }
 
 
+
+
       // GET /api/admin/tag-reports — lista segnalazioni tag
       if (url.pathname === "/api/admin/tag-reports" && request.method === "GET") {
         const adm = await requireAdmin(request);
@@ -1571,6 +1910,27 @@ export default {
         ).bind(adminSegActivate[1]).run();
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
+
+
+      // ── TERMS ACCEPT ─────────────────────────────────────────────────
+      if (url.pathname === "/api/terms/accept" && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+        const body = await request.json().catch(() => ({}));
+        const version = String(body.version || "").trim();
+        if (!version) return json({ ok: false, error: "missing_version" }, 400, ALLOWED_ORIGIN);
+        const now = new Date().toISOString();
+        await env.dbagora.prepare(
+          "UPDATE users SET terms_accepted_version = ?1, terms_accepted_at = ?2 WHERE id = ?3"
+        ).bind(version, now, session.user_id).run();
+        return json({ ok: true, version, accepted_at: now }, 200, ALLOWED_ORIGIN);
+      }
+
 
       return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
     } catch (e) {
