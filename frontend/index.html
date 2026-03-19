@@ -4544,8 +4544,10 @@
 
           // Calcola i timestamp dei frame da estrarre (evita 0 e fine)
           const times = [];
-          for (let i = 0; i < numFrames; i++) {
-            times.push(Math.min(duration * 0.95, (duration / (numFrames + 1)) * (i + 1)));
+          // Distribuzione più fitta: inizio, fine, e punti random nel mezzo
+          const fixed = [0.05, 0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 0.95];
+          for (let i = 0; i < Math.min(numFrames, fixed.length); i++) {
+            times.push(duration * fixed[i]);
           }
 
           function grabNext() {
@@ -4584,7 +4586,7 @@
 
     async function checkVideoNSFW(file) {
       try {
-        const frames = await extractVideoFrames(file, 4);
+        const frames = await extractVideoFrames(file, 8);
         console.log("VIDEO NSFW: frames estratti =", frames.length);
         if (!frames.length) return { nsfw: false, label: "no_frames", confidence: 0 };
         for (const frame of frames) {
