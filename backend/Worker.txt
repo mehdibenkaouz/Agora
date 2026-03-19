@@ -466,6 +466,7 @@ export default {
               OR (b.block_type = 1 AND b.blocker_id = p.user_id AND b.blocked_id = ?1)
           ))
           AND COALESCE(u.banned, 0) = 0
+          AND COALESCE(p.hidden, 0) = 0
           ORDER BY p.created_at DESC
           LIMIT 30`
         ).bind(feedUid).all();
@@ -1014,6 +1015,42 @@ export default {
 
         await env.AGORA_MEDIA.delete(key);
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+      // ── NSFW CHECK (Workers AI) ─────────────────────────────────
+      if (url.pathname === "/api/media/nsfw-check" && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const ct = request.headers.get("content-type") || "";
+        if (!ct.includes("multipart/form-data")) return json({ ok: false, error: "expected_multipart" }, 400, ALLOWED_ORIGIN);
+
+        const form = await request.formData();
+        const file = form.get("file");
+        if (!file || typeof file.arrayBuffer !== "function") return json({ ok: false, error: "missing_file" }, 400, ALLOWED_ORIGIN);
+
+        const mime = file.type || "";
+        if (!mime.startsWith("image/")) return json({ ok: false, error: "not_image" }, 400, ALLOWED_ORIGIN);
+
+        try {
+          const buf = await file.arrayBuffer();
+          const result = await env.AI.run("@cf/microsoft/resnet-50", {
+            image: [...new Uint8Array(buf)]
+          });
+          // Cerca label NSFW-correlate nei risultati
+          const nsfwLabels = ['bikini', 'brassiere', 'miniskirt', 'maillot', 'swimming_trunks'];
+          const topLabel = result?.[0]?.label || "";
+          const topScore = result?.[0]?.score || 0;
+          const isNsfw = nsfwLabels.some(l => topLabel.toLowerCase().includes(l)) && topScore > 0.5;
+          return json({ ok: true, nsfw: isNsfw, label: topLabel, confidence: topScore }, 200, ALLOWED_ORIGIN);
+        } catch(e) {
+          // Se Workers AI fallisce, non bloccare l'utente
+          return json({ ok: true, nsfw: false, label: "error", confidence: 0 }, 200, ALLOWED_ORIGIN);
+        }
       }
 
       // ── SAVED POSTS ──────────────────────────────────────────────────
@@ -1889,6 +1926,66 @@ export default {
         return json({ ok: true, reports: rows.results || [] }, 200, ALLOWED_ORIGIN);
       }
 
+      // GET /api/admin/post-reports — lista segnalazioni post
+      if (url.pathname === "/api/admin/post-reports" && request.method === "GET") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        const rows = await env.dbagora.prepare(`
+          SELECT pr.id, pr.reason, pr.created_at, pr.post_id,
+            p.content, p.created_at AS post_created_at,
+            COALESCE(p.hidden, 0) AS post_hidden,
+            au.id AS author_id, au.email AS author_email,
+            COALESCE(NULLIF(TRIM(au.display_name),''),
+              CASE WHEN instr(au.email,'@')>1 THEN substr(au.email,1,instr(au.email,'@')-1) ELSE au.email END
+            ) AS author_name,
+            COALESCE(au.picture_url,'') AS author_picture,
+            ru.email AS reporter_email,
+            COALESCE(NULLIF(TRIM(ru.display_name),''),
+              CASE WHEN instr(ru.email,'@')>1 THEN substr(ru.email,1,instr(ru.email,'@')-1) ELSE ru.email END
+            ) AS reporter_name,
+            (SELECT COUNT(*) FROM post_reports pr2 WHERE pr2.post_id = pr.post_id) AS total_reports
+          FROM post_reports pr
+          JOIN posts p ON p.id = pr.post_id
+          JOIN users au ON au.id = p.user_id
+          JOIN users ru ON ru.id = pr.reporter_user_id
+          ORDER BY pr.created_at DESC LIMIT 300
+        `).all();
+        return json({ ok: true, reports: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
+      // POST /api/admin/posts/:id/hide — admin nasconde post
+      const adminPostHide = url.pathname.match(/^\/api\/admin\/posts\/([^/]+)\/hide$/);
+      if (adminPostHide && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        await env.dbagora.prepare("UPDATE posts SET hidden = 1 WHERE id = ?1").bind(adminPostHide[1]).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // POST /api/admin/posts/:id/unhide — admin ripristina post
+      const adminPostUnhide = url.pathname.match(/^\/api\/admin\/posts\/([^/]+)\/unhide$/);
+      if (adminPostUnhide && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        await env.dbagora.prepare("UPDATE posts SET hidden = 0, approved = 1 WHERE id = ?1").bind(adminPostUnhide[1]).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // DELETE /api/admin/posts/:id — admin elimina post definitivamente
+      const adminPostDelete = url.pathname.match(/^\/api\/admin\/posts\/([^/]+)$/);
+      if (adminPostDelete && request.method === "DELETE") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        const postId = adminPostDelete[1];
+        await env.dbagora.prepare("DELETE FROM post_reports WHERE post_id = ?1").bind(postId).run();
+        await env.dbagora.prepare("DELETE FROM comments WHERE post_id = ?1").bind(postId).run();
+        await env.dbagora.prepare("DELETE FROM post_logic_votes WHERE post_id = ?1").bind(postId).run();
+        await env.dbagora.prepare("DELETE FROM post_segments WHERE post_id = ?1").bind(postId).run();
+        await env.dbagora.prepare("DELETE FROM saved_posts WHERE post_id = ?1").bind(postId).run();
+        await env.dbagora.prepare("DELETE FROM posts WHERE id = ?1").bind(postId).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
       // POST /api/admin/segments/:id/deactivate — admin disattiva tag
       const adminSegDeactivate = url.pathname.match(/^\/api\/admin\/segments\/([^/]+)\/deactivate$/);
       if (adminSegDeactivate && request.method === "POST") {
@@ -1931,6 +2028,70 @@ export default {
         return json({ ok: true, version, accepted_at: now }, 200, ALLOWED_ORIGIN);
       }
 
+
+      // ── POST REPORT: POST /api/posts/:id/report ─────────────────
+      const postReportMatch = url.pathname.match(/^\/api\/posts\/([^/]+)\/report$/);
+      if (postReportMatch && request.method === "POST") {
+        const auth = request.headers.get("Authorization") || "";
+        const token = parseBearer(auth);
+        if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        const session = await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first();
+        if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
+
+        const postId = decodeURIComponent(postReportMatch[1]).trim();
+        if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
+
+        const post = await env.dbagora.prepare("SELECT id, user_id FROM posts WHERE id = ?1").bind(postId).first();
+        if (!post) return json({ ok: false, error: "post_not_found" }, 404, ALLOWED_ORIGIN);
+
+        // Non puoi segnalare il tuo post
+        if (post.user_id === session.user_id) {
+          return json({ ok: false, error: "cannot_report_own_post" }, 403, ALLOWED_ORIGIN);
+        }
+
+        const body = await request.json().catch(() => ({}));
+        const reason = String(body.reason || "").trim();
+        const validReasons = ['nsfw_porn','spam','hate_speech','harassment','violence','misinformation','other'];
+        if (!validReasons.includes(reason)) {
+          return json({ ok: false, error: "invalid_reason" }, 400, ALLOWED_ORIGIN);
+        }
+
+        // Un report per utente per post (UNIQUE constraint)
+        try {
+          await env.dbagora.prepare(
+            `INSERT INTO post_reports (id, post_id, reporter_user_id, reason, created_at)
+            VALUES (?1, ?2, ?3, ?4, ?5)`
+          ).bind(crypto.randomUUID(), postId, session.user_id, reason, new Date().toISOString()).run();
+        } catch(e) {
+          return json({ ok: false, error: "already_reported" }, 409, ALLOWED_ORIGIN);
+        }
+
+    // Conta report totali per questo post
+    const cnt = await env.dbagora.prepare(
+      "SELECT COUNT(*) as c FROM post_reports WHERE post_id = ?1"
+    ).bind(postId).first();
+    const reportCount = cnt?.c || 0;
+
+    // Controlla se il post è già stato approvato da un admin
+    const postRow = await env.dbagora.prepare(
+      "SELECT COALESCE(hidden,0) as hidden, COALESCE(approved,0) as approved FROM posts WHERE id = ?1"
+    ).bind(postId).first();
+
+    let postHidden = false;
+
+    if (postRow && !postRow.approved) {
+      // Mai approvato → nascondi alla PRIMA segnalazione
+      await env.dbagora.prepare(
+        "UPDATE posts SET hidden = 1 WHERE id = ?1"
+      ).bind(postId).run();
+      postHidden = true;
+    }
+    // Se approved = 1, il post resta visibile (admin l'ha già revisionato)
+
+    return json({ ok: true, report_count: reportCount, post_hidden: postHidden }, 200, ALLOWED_ORIGIN);
+      }
 
       return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
     } catch (e) {
