@@ -5224,7 +5224,18 @@ async function uploadAllSelectedImagesAndSwapSrc() {
           const avatar = escapeHtml(c.author_picture_url || '/avatar-default.png');
           const isMine = myEmail && myEmail === String(c.author_email || "").trim().toLowerCase();
           const side   = isMine ? "mine" : "theirs";
-    
+          const canBlock = !isMine && !!getToken();
+          const commentMenuHtml = (isMine || canBlock) ? `
+            <div class="comment-menu-wrap">
+              <button class="comment-menu-btn" type="button" aria-label="Opzioni commento">···</button>
+              <div class="comment-menu">
+                ${isMine ? `<button class="comment-menu-item danger c-del-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}">Elimina</button>` : ''}
+                ${canBlock ? `<button class="comment-menu-item c-block-btn"
+                  data-author-email="${escapeHtml(c.author_email || '')}"
+                  data-author-name="${escapeHtml(c.author_display_name || c.author_email || 'utente')}">Blocca</button>` : ''}
+              </div>
+            </div>` : '';
+
           return `
           <div class="comment-row ${side}" data-comment-id="${escapeHtml(c.id)}">
             ${!isMine ? `<div class="comment-who">
@@ -5235,6 +5246,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
             </div>` : ''}
             <div class="comment-row-wrap">
               <div class="comment-bubble ${side}">${text}</div>
+              ${commentMenuHtml}
             </div>
             <div style="display:flex;align-items:center;gap:8px;padding:0 2px;">
               <span class="comment-time">${when}</span>
@@ -5256,6 +5268,33 @@ async function uploadAllSelectedImagesAndSwapSrc() {
           btn.addEventListener("click", async e => {
             e.stopPropagation();
             await drillIntoComment(btn.dataset.postId, btn.dataset.commentId, btn.dataset.author);
+          });
+        });
+        // Attacca eventi menu
+        threadComments.querySelectorAll(".comment-menu-btn").forEach(btn => {
+          btn.addEventListener("click", e => {
+            e.stopPropagation();
+            const wrap = btn.nextElementSibling;
+            const isOpen = wrap.classList.contains("open");
+            threadComments.querySelectorAll(".comment-menu.open").forEach(m => m.classList.remove("open"));
+            wrap.classList.toggle("open", !isOpen);
+          });
+        });
+        threadComments.querySelectorAll(".c-del-btn").forEach(btn => {
+          btn.addEventListener("click", async e => {
+            e.stopPropagation();
+            const cId = btn.dataset.commentId;
+            if (!cId) return;
+            try {
+              await api(`/api/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(cId)}`, { method: "DELETE" });
+              btn.closest(".comment-row").remove();
+            } catch(err) { alert("Eliminazione fallita: " + (err?.message || err)); }
+          });
+        });
+        threadComments.querySelectorAll(".c-block-btn").forEach(btn => {
+          btn.addEventListener("click", e => {
+            e.stopPropagation();
+            openBlockModal({ authorEmail: btn.dataset.authorEmail, authorName: btn.dataset.authorName });
           });
         });
       }
