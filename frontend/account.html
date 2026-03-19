@@ -3756,7 +3756,7 @@ loadPosts();
   // initial render (aspetta che refreshMe sia fatto)
   // viene chiamato da loadPosts() già
 })();
-  (function() {
+  document.addEventListener("DOMContentLoaded", function() {
   const btn      = document.getElementById("mobileMenuBtn");
   const drawer   = document.getElementById("mobileDrawer");
   const backdrop = document.getElementById("mobileDrawerBackdrop");
@@ -3768,7 +3768,7 @@ loadPosts();
   closeBtn?.addEventListener("click", closeDrawer);
   backdrop?.addEventListener("click", closeDrawer);
   document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
-})();
+});
   
 </script>
 <div id="mobileDrawer" class="mobile-drawer" aria-hidden="true">
