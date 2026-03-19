@@ -436,14 +436,46 @@
     }
 
     @media (max-width: 900px){
-      .info-grid,.toc-grid{ grid-template-columns:1fr; }
+      .info-grid{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+      .toc-grid{ grid-template-columns: 1fr; }
     }
 
     @media (max-width: 700px){
-      .topbar-inner{ flex-wrap:wrap; justify-content:center; }
-      .hero,.terms-head,.toc,.section,.accept-panel{ padding-left:18px; padding-right:18px; }
-      .accept-actions{ align-items:stretch; }
-      .accept-actions .primary-btn,.accept-actions .ghost-btn{ width:100%; }
+      .topbar-inner{ flex-wrap:wrap; justify-content:center; gap:10px; }
+      .brand{ flex-direction:row; justify-content:center; }
+      .brand-subtitle{ display:none; }
+      .top-actions{ width:100%; justify-content:center; }
+
+      .hero{ padding:20px 16px 18px; border-radius:20px; }
+      .hero h1{ font-size:1.75rem; line-height:1.1; }
+      .hero p{ font-size:.93rem; }
+      .info-grid{ grid-template-columns:1fr; gap:10px; margin-top:14px; }
+      .info-chip{ padding:12px 14px; border-radius:14px; }
+
+      .terms-shell{ border-radius:20px; }
+      .terms-head{ padding:18px 16px; }
+      .terms-head-title{ font-size:.92rem; }
+      .toc{ padding:16px 16px 8px; }
+      .toc-grid{ grid-template-columns:1fr; gap:2px; }
+      .toc a{ padding:5px 0; font-size:.9rem; }
+
+      .section{ padding:20px 16px; }
+      .section h2{ font-size:1.45rem; }
+      .section p, .section li{ font-size:.93rem; line-height:1.75; }
+      .callout{ padding:12px 14px; border-radius:12px; }
+
+      .accept-panel{ padding:18px 16px; border-radius:20px; }
+      .accept-actions{ flex-direction:column; align-items:stretch; gap:14px; }
+      .accept-actions > div{ display:flex; flex-direction:column; gap:10px; }
+      .accept-actions .primary-btn,
+      .accept-actions .ghost-btn{ width:100%; text-align:center; }
+      .accept-note{ font-size:.88rem; }
+    }
+
+    @media (max-width: 420px){
+      .hero h1{ font-size:1.45rem; }
+      .section h2{ font-size:1.25rem; }
+      .ghost-btn, .primary-btn{ font-size:.72rem; padding:9px 13px; }
     }
   </style>
 </head>
