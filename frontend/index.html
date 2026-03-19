@@ -4551,6 +4551,7 @@
           function grabNext() {
             if (idx >= times.length) {
               URL.revokeObjectURL(url);
+              console.log("VIDEO FRAMES: estratti", frames.length, "frame da video di", duration, "secondi");
               resolve(frames);
               return;
             }
@@ -4584,6 +4585,7 @@
     async function checkVideoNSFW(file) {
       try {
         const frames = await extractVideoFrames(file, 4);
+        console.log("VIDEO NSFW: frames estratti =", frames.length);
         if (!frames.length) return { nsfw: false, label: "no_frames", confidence: 0 };
         for (const frame of frames) {
           const result = await checkImageNSFW(frame);
