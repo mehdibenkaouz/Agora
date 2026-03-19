@@ -1178,27 +1178,57 @@
     /* ==========================================
        RESPONSIVE
     ========================================== */
-    @media (max-width: 900px) {
-      .book-shell { height: min(80vh, 720px); }
+@media (max-width: 900px) {
+      .book-shell { height: min(75vh, 680px); }
       .book-spread { flex-direction: column; }
-      .book-gutter { width: 100%; height: 22px; flex: none; }
-      .flip-btn { top: auto; transform: none !important; bottom: 22px; }
-      .flip-btn.prev { left: 22px; }
-      .flip-btn.next { right: 22px; }
+      .book-gutter { width: 100%; height: 18px; flex: none; }
+      .flip-btn { top: auto; transform: none !important; bottom: 20px; }
+      .flip-btn.prev { left: 20px; }
+      .flip-btn.next { right: 20px; }
       .flip-btn:hover { transform: translateY(-2px) !important; }
       .flip-btn:disabled { transform: none !important; }
     }
 
     @media (max-width: 760px) {
       .topbar-inner { flex-wrap: wrap; justify-content: space-between; }
-      .top-links { width: 100%; order: 3; padding-bottom: 8px; gap: 18px; font-size: 0.72rem; }
-      .book-stage { padding: 28px 20px 24px; }
-      .page-inner { padding: 18px 18px 14px; }
+      .top-links { width: 100%; order: 3; padding-bottom: 8px; gap: 14px; font-size: 0.70rem; }
+
+      .page { padding: 10px 0 40px; }
+
+      .book-stage { padding: 20px 14px 18px; border-radius: 18px; }
+      .book-shell { height: min(72vh, 580px); }
+      .page-inner { padding: 14px 14px 12px; }
+      .page-content { font-size: 14.5px; }
+
+      .book-index-btn { top: 12px; right: 12px; font-size: 0.68rem; padding: 7px 12px; }
+      .index-panel { width: min(300px, calc(100% - 20px)); top: 48px; right: 10px; }
+
+      .blocked-section { padding: 16px 14px; border-radius: 16px; margin-top: 20px; }
+      .blocked-row { padding: 10px 12px; gap: 10px; }
+      .blocked-avatar { width: 32px; height: 32px; }
+
+      .danger-zone { padding: 16px 14px; margin-top: 20px; }
+      .danger-zone-btn { width: 100%; }
     }
 
     @media (max-width: 540px) {
+      .top-links { display: none; }
+      .brand-logo, .logo { height: 44px; width: 44px; }
+
+      .book-shell { height: min(70vh, 500px); }
+      .page-content { font-size: 14px; }
+
+      .flip-btn { width: 42px; height: 42px; bottom: 14px; }
       .flip-btn.prev { left: 10px; }
       .flip-btn.next { right: 10px; }
+
+      .profile-avatar-preview { width: 88px; height: 88px; }
+    }
+
+    @media (max-width: 400px) {
+      .book-shell { height: min(68vh, 440px); }
+      .flip-btn.prev { left: 6px; }
+      .flip-btn.next { right: 6px; }
     }
 
     /* ==========================================
@@ -1492,13 +1522,20 @@
   }
 
   @media (max-width: 760px){
-    .profile-grid{
-      grid-template-columns: 1fr;
+      .profile-grid{
+        grid-template-columns: 1fr;
+      }
+      .profile-avatar-box{
+        flex-direction: row;
+        align-items: center;
+        gap: 16px;
+      }
+      .profile-avatar-preview{
+        width: 90px;
+        height: 90px;
+        flex-shrink: 0;
+      }
     }
-    .profile-avatar-box{
-      align-items: flex-start;
-    }
-  }
 
   
     .account-btn.has-avatar{
