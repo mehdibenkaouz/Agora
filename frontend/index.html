@@ -1133,6 +1133,44 @@
     }
     .actions-left, .actions-right{ display:flex; align-items:center; gap:10px; }
 
+    .translate-lang-select {
+      font-size: 0.76rem;
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 8px;
+      background: transparent;
+      color: var(--muted);
+      padding: 3px 5px;
+      cursor: pointer;
+      height: 32px;
+    }
+    :root[data-theme="dark"] .translate-lang-select {
+      border-color: rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.55);
+    }
+    .translate-btn.is-on svg { fill: var(--brand); stroke: var(--brand); }
+    :root[data-theme="dark"] .translate-btn.is-on svg { fill: var(--gold); stroke: var(--gold); }
+
+    .translation-box {
+      margin: 8px 0 2px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,0.03);
+      font-size: 0.91rem;
+      line-height: 1.6;
+    }
+    :root[data-theme="dark"] .translation-box {
+      background: rgba(255,255,255,0.04);
+    }
+    .translation-label {
+      font-size: 0.70rem;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      opacity: 0.50;
+      margin-bottom: 5px;
+    }
+    .translation-text { color: var(--text); }
+
     .icon-btn{
       width: 40px;
       height: 40px;
@@ -4458,6 +4496,30 @@
             </div>
 
             <div class="actions-right">
+              <select class="translate-lang-select" title="Translate to" aria-label="Translation language">
+                <option value="it">🇮🇹 IT</option>
+                <option value="en">🇬🇧 EN</option>
+                <option value="es">🇪🇸 ES</option>
+                <option value="fr">🇫🇷 FR</option>
+                <option value="de">🇩🇪 DE</option>
+                <option value="pt">🇵🇹 PT</option>
+                <option value="ru">🇷🇺 RU</option>
+                <option value="zh">🇨🇳 ZH</option>
+                <option value="ar">🇸🇦 AR</option>
+                <option value="ja">🇯🇵 JA</option>
+                <option value="ko">🇰🇷 KO</option>
+                <option value="hi">🇮🇳 HI</option>
+                <option value="tr">🇹🇷 TR</option>
+                <option value="nl">🇳🇱 NL</option>
+                <option value="pl">🇵🇱 PL</option>
+                <option value="uk">🇺🇦 UK</option>
+                <option value="el">🇬🇷 EL</option>
+              </select>
+              <button class="icon-btn translate-btn" type="button" aria-label="Translate" title="Translate post">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" stroke-width="0.5" fill="currentColor"></path>
+                </svg>
+              </button>
               <button class="icon-btn save-btn ${st.saved ? "is-on" : ""}" ${canInteract ? "" : "disabled"} type="button" aria-label="Save">
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
@@ -4478,6 +4540,86 @@ const logicalBtn = card.querySelector(".logical-btn");
         const saveBtn = card.querySelector(".save-btn");
         const commentBtn = card.querySelector(".comment-btn");
         const quoteBtn = card.querySelector(".quote-btn");
+        const translateBtn = card.querySelector(".translate-btn");
+        const translateSelect = card.querySelector(".translate-lang-select");
+
+        // Preseleziona la lingua del browser
+        if (translateSelect) {
+          const browserLang = navigator.language.split("-")[0] || "en";
+          if ([...translateSelect.options].some(o => o.value === browserLang)) {
+            translateSelect.value = browserLang;
+          }
+          translateSelect.addEventListener("change", (e) => {
+            e.stopPropagation();
+            // Se la traduzione è già aperta, aggiornala con la nuova lingua
+            const existing = card.querySelector(".translation-box");
+            if (existing) {
+              existing.remove();
+              translateBtn.classList.remove("is-on");
+              translateBtn.click();
+            }
+          });
+        }
+
+        if (translateBtn) {
+          translateBtn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+            const targetLang = translateSelect ? translateSelect.value : (navigator.language.split("-")[0] || "en");
+
+            // Toggle: stessa lingua già aperta → chiudi
+            const existing = card.querySelector(".translation-box");
+            if (existing && existing.dataset.lang === targetLang) {
+              existing.remove();
+              translateBtn.classList.remove("is-on");
+              return;
+            }
+            if (existing) existing.remove();
+
+            translateBtn.disabled = true;
+            translateBtn.classList.add("is-on");
+
+            // Estrai testo plain dal contenuto del post
+            const tmp = document.createElement("div");
+            tmp.innerHTML = p.content || "";
+            const plainText = (tmp.textContent || "").trim();
+            if (!plainText) { translateBtn.disabled = false; return; }
+
+            // Box di traduzione
+            const box = document.createElement("div");
+            box.className = "translation-box";
+            box.dataset.lang = targetLang;
+            box.innerHTML = `<div class="translation-label">Translating…</div>`;
+            const actions = card.querySelector(".post-actions");
+            card.insertBefore(box, actions);
+
+            try {
+              const apiUrl =
+                "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" +
+                encodeURIComponent(targetLang) +
+                "&dt=t&q=" + encodeURIComponent(plainText);
+
+              const res = await fetch(apiUrl);
+              const data = await res.json();
+
+              const translated = data[0]
+                .map(chunk => chunk[0])
+                .filter(Boolean)
+                .join("");
+
+              const detectedLang = (data[2] || "").toUpperCase();
+
+              box.innerHTML = `
+                <div class="translation-label">Translated${detectedLang ? " from " + detectedLang : ""} · Google Translate</div>
+                <div class="translation-text">${escapeHtml(translated)}</div>
+              `;
+            } catch (err) {
+              box.innerHTML = `<div class="translation-label">Translation failed. Try again.</div>`;
+              translateBtn.classList.remove("is-on");
+            } finally {
+              translateBtn.disabled = false;
+            }
+          });
+        }
 
         const menuBtn = card.querySelector(".post-menu-btn");
         const menu = card.querySelector(".post-menu");
