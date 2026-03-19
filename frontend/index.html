@@ -1152,6 +1152,64 @@
       background: #0c1620;
       color: var(--gold);
     }
+
+
+    .lang-picker { position: relative; display: inline-flex; align-items: center; }
+    .lang-picker-btn {
+      display: flex; align-items: center; gap: 4px;
+      height: 32px; padding: 0 7px;
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      font-size: 0.76rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+    :root[data-theme="dark"] .lang-picker-btn {
+      border-color: rgba(255,255,255,0.15);
+      color: var(--gold);
+    }
+    .lang-picker-btn:hover { background: rgba(0,0,0,0.05); }
+    :root[data-theme="dark"] .lang-picker-btn:hover { background: rgba(255,255,255,0.07); }
+    .lang-flag { width: 18px; height: auto; border-radius: 2px; display: block; }
+
+    .lang-picker-dropdown {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 6px);
+      right: 0;
+      background: #fff;
+      border: 1px solid rgba(0,0,0,0.12);
+      border-radius: 10px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      z-index: 50;
+      min-width: 110px;
+      padding: 4px;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+    :root[data-theme="dark"] .lang-picker-dropdown {
+      background: #0c1620;
+      border-color: rgba(255,255,255,0.12);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.50);
+    }
+    .lang-picker-dropdown.open { display: block; }
+
+    .lang-option {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px;
+      border-radius: 7px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .lang-option:hover { background: rgba(0,0,0,0.05); }
+    :root[data-theme="dark"] .lang-option { color: var(--gold); }
+    :root[data-theme="dark"] .lang-option:hover { background: rgba(255,255,255,0.07); }
+    .lang-option.selected { font-weight: 700; }
+    
     .translate-btn.is-on svg { fill: var(--brand); stroke: var(--brand); }
     :root[data-theme="dark"] .translate-btn.is-on svg { fill: var(--gold); stroke: var(--gold); }
 
@@ -4501,25 +4559,65 @@
             </div>
 
             <div class="actions-right">
-              <select class="translate-lang-select" title="Translate to" aria-label="Translation language">
-                <option value="it">🇮🇹 IT</option>
-                <option value="en">🇬🇧 EN</option>
-                <option value="es">🇪🇸 ES</option>
-                <option value="fr">🇫🇷 FR</option>
-                <option value="de">🇩🇪 DE</option>
-                <option value="pt">🇵🇹 PT</option>
-                <option value="ru">🇷🇺 RU</option>
-                <option value="zh">🇨🇳 ZH</option>
-                <option value="ar">🇸🇦 AR</option>
-                <option value="ja">🇯🇵 JA</option>
-                <option value="ko">🇰🇷 KO</option>
-                <option value="hi">🇮🇳 HI</option>
-                <option value="tr">🇹🇷 TR</option>
-                <option value="nl">🇳🇱 NL</option>
-                <option value="pl">🇵🇱 PL</option>
-                <option value="uk">🇺🇦 UK</option>
-                <option value="el">🇬🇷 EL</option>
-              </select>
+<div class="lang-picker">
+                <button class="lang-picker-btn" type="button" aria-label="Select language">
+                  <img src="https://flagcdn.com/w20/gb.png" class="lang-flag" alt="EN">
+                  <span class="lang-code">EN</span>
+                </button>
+                <div class="lang-picker-dropdown">
+                  <div class="lang-option" data-lang="it" data-flag="it">
+                    <img src="https://flagcdn.com/w20/it.png" class="lang-flag" alt=""> IT — Italiano
+                  </div>
+                  <div class="lang-option" data-lang="en" data-flag="gb">
+                    <img src="https://flagcdn.com/w20/gb.png" class="lang-flag" alt=""> EN — English
+                  </div>
+                  <div class="lang-option" data-lang="es" data-flag="es">
+                    <img src="https://flagcdn.com/w20/es.png" class="lang-flag" alt=""> ES — Español
+                  </div>
+                  <div class="lang-option" data-lang="fr" data-flag="fr">
+                    <img src="https://flagcdn.com/w20/fr.png" class="lang-flag" alt=""> FR — Français
+                  </div>
+                  <div class="lang-option" data-lang="de" data-flag="de">
+                    <img src="https://flagcdn.com/w20/de.png" class="lang-flag" alt=""> DE — Deutsch
+                  </div>
+                  <div class="lang-option" data-lang="pt" data-flag="pt">
+                    <img src="https://flagcdn.com/w20/pt.png" class="lang-flag" alt=""> PT — Português
+                  </div>
+                  <div class="lang-option" data-lang="ru" data-flag="ru">
+                    <img src="https://flagcdn.com/w20/ru.png" class="lang-flag" alt=""> RU — Русский
+                  </div>
+                  <div class="lang-option" data-lang="zh" data-flag="cn">
+                    <img src="https://flagcdn.com/w20/cn.png" class="lang-flag" alt=""> ZH — 中文
+                  </div>
+                  <div class="lang-option" data-lang="ar" data-flag="sa">
+                    <img src="https://flagcdn.com/w20/sa.png" class="lang-flag" alt=""> AR — العربية
+                  </div>
+                  <div class="lang-option" data-lang="ja" data-flag="jp">
+                    <img src="https://flagcdn.com/w20/jp.png" class="lang-flag" alt=""> JA — 日本語
+                  </div>
+                  <div class="lang-option" data-lang="ko" data-flag="kr">
+                    <img src="https://flagcdn.com/w20/kr.png" class="lang-flag" alt=""> KO — 한국어
+                  </div>
+                  <div class="lang-option" data-lang="hi" data-flag="in">
+                    <img src="https://flagcdn.com/w20/in.png" class="lang-flag" alt=""> HI — हिन्दी
+                  </div>
+                  <div class="lang-option" data-lang="tr" data-flag="tr">
+                    <img src="https://flagcdn.com/w20/tr.png" class="lang-flag" alt=""> TR — Türkçe
+                  </div>
+                  <div class="lang-option" data-lang="nl" data-flag="nl">
+                    <img src="https://flagcdn.com/w20/nl.png" class="lang-flag" alt=""> NL — Nederlands
+                  </div>
+                  <div class="lang-option" data-lang="pl" data-flag="pl">
+                    <img src="https://flagcdn.com/w20/pl.png" class="lang-flag" alt=""> PL — Polski
+                  </div>
+                  <div class="lang-option" data-lang="uk" data-flag="ua">
+                    <img src="https://flagcdn.com/w20/ua.png" class="lang-flag" alt=""> UK — Українська
+                  </div>
+                  <div class="lang-option" data-lang="el" data-flag="gr">
+                    <img src="https://flagcdn.com/w20/gr.png" class="lang-flag" alt=""> EL — Ελληνικά
+                  </div>
+                </div>
+              </div>
               <button class="icon-btn translate-btn" type="button" aria-label="Translate" title="Translate post">
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" stroke-width="0.5" fill="currentColor"></path>
@@ -4545,23 +4643,114 @@ const logicalBtn = card.querySelector(".logical-btn");
         const saveBtn = card.querySelector(".save-btn");
         const commentBtn = card.querySelector(".comment-btn");
         const quoteBtn = card.querySelector(".quote-btn");
-        const translateBtn = card.querySelector(".translate-btn");
-        const translateSelect = card.querySelector(".translate-lang-select");
+        const translateBtn  = card.querySelector(".translate-btn");
+        const langPickerBtn = card.querySelector(".lang-picker-btn");
+        const langDropdown  = card.querySelector(".lang-picker-dropdown");
+        const langOptions   = card.querySelectorAll(".lang-option");
+        let currentLang = "en";
 
-        // Preseleziona la lingua del browser
-        if (translateSelect) {
-          const browserLang = navigator.language.split("-")[0] || "en";
-          if ([...translateSelect.options].some(o => o.value === browserLang)) {
-            translateSelect.value = browserLang;
-          }
-          translateSelect.addEventListener("change", (e) => {
+        // Preseleziona lingua del browser
+        const browserLang = navigator.language.split("-")[0] || "en";
+        const matchOption = [...langOptions].find(o => o.dataset.lang === browserLang);
+        if (matchOption) {
+          currentLang = browserLang;
+          const flag = langPickerBtn.querySelector(".lang-flag");
+          const code = langPickerBtn.querySelector(".lang-code");
+          if (flag) flag.src = "https://flagcdn.com/w20/" + matchOption.dataset.flag + ".png";
+          if (code) code.textContent = browserLang.toUpperCase();
+          matchOption.classList.add("selected");
+        } else {
+          card.querySelector(".lang-option[data-lang='en']")?.classList.add("selected");
+        }
+
+        // Apri/chiudi dropdown
+        langPickerBtn?.addEventListener("click", (e) => {
+          e.stopPropagation();
+          // Chiudi tutti gli altri dropdown aperti
+          document.querySelectorAll(".lang-picker-dropdown.open").forEach(d => {
+            if (d !== langDropdown) d.classList.remove("open");
+          });
+          langDropdown.classList.toggle("open");
+        });
+
+        // Selezione lingua
+        langOptions.forEach(opt => {
+          opt.addEventListener("click", (e) => {
             e.stopPropagation();
-            // Se la traduzione è già aperta, aggiornala con la nuova lingua
+            currentLang = opt.dataset.lang;
+            const flag = langPickerBtn.querySelector(".lang-flag");
+            const code = langPickerBtn.querySelector(".lang-code");
+            if (flag) flag.src = "https://flagcdn.com/w20/" + opt.dataset.flag + ".png";
+            if (code) code.textContent = currentLang.toUpperCase();
+            langOptions.forEach(o => o.classList.remove("selected"));
+            opt.classList.add("selected");
+            langDropdown.classList.remove("open");
+
+            // Se la traduzione è già aperta, aggiornala
             const existing = card.querySelector(".translation-box");
             if (existing) {
               existing.remove();
               translateBtn.classList.remove("is-on");
               translateBtn.click();
+            }
+          });
+        });
+
+        // Chiudi dropdown cliccando fuori
+        document.addEventListener("click", () => langDropdown?.classList.remove("open"));
+
+        if (translateBtn) {
+          translateBtn.addEventListener("click", async (e) => {
+            e.stopPropagation();
+
+            const existing = card.querySelector(".translation-box");
+            if (existing && existing.dataset.lang === currentLang) {
+              existing.remove();
+              translateBtn.classList.remove("is-on");
+              return;
+            }
+            if (existing) existing.remove();
+
+            translateBtn.disabled = true;
+            translateBtn.classList.add("is-on");
+
+            const tmp = document.createElement("div");
+            tmp.innerHTML = p.content || "";
+            const plainText = (tmp.textContent || "").trim();
+            if (!plainText) { translateBtn.disabled = false; return; }
+
+            const box = document.createElement("div");
+            box.className = "translation-box";
+            box.dataset.lang = currentLang;
+            box.innerHTML = `<div class="translation-label">Translating…</div>`;
+            const actions = card.querySelector(".post-actions");
+            card.insertBefore(box, actions);
+
+            try {
+              const apiUrl =
+                "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" +
+                encodeURIComponent(currentLang) +
+                "&dt=t&q=" + encodeURIComponent(plainText);
+
+              const res = await fetch(apiUrl);
+              const data = await res.json();
+
+              const translated = data[0]
+                .map(chunk => chunk[0])
+                .filter(Boolean)
+                .join("");
+
+              const detectedLang = (data[2] || "").toUpperCase();
+
+              box.innerHTML = `
+                <div class="translation-label">Translated${detectedLang ? " from " + detectedLang : ""} · Google Translate</div>
+                <div class="translation-text">${escapeHtml(translated)}</div>
+              `;
+            } catch (err) {
+              box.innerHTML = `<div class="translation-label">Translation failed. Try again.</div>`;
+              translateBtn.classList.remove("is-on");
+            } finally {
+              translateBtn.disabled = false;
             }
           });
         }
