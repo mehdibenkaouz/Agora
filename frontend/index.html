@@ -1145,7 +1145,12 @@
     }
     :root[data-theme="dark"] .translate-lang-select {
       border-color: rgba(255,255,255,0.15);
-      color: rgba(255,255,255,0.55);
+      color: var(--gold);
+      background: #0c1620;
+    }
+    :root[data-theme="dark"] .translate-lang-select option {
+      background: #0c1620;
+      color: var(--gold);
     }
     .translate-btn.is-on svg { fill: var(--brand); stroke: var(--brand); }
     :root[data-theme="dark"] .translate-btn.is-on svg { fill: var(--gold); stroke: var(--gold); }
