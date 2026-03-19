@@ -1883,13 +1883,31 @@
 </div>
 
       <!-- Danger Zone -->
-      <div class="danger-zone" id="dangerZone" style="display:none;">
-        <div class="danger-zone-title">Danger zone</div>
-        <div class="danger-zone-body">
-          <p class="danger-zone-desc">Deleting your account is <strong>permanent and irreversible</strong>. All your posts, comments, saved items, media, blocks, and notifications will be erased.</p>
-          <button id="deleteAccountBtn" class="danger-zone-btn" type="button">Delete my account</button>
-        </div>
-      </div>
+<div class="danger-zone" id="dangerZone" style="display:none;">
+  <div class="danger-zone-title">Danger zone</div>
+  <div class="danger-zone-body">
+
+    <p class="danger-zone-desc">
+      <strong>Delete all your posts.</strong> This permanently removes every post you have written.
+      Comments left by others will be soft-deleted but retained as required by law.
+    </p>
+    <button id="deleteAllPostsBtn" class="danger-zone-btn" type="button">Delete all my posts</button>
+
+    <hr style="border:none;border-top:1px solid rgba(200,50,50,0.18);margin:18px 0;">
+
+    <p class="danger-zone-desc">
+      <strong>Delete all your comments.</strong> Your comments will be hidden from public view immediately.
+      As required by applicable law, the underlying data is retained for the legally mandated retention period before permanent erasure.
+    </p>
+    <button id="deleteAllCommentsBtn" class="danger-zone-btn" type="button">Delete all my comments</button>
+
+    <hr style="border:none;border-top:1px solid rgba(200,50,50,0.18);margin:18px 0;">
+
+    <p class="danger-zone-desc">Deleting your account is <strong>permanent and irreversible</strong>. All your posts, comments, saved items, media, blocks, and notifications will be erased.</p>
+    <button id="deleteAccountBtn" class="danger-zone-btn" type="button">Delete my account</button>
+
+  </div>
+</div>
 
     </div>
   </section>
@@ -3156,7 +3174,97 @@ if (profileForm){
   window.addEventListener("resize",resize,{passive:true});
   resize();setTimeout(spawnMeteor,rand(3000,10000));tick();
 })();
+/* ===== Delete All Posts ===== */
+(function initDeleteAllPosts(){
+  const btn = document.getElementById("deleteAllPostsBtn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    if (!CURRENT_USER) return;
+    const modal    = document.getElementById("confirmModal");
+    const titleEl  = document.getElementById("confirmTitle");
+    const textEl   = document.getElementById("confirmText");
+    const okEl     = document.getElementById("confirmOk");
+    const cancelEl = document.getElementById("confirmCancel");
+    const backdrop = document.getElementById("confirmBackdrop");
+    let cleanup = null;
+    function closeConfirm(){
+      modal.classList.remove("open"); modal.setAttribute("aria-hidden","true");
+      if (cleanup){ cleanup(); cleanup = null; }
+    }
+    function openConfirm(t, msg, okLabel, onOk){
+      titleEl.textContent = t; textEl.innerHTML = msg; okEl.textContent = okLabel;
+      modal.classList.add("open"); modal.setAttribute("aria-hidden","false");
+      const h1 = () => { closeConfirm(); onOk(); };
+      const h2 = () => closeConfirm();
+      okEl.addEventListener("click", h1, {once:true});
+      cancelEl.addEventListener("click", h2, {once:true});
+      backdrop.addEventListener("click", h2, {once:true});
+      cleanup = () => { okEl.removeEventListener("click",h1); cancelEl.removeEventListener("click",h2); backdrop.removeEventListener("click",h2); };
+    }
+    openConfirm(
+      "Delete all posts?",
+      "This will <strong>permanently delete every post</strong> you have written. This action <strong>cannot be undone</strong>.",
+      "Yes, delete all posts",
+      async () => {
+        btn.disabled = true; btn.textContent = "Deleting…";
+        try {
+          await api("/api/my/posts", { method:"DELETE", body: JSON.stringify({ confirm:"DELETE_ALL_MY_POSTS" }) });
+          POSTS = []; spreadIndex = 0; renderSpread();
+          btn.textContent = "All posts deleted";
+        } catch(err) {
+          btn.disabled = false; btn.textContent = "Delete all my posts";
+          alert("Error: " + (err?.message || err));
+        }
+      }
+    );
+  });
+})();
 
+/* ===== Delete All Comments ===== */
+(function initDeleteAllComments(){
+  const btn = document.getElementById("deleteAllCommentsBtn");
+  if (!btn) return;
+  btn.addEventListener("click", () => {
+    if (!CURRENT_USER) return;
+    const modal    = document.getElementById("confirmModal");
+    const titleEl  = document.getElementById("confirmTitle");
+    const textEl   = document.getElementById("confirmText");
+    const okEl     = document.getElementById("confirmOk");
+    const cancelEl = document.getElementById("confirmCancel");
+    const backdrop = document.getElementById("confirmBackdrop");
+    let cleanup = null;
+    function closeConfirm(){
+      modal.classList.remove("open"); modal.setAttribute("aria-hidden","true");
+      if (cleanup){ cleanup(); cleanup = null; }
+    }
+    function openConfirm(t, msg, okLabel, onOk){
+      titleEl.textContent = t; textEl.innerHTML = msg; okEl.textContent = okLabel;
+      modal.classList.add("open"); modal.setAttribute("aria-hidden","false");
+      const h1 = () => { closeConfirm(); onOk(); };
+      const h2 = () => closeConfirm();
+      okEl.addEventListener("click", h1, {once:true});
+      cancelEl.addEventListener("click", h2, {once:true});
+      backdrop.addEventListener("click", h2, {once:true});
+      cleanup = () => { okEl.removeEventListener("click",h1); cancelEl.removeEventListener("click",h2); backdrop.removeEventListener("click",h2); };
+    }
+    openConfirm(
+      "Delete all comments?",
+      "Your comments will be <strong>hidden immediately</strong> from public view.<br><br>As required by applicable law, the underlying data is retained for the legally mandated retention period before permanent erasure.",
+      "Yes, hide all my comments",
+      async () => {
+        btn.disabled = true; btn.textContent = "Processing…";
+        try {
+          await api("/api/my/comments", { method:"DELETE", body: JSON.stringify({ confirm:"DELETE_ALL_MY_COMMENTS" }) });
+          btn.textContent = "All comments hidden";
+        } catch(err) {
+          btn.disabled = false; btn.textContent = "Delete all my comments";
+          alert("Error: " + (err?.message || err));
+        }
+      }
+    );
+  });
+  
+})();
 loadPosts();
 
 /* ===== SAVED BOOK ENGINE ===== */
