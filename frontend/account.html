@@ -2564,6 +2564,19 @@ function renderPage(side, post, pageNo){
   contentEl.innerHTML = sanitizeForReader(post.content);
   numEl.textContent = String(pageNo);
   idEl.textContent = post.id ? ("#" + String(post.id).slice(0,8)) : "";
+
+  // Pulsante elimina post singolo (solo se il libro è dell'utente loggato)
+  const existingBtn = contentEl.parentElement.querySelector(".delete-post-btn");
+  if (existingBtn) existingBtn.remove();
+
+  if (post && CURRENT_USER && !VIEW_USER_ID) {
+    const delBtn = document.createElement("button");
+    delBtn.className = "delete-post-btn danger-zone-btn";
+    delBtn.textContent = "Delete this post";
+    delBtn.style.cssText = "margin-top:12px; font-size:0.75rem; padding:7px 14px;";
+    delBtn.addEventListener("click", () => deleteOnePost(post.id, delBtn));
+    contentEl.parentElement.insertBefore(delBtn, numEl.closest(".page-bottom") || contentEl.nextSibling);
+  }
 }
 
 function renderSpread(){
@@ -3265,6 +3278,60 @@ if (profileForm){
   });
   
 })();
+
+/* ===== Delete single post ===== */
+async function deleteOnePost(postId, btn) {
+  const modal    = document.getElementById("confirmModal");
+  const titleEl  = document.getElementById("confirmTitle");
+  const textEl   = document.getElementById("confirmText");
+  const okEl     = document.getElementById("confirmOk");
+  const cancelEl = document.getElementById("confirmCancel");
+  const backdrop = document.getElementById("confirmBackdrop");
+
+  let cleanup = null;
+  function closeConfirm() {
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+    if (cleanup) { cleanup(); cleanup = null; }
+  }
+
+  titleEl.textContent = "Delete this post?";
+  textEl.innerHTML = "This post will be <strong>permanently deleted</strong>. This action cannot be undone.";
+  okEl.textContent = "Yes, delete";
+  modal.classList.add("open");
+  modal.setAttribute("aria-hidden", "false");
+
+  await new Promise((resolve) => {
+    const onOk     = () => { closeConfirm(); resolve(true); };
+    const onCancel = () => { closeConfirm(); resolve(false); };
+    okEl.addEventListener("click", onOk, { once: true });
+    cancelEl.addEventListener("click", onCancel, { once: true });
+    backdrop.addEventListener("click", onCancel, { once: true });
+    cleanup = () => {
+      okEl.removeEventListener("click", onOk);
+      cancelEl.removeEventListener("click", onCancel);
+      backdrop.removeEventListener("click", onCancel);
+    };
+  }).then(async (confirmed) => {
+    if (!confirmed) return;
+    btn.disabled = true;
+    btn.textContent = "Deleting…";
+    try {
+      await api("/api/posts/" + encodeURIComponent(postId), { method: "DELETE" });
+      POSTS = POSTS.filter(p => p.id !== postId);
+      // Se lo spread corrente è ora vuoto, torna indietro
+      if (spreadIndex > 0 && spreadIndex >= Math.ceil(POSTS.length / 2)) {
+        spreadIndex = Math.max(0, Math.ceil(POSTS.length / 2) - 1);
+      }
+      renderSpread();
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = "Delete this post";
+      alert("Error: " + (err?.message || err));
+    }
+  });
+}
+  
 loadPosts();
 
 /* ===== SAVED BOOK ENGINE ===== */
