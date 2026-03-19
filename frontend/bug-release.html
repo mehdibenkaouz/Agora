@@ -782,22 +782,24 @@
         if (logo) logo.src = logo.dataset.light;
       }
     }
-    // function getPreferredTheme() {
-    //   const saved = localStorage.getItem(THEME_KEY);
-    //   if (saved === "dark" || saved === "light") return saved;
-    //   return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    // }
-    // function syncThemeUi() {
-    //   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-    //   if (themeToggleBtn) themeToggleBtn.textContent = isDark ? "Light mode" : "Dark mode";
-    // }
-    // function toggleTheme() {
-    //   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-    //   const next = isDark ? "light" : "dark";
-    //   localStorage.setItem(THEME_KEY, next);
-    //   applyTheme(next);
-    //   syncThemeUi();
-    // }
+    function getPreferredTheme() {
+      const saved = localStorage.getItem(THEME_KEY);
+      if (saved === "dark" || saved === "light") return saved;
+      return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    
+    function syncThemeUi() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      if (themeToggleBtn) themeToggleBtn.textContent = isDark ? "Light mode" : "Dark mode";
+    }
+    
+    function toggleTheme() {
+      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
+      const next = isDark ? "light" : "dark";
+      localStorage.setItem(THEME_KEY, next);
+      applyTheme(next);
+      syncThemeUi();
+    }
 
     // ── MENU ─────────────────────────────────────────────────
     function openMenu()  { accountMenu.classList.add("open"); accountBtn.setAttribute("aria-expanded","true"); accountMenu.setAttribute("aria-hidden","false"); }
@@ -1052,14 +1054,16 @@
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMenu(); });
 
     // ── INIT ─────────────────────────────────────────────────
-    applyTheme(getPreferredTheme());
-    syncThemeUi();
-    refreshMe();
-
-    setInterval(() => {
-      loadBugs();
-      loadReleases();
-    }, 30000);
+    document.addEventListener("DOMContentLoaded", async () => {
+      applyTheme(getPreferredTheme());
+      syncThemeUi();
+      await refreshMe();
+    
+      setInterval(() => {
+        loadBugs();
+        loadReleases();
+      }, 30000);
+    });
   </script>
 </body>
 </html>
