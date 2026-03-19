@@ -4512,23 +4512,117 @@
       return out; // { ok:true, key, url }
     }
 
-    async function uploadAllSelectedImagesAndSwapSrc() {
+    /* ===== NSFW Pre-check ===== */
+    async function checkImageNSFW(file) {
+      try {
+        const fd = new FormData();
+        fd.append("file", file, file.name || "image.png");
+        const res = await api("/api/media/nsfw-check", { method: "POST", body: fd });
+        return res;
+      } catch (err) {
+        console.warn("NSFW check failed (allowing upload):", err);
+        return { nsfw: false, confidence: 0, label: "safe" };
+      }
+    }
+
+    /* Estrae N frame da un video come File (blob jpeg) */
+    function extractVideoFrames(file, numFrames = 4) {
+      return new Promise((resolve) => {
+        const video = document.createElement("video");
+        video.preload = "auto";
+        video.muted = true;
+        video.playsInline = true;
+        const url = URL.createObjectURL(file);
+        video.src = url;
+
+        video.addEventListener("loadedmetadata", () => {
+          const duration = video.duration || 1;
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          const frames = [];
+          let idx = 0;
+
+          // Calcola i timestamp dei frame da estrarre (evita 0 e fine)
+          const times = [];
+          for (let i = 0; i < numFrames; i++) {
+            times.push(Math.min(duration * 0.95, (duration / (numFrames + 1)) * (i + 1)));
+          }
+
+          function grabNext() {
+            if (idx >= times.length) {
+              URL.revokeObjectURL(url);
+              resolve(frames);
+              return;
+            }
+            video.currentTime = times[idx];
+          }
+
+          video.addEventListener("seeked", () => {
+            canvas.width = video.videoWidth || 640;
+            canvas.height = video.videoHeight || 480;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((blob) => {
+              if (blob) {
+                frames.push(new File([blob], `frame_${idx}.jpg`, { type: "image/jpeg" }));
+              }
+              idx++;
+              grabNext();
+            }, "image/jpeg", 0.85);
+          });
+
+          grabNext();
+        });
+
+        // Timeout di sicurezza: se il video non carica, non bloccare
+        setTimeout(() => {
+          URL.revokeObjectURL(url);
+          resolve([]);
+        }, 15000);
+      });
+    }
+
+    async function checkVideoNSFW(file) {
+      try {
+        const frames = await extractVideoFrames(file, 4);
+        if (!frames.length) return { nsfw: false, label: "no_frames", confidence: 0 };
+        for (const frame of frames) {
+          const result = await checkImageNSFW(frame);
+          if (result && result.nsfw) {
+            return { nsfw: true, label: result.label, confidence: result.confidence, frame_index: frames.indexOf(frame) };
+          }
+        }
+        return { nsfw: false, label: "safe", confidence: 0 };
+      } catch (err) {
+        console.warn("Video NSFW check failed (allowing upload):", err);
+        return { nsfw: false, label: "error", confidence: 0 };
+      }
+    }
+async function uploadAllSelectedImagesAndSwapSrc() {
       for (const it of selectedImages) {
-        if (it.uploadedUrl) continue;
+        if (it.uploadedUrl || it.blocked) continue;
 
-
-        // NSFW pre-screening (solo immagini)
-        if (it.file && it.file.type && it.file.type.startsWith("image/")) {
+        // ── NSFW pre-screening ──
+        if (it.file && it.file.type) {
           try {
-            const nsfwResult = await checkImageNSFW(it.file);
+            let nsfwResult = null;
+
+            if (it.file.type.startsWith("image/")) {
+              nsfwResult = await checkImageNSFW(it.file);
+            } else if (it.file.type.startsWith("video/")) {
+              nsfwResult = await checkVideoNSFW(it.file);
+            }
+
             if (nsfwResult && nsfwResult.nsfw) {
               const node = createPostContent.querySelector(`[data-img-id="${it.id}"]`);
               if (node) node.remove();
               it.blocked = true;
-              alert("⚠️ Image blocked: flagged as inappropriate content (NSFW).");
+              const mediaType = it.file.type.startsWith("video/") ? "Video" : "Image";
+              alert(`⚠️ ${mediaType} blocked: flagged as inappropriate content (NSFW).`);
               continue;
             }
-          } catch (err) { console.warn("NSFW check error:", err); }
+          } catch (err) {
+            console.warn("NSFW check error, allowing upload:", err);
+          }
         }
 
         const up = await uploadImageToR2(it.file);
@@ -4543,6 +4637,8 @@
         const vidNode = createPostContent.querySelector(`.video-node[data-img-id="${it.id}"] video`);
         if (vidNode) vidNode.src = it.uploadedUrl;
       }
+
+      // Rimuovi media bloccati dalla lista
       for (let i = selectedImages.length - 1; i >= 0; i--) {
         if (selectedImages[i].blocked) selectedImages.splice(i, 1);
       }
