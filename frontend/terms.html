@@ -54,6 +54,8 @@
     html,body{
       margin:0;
       padding:0;
+      overflow-x:hidden;
+      max-width:100%;
       min-height:100%;
       background:var(--bg);
       color:var(--text);
@@ -257,8 +259,8 @@
 
     :root[data-theme="dark"] .info-chip{ background:rgba(255,255,255,0.03); }
 
-    .info-chip strong{
-      display:block;
+    .info-chip > strong{
+      display:block
       font-family:'Cinzel', serif;
       font-size:.76rem;
       letter-spacing:.08em;
