@@ -610,6 +610,9 @@
     <button class="tab-btn" data-tab="releases">
       ◎ Release
     </button>
+    <button class="tab-btn" data-tab="postreports">
+      🚩 Post Reports <span class="tab-count" id="cnt-postreports">0</span>
+    </button>
   </div>
 
   <!-- SPAM TAB -->
@@ -755,6 +758,32 @@
         <tr><td colspan="8" style="text-align:center;color:var(--muted)">Nessuna segnalazione</td></tr>
       </tbody>
     </table>
+  </div>
+
+  <!-- POST REPORTS TAB -->
+  <div class="tab-panel" id="tab-postreports">
+    <div class="section-header">
+      <div class="section-title">Post Reports <span id="postreports-subtitle">segnalazioni contenuti</span></div>
+      <button class="refresh-btn" onclick="loadPostReports()">↻ Aggiorna</button>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Segnalatore</th>
+          <th>Autore Post</th>
+          <th>Motivo</th>
+          <th>Contenuto (anteprima)</th>
+          <th>Tot. Report</th>
+          <th>Stato</th>
+          <th>Data</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody id="postreports-tbody">
+        <tr><td colspan="8" style="text-align:center;color:var(--muted)">Nessuna segnalazione</td></tr>
+      </tbody>
+    </table>
+
   </div>
 
   <!-- RELEASES TAB -->
@@ -927,7 +956,7 @@
 
   // ── LOAD ALL ────────────────────────────────────────────
   async function loadAll() {
-    await Promise.all([loadSpam(), loadUsers(), loadComplaints(), loadBugs(), loadReleases(), loadTagReports()]);
+    await Promise.all([loadSpam(), loadUsers(), loadComplaints(), loadBugs(), loadReleases(), loadTagReports(), loadPostReports()]);
   }
 
   // ── FORMAT ──────────────────────────────────────────────
@@ -1305,6 +1334,122 @@
       toast("Tag riattivato");
       loadTagReports();
     } catch(e) { toast("Errore: " + e.message); }
+  }
+  // ════════════════════════════════════════════════════════
+  // ── POST REPORTS ────────────────────────────────────────
+  // ════════════════════════════════════════════════════════
+
+
+  const postReportReasonLabels = {
+    
+    nsfw_porn: "🔞 NSFW / Porn",
+    spam: "📨 Spam",
+    hate_speech: "🚫 Hate speech",
+    harassment: "⚠️ Harassment",
+    violence: "🩸 Violence",
+    misinformation: "❌ Misinfo",
+    other: "📝 Other",
+    nsfw_auto: "🤖 NSFW (auto)"
+  };
+
+  async function loadPostReports() {
+    const tbody = document.getElementById("postreports-tbody");
+    if (!tbody) return;
+    tbody.innerHTML = `<tr class="loading-row"><td colspan="8">CARICAMENTO...</td></tr>`;
+    try {
+      const data = await adminApi("/api/admin/post-reports");
+      if (!data.ok) { tbody.innerHTML = `<tr><td colspan="8">Errore caricamento</td></tr>`; return; }
+
+      const reports = data.reports || [];
+      const cntEl = document.getElementById("cnt-postreports");
+      if (cntEl) cntEl.textContent = reports.length;
+
+      if (!reports.length) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted)">Nessuna segnalazione</td></tr>`;
+        return;
+      }
+
+      // Raggruppa per post per mostrare il conteggio reale
+      tbody.innerHTML = reports.map(r => {
+        // Estrai anteprima testo dal contenuto HTML
+        const tmp = document.createElement("div");
+        tmp.innerHTML = r.content || "";
+        const preview = (tmp.textContent || "").trim().substring(0, 120);
+        const hasImg = /<img\b/i.test(r.content || "");
+
+        return `
+        <tr>
+          <td>
+            <div class="user-cell">
+              ${avatarHtml(null, r.reporter_name)}
+              <div>
+                <div class="user-name">${esc(r.reporter_name)}</div>
+                <div class="user-email">${esc(r.reporter_email)}</div>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="user-cell">
+              ${avatarHtml(r.author_picture, r.author_name)}
+              <div>
+                <div class="user-name">${esc(r.author_name)}</div>
+                <div class="user-email">${esc(r.author_email)}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="badge badge-${r.reason === 'nsfw_porn' || r.reason === 'nsfw_auto' ? 'spam' : 'pending'}">${postReportReasonLabels[r.reason] || r.reason}</span></td>
+          <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(preview)}">
+            ${hasImg ? '🖼 ' : ''}${esc(preview) || '<em style="color:var(--muted)">[solo immagine]</em>'}
+          </td>
+          <td><strong>${r.total_reports}</strong></td>
+          <td>${r.post_hidden
+            ? '<span class="badge badge-spam">Nascosto</span>'
+            : '<span class="badge badge-active">Visibile</span>'
+          }</td>
+          <td>${fmtDate(r.created_at)}</td>
+          <td style="white-space:nowrap">
+            ${r.post_hidden
+              ? `<button class="action-btn" onclick="adminUnhidePost('${r.post_id}')">Ripristina</button>`
+              : `<button class="action-btn warn" onclick="adminHidePost('${r.post_id}')">Nascondi</button>`
+            }
+            <button class="action-btn danger" onclick="adminDeletePost('${r.post_id}', '${esc(r.author_name)}')">✕ Elimina</button>
+          </td>
+        </tr>`;
+      }).join("");
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="8">Errore: ${e.message}</td></tr>`;
+    }
+  }
+
+  async function adminHidePost(postId) {
+    openConfirm("Nascondi post", "Il post verrà nascosto dal feed. L'autore non verrà notificato.", async () => {
+      try {
+        await adminApi("/api/admin/posts/" + postId + "/hide", { method: "POST" });
+        showToast("Post nascosto.");
+        loadPostReports();
+      } catch(e) { showToast("Errore: " + e.message, true); }
+    });
+  }
+
+  async function adminUnhidePost(postId) {
+    try {
+      await adminApi("/api/admin/posts/" + postId + "/unhide", { method: "POST" });
+      showToast("Post ripristinato.");
+      loadPostReports();
+    } catch(e) { showToast("Errore: " + e.message, true); }
+  }
+
+  async function adminDeletePost(postId, authorName) {
+    openConfirm("Elimina post definitivamente",
+      "Il post di " + authorName + " verrà eliminato con tutti i commenti. Azione irreversibile.",
+      async () => {
+        try {
+          await adminApi("/api/admin/posts/" + postId, { method: "DELETE" });
+          showToast("Post eliminato.");
+          loadPostReports();
+        } catch(e) { showToast("Errore: " + e.message, true); }
+      }
+    );
   }
 
   // ════════════════════════════════════════════════════════
