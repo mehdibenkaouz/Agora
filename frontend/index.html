@@ -4589,6 +4589,7 @@
         if (!frames.length) return { nsfw: false, label: "no_frames", confidence: 0 };
         for (const frame of frames) {
           const result = await checkImageNSFW(frame);
+          console.log("FRAME CHECK:", frames.indexOf(frame), result);
           if (result && result.nsfw) {
             return { nsfw: true, label: result.label, confidence: result.confidence, frame_index: frames.indexOf(frame) };
           }
