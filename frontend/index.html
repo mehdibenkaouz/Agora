@@ -4849,7 +4849,7 @@
               <div class="comment-menu-wrap">
                 <button class="comment-menu-btn" type="button" aria-label="Opzioni commento">···</button>
                 <div class="comment-menu">
-                  ${isMine ? `<button class="comment-menu-item danger c-del-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(c.post_id || '')}">Elimina</button>` : ''}
+                  ${isMine ? `<button class="comment-menu-item danger c-del-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(p.id)}">Elimina</button>` : ''}
                   ${canBlock ? `<button class="comment-menu-item c-block-btn"
                     data-author-email="${escapeHtml(c.author_email || '')}"
                     data-author-name="${escapeHtml(c.author_display_name || c.author_email || 'utente')}">Blocca</button>` : ''}

@@ -1341,7 +1341,7 @@
 
 
   const postReportReasonLabels = {
-    
+
     nsfw_porn: "🔞 NSFW / Porn",
     spam: "📨 Spam",
     hate_speech: "🚫 Hate speech",
@@ -1372,11 +1372,17 @@
       // Raggruppa per post per mostrare il conteggio reale
       tbody.innerHTML = reports.map(r => {
         // Estrai anteprima testo dal contenuto HTML
+const contentHtml = r.content || "";
         const tmp = document.createElement("div");
-        tmp.innerHTML = r.content || "";
-        const preview = (tmp.textContent || "").trim().substring(0, 120);
-        const hasImg = /<img\b/i.test(r.content || "");
+        tmp.innerHTML = contentHtml;
+        const textPreview = (tmp.textContent || "").trim().substring(0, 80);
 
+        // Estrai src delle immagini per thumbnail
+        const imgMatches = [...contentHtml.matchAll(/<img[^>]+src="([^"]+)"/gi)];
+        const thumbsHtml = imgMatches.slice(0, 3).map(m =>
+          `<img src="${esc(m[1])}" style="width:48px;height:48px;object-fit:cover;border-radius:3px;border:1px solid var(--border);vertical-align:middle;margin-right:4px;" />`
+        ).join("");
+        
         return `
         <tr>
           <td>
@@ -1399,7 +1405,11 @@
           </td>
           <td><span class="badge badge-${r.reason === 'nsfw_porn' || r.reason === 'nsfw_auto' ? 'spam' : 'pending'}">${postReportReasonLabels[r.reason] || r.reason}</span></td>
           <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${esc(preview)}">
-            ${hasImg ? '🖼 ' : ''}${esc(preview) || '<em style="color:var(--muted)">[solo immagine]</em>'}
+            <td style="max-width:280px;overflow:hidden;">
+            ${thumbsHtml}
+            ${textPreview ? `<div style="margin-top:${thumbsHtml ? '6px' : '0'};max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:var(--muted);">${esc(textPreview)}</div>` : ''}
+            ${!thumbsHtml && !textPreview ? '<em style="color:var(--muted)">[vuoto]</em>' : ''}
+          </td>
           </td>
           <td><strong>${r.total_reports}</strong></td>
           <td>${r.post_hidden
