@@ -1211,14 +1211,18 @@
       .danger-zone { padding: 16px 14px; margin-top: 20px; }
       .danger-zone-btn { width: 100%; }
       .book-stage { overflow: hidden; }
-      .page { overflow-x: hidden; }
+      
     }
 
     @media (max-width: 540px) {
       .top-links { display: none; }
       .brand-logo, .logo { height: 44px; width: 44px; }
 
-      .book-shell { height: min(70vh, 500px); }
+      .book-shell {
+        height: min(70vh, 500px);
+        transform: none;
+        filter: drop-shadow(0 12px 24px rgba(0,0,0,0.40));
+      }
       .page-content { font-size: 14px; }
 
       .flip-btn { width: 42px; height: 42px; bottom: 14px; }
@@ -1234,8 +1238,12 @@
       .book-shell { height: min(68vh, 440px); }
       .flip-btn.prev { left: 6px; }
       .flip-btn.next { right: 6px; }
-      .award img { width: 48px; height: 48px; }
+      .award img { width: 52px; height: 52px; }
       .award-item { gap: 2px; }
+    }
+    @media (max-width: 400px) {
+      .award img { width: 52px; height: 52px; }
+      .award-counter { font-size: 0.65rem; }
     }
 
     /* ==========================================
@@ -1584,6 +1592,31 @@
       -webkit-overflow-scrolling: touch;
       width: 100%;
       box-sizing: border-box;
+    }
+    @media (max-width: 760px) {
+      .danger-zone,
+      .blocked-section,
+      .profile-card {
+        max-width: 100%;
+        overflow-wrap: break-word;
+        word-break: break-word;
+      }
+      .danger-zone-desc {
+        overflow-wrap: break-word;
+        word-break: break-word;
+      }
+    }
+    @media (max-width: 540px) {
+      .award {
+        flex-wrap: wrap;
+        justify-content: center;
+        overflow-x: visible;
+        gap: 4px;
+      }
+      .award-item {
+        flex: 0 0 auto;
+        min-width: 0;
+      }
     }
     .award-item{
       display: flex; flex-direction: column; align-items: center; gap: 4px;
