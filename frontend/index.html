@@ -3294,6 +3294,30 @@
     gap: 8px;
   }
 }
+    .post-card {
+      position: relative;
+      overflow: visible;
+    }
+    
+    .post-actions,
+    .actions-right,
+    .lang-picker {
+      overflow: visible;
+    }
+    
+    .lang-picker {
+      position: relative;
+      z-index: 20;
+    }
+    
+    .lang-picker-dropdown {
+      z-index: 9999;
+    }
+    
+    /* quando la tendina lingua è aperta, tutto il post sale sopra gli altri */
+    .post-card.lang-open {
+      z-index: 300;
+    }
   </style>
 </head>
 
@@ -5584,11 +5608,17 @@ const logicalBtn = card.querySelector(".logical-btn");
         // Apri/chiudi dropdown
         langPickerBtn?.addEventListener("click", (e) => {
           e.stopPropagation();
-          // Chiudi tutti gli altri dropdown aperti
+        
           document.querySelectorAll(".lang-picker-dropdown.open").forEach(d => {
             if (d !== langDropdown) d.classList.remove("open");
           });
-          langDropdown.classList.toggle("open");
+          document.querySelectorAll(".post-card.lang-open").forEach(c => {
+            if (c !== card) c.classList.remove("lang-open");
+          });
+        
+          const willOpen = !langDropdown.classList.contains("open");
+          langDropdown.classList.toggle("open", willOpen);
+          card.classList.toggle("lang-open", willOpen);
         });
 
         // Selezione lingua
@@ -5603,6 +5633,7 @@ const logicalBtn = card.querySelector(".logical-btn");
             langOptions.forEach(o => o.classList.remove("selected"));
             opt.classList.add("selected");
             langDropdown.classList.remove("open");
+            card.classList.remove("lang-open");
 
             // Se la traduzione è già aperta, aggiornala
             const existing = card.querySelector(".translation-box");
@@ -5615,7 +5646,10 @@ const logicalBtn = card.querySelector(".logical-btn");
         });
 
         // Chiudi dropdown cliccando fuori
-        document.addEventListener("click", () => langDropdown?.classList.remove("open"));
+        document.addEventListener("click", () => {
+          langDropdown?.classList.remove("open");
+          card.classList.remove("lang-open");
+        });
 
         if (translateBtn) {
           translateBtn.addEventListener("click", async (e) => {
