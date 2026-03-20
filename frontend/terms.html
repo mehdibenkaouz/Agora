@@ -1,19 +1,17 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AGORÀ • Terms of Service</title>
-
-  <link id="site-favicon" rel="icon" type="image/png" sizes="64x64" href="/icon-light-64.png?v=1">
-  <link rel="apple-touch-icon" href="item/Logoagora.png">
-  <script src="/shared-theme.js" defer></script>
-
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:wght@400;500;600;700&family=Cinzel:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
-
-  <style>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>AGORÀ • Terms of Service</title>
+<link href="/icon-light-64.png?v=1" id="site-favicon" rel="icon" sizes="64x64" type="image/png"/>
+<link href="item/Logoagora.png" rel="apple-touch-icon"/>
+<script defer="" src="/shared-theme.js"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&amp;family=Cormorant+Garamond:wght@400;500;600;700&amp;family=Cinzel:wght@400;500;600;700&amp;family=Lora:ital,wght@0,400;0,500;0,600;1,400&amp;display=swap" rel="stylesheet"/>
+<style>
     :root{
       --bg:#e8e2d5;
       --panel:#f5f0e8;
@@ -479,496 +477,682 @@
       .section h2{ font-size:1.25rem; }
       .ghost-btn, .primary-btn{ font-size:.72rem; padding:9px 13px; }
     }
-  </style>
+  
+
+    .lang-picker{ position:relative; }
+    .lang-toggle{
+      display:flex;
+      align-items:center;
+      gap:8px;
+      min-height:42px;
+      border-radius:12px;
+      padding:10px 14px;
+      cursor:pointer;
+      font-family:'Cinzel', serif;
+      font-size:.78rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      transition:.15s ease;
+      border:1px solid rgba(201,147,42,0.25);
+      background:rgba(201,147,42,0.08);
+      color:var(--gold);
+    }
+    .lang-toggle:hover{ background:rgba(201,147,42,0.16); }
+    .lang-flag{ width:20px; height:14px; object-fit:cover; border-radius:3px; box-shadow:0 0 0 1px rgba(0,0,0,.12); }
+    .lang-picker-dropdown{
+      position:absolute;
+      top:calc(100% + 8px);
+      right:0;
+      width:min(320px, calc(100vw - 32px));
+      max-height:340px;
+      overflow:auto;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:18px;
+      box-shadow:var(--shadow);
+      padding:10px;
+      display:none;
+      z-index:80;
+    }
+    .lang-picker.open .lang-picker-dropdown{ display:block; }
+    .lang-option{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      line-height:1.35;
+      color:var(--text);
+    }
+    .lang-option:hover,
+    .lang-option.active{ background:rgba(201,147,42,0.10); }
+    :root[data-theme="dark"] .lang-option:hover,
+    :root[data-theme="dark"] .lang-option.active{ background:rgba(37,172,193,0.12); }
+
+    .lang-note{
+      margin-top:16px;
+      padding:14px 16px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(201,147,42,0.08);
+      color:var(--text);
+      line-height:1.7;
+      box-shadow:var(--soft-shadow);
+    }
+    :root[data-theme="dark"] .lang-note{ background:rgba(37,172,193,0.08); }
+    .lang-note strong{
+      display:block;
+      margin-bottom:6px;
+      font-family:'Cinzel', serif;
+      font-size:.76rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--gold);
+    }
+
+    .terms-head-meta-line{
+      display:block;
+      margin-bottom:2px;
+    }
+
+    html[dir="rtl"] .topbar-inner,
+    html[dir="rtl"] .brand,
+    html[dir="rtl"] .top-actions,
+    html[dir="rtl"] .accept-actions,
+    html[dir="rtl"] .accept-row{ direction:rtl; }
+    html[dir="rtl"] .section ul{ padding-left:0; padding-right:22px; }
+    html[dir="rtl"] .toc-grid{ direction:rtl; }
+
+    @media (max-width: 700px){
+      .lang-picker{ width:100%; }
+      .lang-toggle{ width:100%; justify-content:center; }
+      .lang-picker-dropdown{ left:0; right:0; width:100%; }
+    }
+</style>
 </head>
 <body>
-  <header class="topbar">
-    <div class="topbar-inner">
-      <div class="brand">
-        <a href="index.html">
-          <img
-            id="mainLogo"
-            src="item/Logoagora.png"
-            data-light="item/Logoagora.png"
-            data-dark="item/Logoagoradark.png"
-            class="logo"
-            alt="Agora"
-          >
-        </a>
-        <div class="brand-stack">
-          <div class="brand-title">Terms of Service</div>
-          <div class="brand-subtitle">AGORÀ public discourse, moderation, and account rules</div>
-        </div>
-      </div>
-
-      <div class="top-actions">
-        <button id="themeToggleBtn" class="ghost-btn" type="button">Dark mode</button>
-        <a class="ghost-btn" href="index.html">Back</a>
-      </div>
-    </div>
-  </header>
-
-  <main class="page">
-    <section class="hero">
-      <div class="eyebrow">Agorà legal framework</div>
-      <h1>Access to AGORÀ requires acceptance of these Terms of Service.</h1>
-      <p>
+<header class="topbar">
+<div class="topbar-inner">
+<div class="brand">
+<a href="index.html">
+<img alt="Agora" class="logo" data-dark="item/Logoagoradark.png" data-light="item/Logoagora.png" id="mainLogo" src="item/Logoagora.png"/>
+</a>
+<div class="brand-stack">
+<div class="brand-title" id="brandTitle">Terms of Service</div>
+<div class="brand-subtitle" id="brandSubtitle">AGORÀ public discourse, moderation, and account rules</div>
+</div>
+</div>
+<div class="top-actions">
+<div class="lang-picker" id="langPicker">
+<button aria-expanded="false" aria-haspopup="listbox" class="lang-toggle" id="langToggleBtn" type="button">
+<img alt="" class="lang-flag" id="currentLangFlag" src="https://flagcdn.com/w20/gb.png"/>
+<span id="currentLangCode">EN</span>
+</button>
+<div aria-label="Language selector" class="lang-picker-dropdown" id="langPickerDropdown" role="listbox">
+</div>
+</div>
+<button class="ghost-btn" id="themeToggleBtn" type="button">Dark mode</button>
+<a class="ghost-btn" href="index.html" id="backTopBtn">Back</a>
+</div>
+</div>
+</header>
+<main class="page">
+<section class="hero">
+<div class="eyebrow" id="heroEyebrow">Agorà legal framework</div>
+<h1 id="heroTitle">Access to AGORÀ requires acceptance of these Terms of Service.</h1>
+<p id="heroText">
         AGORÀ is built for thoughtful writing, civil dialogue, sources, clarification,
         and logical contribution. These Terms define who may use the platform, what conduct
         is allowed, how moderation may work, and what rights and responsibilities apply to users.
       </p>
-
-      <div class="info-grid">
-        <div class="info-chip">
-          <strong>Minimum age</strong>
-          <span>AGORÀ sets a global minimum age of <strong>16 years</strong>, even where local law may permit a lower age.</span>
-        </div>
-        <div class="info-chip">
-          <strong>Acceptance</strong>
-          <span>Use of the platform requires express acceptance of these Terms and confirmation of age eligibility.</span>
-        </div>
-        <div class="info-chip">
-          <strong>Moderation</strong>
-          <span>AGORÀ may limit, hide, remove, or suspend content or accounts to protect legality, safety, and platform integrity.</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="terms-shell">
-      <div class="terms-head">
-        <div class="terms-head-title">Terms of Service</div>
-        <div class="terms-head-sub">
-          Effective date: <span id="effectiveDate">—</span><br>
-          Version: <span id="termsVersionLabel">—</span><br>
-          These Terms govern access to and use of AGORÀ, including accounts, user content, moderation,
-          communication features, saved posts, games, cultural map features, and future extensions of the service.
-        </div>
-      </div>
-
-      <div class="toc">
-        <div class="toc-title">Contents</div>
-        <div class="toc-grid">
-          <a href="#eligibility">1. Eligibility and minimum age</a>
-          <a href="#acceptance">2. Acceptance of these Terms</a>
-          <a href="#purpose">3. Purpose of the platform</a>
-          <a href="#accounts">4. Accounts and account security</a>
-          <a href="#identity">5. Display names and impersonation</a>
-          <a href="#acceptable-use">6. Acceptable use</a>
-          <a href="#prohibited-content">7. Prohibited content</a>
-          <a href="#ugc">8. User-generated content</a>
-          <a href="#license">9. License granted to AGORÀ</a>
-          <a href="#moderation">10. Moderation and enforcement</a>
-          <a href="#reporting">11. Reporting, blocks, and user controls</a>
-          <a href="#privacy">12. Privacy and data processing</a>
-          <a href="#availability">13. Availability and feature changes</a>
-          <a href="#third-parties">14. Third-party services and links</a>
-          <a href="#copyright">15. Intellectual property</a>
-          <a href="#termination">16. Suspension and termination</a>
-          <a href="#disclaimers">17. Disclaimers</a>
-          <a href="#liability">18. Limitation of liability</a>
-          <a href="#indemnity">19. User responsibility and indemnity</a>
-          <a href="#regional">20. Regional and country-specific notes</a>
-          <a href="#changes">21. Changes to these Terms</a>
-          <a href="#final">22. Final provisions</a>
-        </div>
-      </div>
-
-      <div class="terms-body">
-        <section class="section" id="eligibility">
-          <h2>1. Eligibility and minimum age</h2>
-          <p>
+<div class="lang-note" id="languageNoticeBox">
+<strong id="languageNoticeTitle">Language note</strong>
+<div id="languageNoticeText"></div>
+</div>
+<div class="info-grid">
+<div class="info-chip">
+<strong id="minAgeLabel">Minimum age</strong>
+<span id="minAgeText">AGORÀ sets a global minimum age of <strong>16 years</strong>, even where local law may permit a lower age.</span>
+</div>
+<div class="info-chip">
+<strong id="acceptanceLabel">Acceptance</strong>
+<span id="acceptanceText">Use of the platform requires express acceptance of these Terms and confirmation of age eligibility.</span>
+</div>
+<div class="info-chip">
+<strong id="moderationLabel">Moderation</strong>
+<span id="moderationText">AGORÀ may limit, hide, remove, or suspend content or accounts to protect legality, safety, and platform integrity.</span>
+</div>
+</div>
+</section>
+<section class="terms-shell">
+<div class="terms-head">
+<div class="terms-head-title" id="termsHeadTitle">Terms of Service</div>
+<div class="terms-head-sub" id="termsHeadSub">
+<span class="terms-head-meta-line"><span id="effectiveDateLabel">Effective date</span>: <span id="effectiveDate">—</span></span>
+<span class="terms-head-meta-line"><span id="versionLabel">Version</span>: <span id="termsVersionLabel">—</span></span>
+<span id="termsHeadDescription">These Terms govern access to and use of AGORÀ, including accounts, user content, moderation, communication features, saved posts, games, cultural map features, and future extensions of the service.</span>
+</div>
+</div>
+<div class="toc">
+<div class="toc-title" id="tocTitle">Contents</div>
+<div class="toc-grid"><a data-toc-key="eligibility" href="#eligibility">eligibility</a><a data-toc-key="acceptance" href="#acceptance">acceptance</a><a data-toc-key="purpose" href="#purpose">purpose</a><a data-toc-key="accounts" href="#accounts">accounts</a><a data-toc-key="identity" href="#identity">identity</a><a data-toc-key="acceptable-use" href="#acceptable-use">acceptable-use</a><a data-toc-key="prohibited-content" href="#prohibited-content">prohibited-content</a><a data-toc-key="ugc" href="#ugc">ugc</a><a data-toc-key="license" href="#license">license</a><a data-toc-key="moderation" href="#moderation">moderation</a><a data-toc-key="reporting" href="#reporting">reporting</a><a data-toc-key="privacy" href="#privacy">privacy</a><a data-toc-key="availability" href="#availability">availability</a><a data-toc-key="third-parties" href="#third-parties">third-parties</a><a data-toc-key="copyright" href="#copyright">copyright</a><a data-toc-key="termination" href="#termination">termination</a><a data-toc-key="disclaimers" href="#disclaimers">disclaimers</a><a data-toc-key="liability" href="#liability">liability</a><a data-toc-key="indemnity" href="#indemnity">indemnity</a><a data-toc-key="regional" href="#regional">regional</a><a data-toc-key="changes" href="#changes">changes</a><a data-toc-key="automated-screening" href="#automated-screening">automated-screening</a><a data-toc-key="final" href="#final">final</a></div>
+</div>
+<div class="terms-body">
+<section class="section" id="eligibility">
+<h2 data-heading-key="eligibility">1. Eligibility and minimum age</h2>
+<p>
             AGORÀ is intended for mature users capable of understanding the nature of a public discussion platform.
             You must be at least <strong>16 years old</strong> to use AGORÀ. By accessing AGORÀ, creating an account,
             or accepting these Terms, you declare and confirm that you are 16 years of age or older.
           </p>
-          <p>
+<p>
             AGORÀ sets this 16-year minimum globally as a platform rule, even in countries where local law may allow
             a lower age for certain digital services. If local law requires a higher minimum age, the higher local age
             requirement prevails for users in that jurisdiction.
           </p>
-          <div class="callout">
-            <strong>Important</strong>
-            <p style="margin:8px 0 0;">
+<div class="callout">
+<strong id="importantLabel">Important</strong>
+<p style="margin:8px 0 0;">
               If you are under 16, you are not permitted to use AGORÀ. If AGORÀ reasonably believes that an account is
               being used by a person below the minimum age, AGORÀ may restrict, suspend, or remove the account without prior notice.
             </p>
-          </div>
-        </section>
-
-        <section class="section" id="acceptance">
-          <h2>2. Acceptance of these Terms</h2>
-          <p>
+</div>
+</section>
+<section class="section" id="acceptance">
+<h2 data-heading-key="acceptance">2. Acceptance of these Terms</h2>
+<p>
             By using AGORÀ, you agree to be bound by these Terms of Service, by the platform rules that may be displayed inside the service,
             and by any future lawful updates to those rules. If you do not accept these Terms, you must not use the platform.
           </p>
-          <p>
+<p>
             Acceptance may be recorded technically, including by local device storage, account-linked acceptance, timestamps,
             or other operational records necessary to prove that the Terms were presented and accepted.
           </p>
-        </section>
-
-        <section class="section" id="purpose">
-          <h2>3. Purpose of the platform</h2>
-          <p>
+</section>
+<section class="section" id="purpose">
+<h2 data-heading-key="purpose">3. Purpose of the platform</h2>
+<p>
             AGORÀ is a platform designed for thoughtful writing, civil dialogue, cultural exchange, clarification, sources,
             logic, and responsible public discourse. Its features may include public posts, user profiles, saved material,
             games, maps, discovery tools, and future modules intended to support intellectual and social interaction.
           </p>
-          <p>
+<p>
             The service is not intended for spam, coordinated manipulation, harassment, fraud, unlawful conduct, malware,
             abuse of infrastructure, or activities that undermine the integrity of discussion or platform operations.
           </p>
-        </section>
-
-        <section class="section" id="accounts">
-          <h2>4. Accounts and account security</h2>
-          <p>
+</section>
+<section class="section" id="accounts">
+<h2 data-heading-key="accounts">4. Accounts and account security</h2>
+<p>
             You are responsible for your account, login credentials, connected identity methods, and all activity performed through your account.
             You must take reasonable steps to protect access to your profile and must not knowingly allow unauthorized persons to use it.
           </p>
-          <p>
+<p>
             You must provide information that is sufficiently accurate for the service to function and must not create accounts in a way intended
             to deceive AGORÀ, avoid enforcement measures, or impersonate others.
           </p>
-          <ul>
-            <li>You may not sell, rent, or transfer your account without AGORÀ’s prior written authorization.</li>
-            <li>You may not create accounts primarily to evade moderation, bans, or technical limitations.</li>
-            <li>You are responsible for activities performed through your device or session unless you report unauthorized access promptly.</li>
-          </ul>
-        </section>
-
-        <section class="section" id="identity">
-          <h2>5. Display names, identity, and impersonation</h2>
-          <p>
+<ul>
+<li>You may not sell, rent, or transfer your account without AGORÀ’s prior written authorization.</li>
+<li>You may not create accounts primarily to evade moderation, bans, or technical limitations.</li>
+<li>You are responsible for activities performed through your device or session unless you report unauthorized access promptly.</li>
+</ul>
+</section>
+<section class="section" id="identity">
+<h2 data-heading-key="identity">5. Display names, identity, and impersonation</h2>
+<p>
             You may choose a display name and profile presentation, but you must not present yourself as another person, public figure,
             company, institution, or organization in a misleading or deceptive way.
           </p>
-          <p>
+<p>
             AGORÀ may require you to change profile details, usernames, avatars, or labels that create confusion, impersonation risk,
             targeted abuse, or unfair misrepresentation.
           </p>
-        </section>
-
-        <section class="section" id="acceptable-use">
-          <h2>6. Acceptable use</h2>
-          <p>By using AGORÀ, you agree that you will not:</p>
-          <ul>
-            <li>use the service in violation of applicable law;</li>
-            <li>post or distribute malware, malicious code, phishing content, or deceptive technical material;</li>
-            <li>interfere with servers, APIs, authentication flows, storage, moderation systems, or user safety mechanisms;</li>
-            <li>scrape, clone, mass-harvest, or systematically extract data beyond what the service visibly allows;</li>
-            <li>artificially manipulate ranking, visibility, metrics, reactions, or discovery systems;</li>
-            <li>use bots, automation, or scripts in ways that create abuse, fake engagement, or denial of service;</li>
-            <li>engage in targeted harassment, intimidation, stalking, or coordinated hostility;</li>
-            <li>use AGORÀ primarily for spam, commercial flooding, or deceptive promotion.</li>
-          </ul>
-        </section>
-
-        <section class="section" id="prohibited-content">
-          <h2>7. Prohibited content</h2>
-          <p>The following categories of content may be removed or restricted, and may lead to account action:</p>
-          <ul>
-            <li>content that is unlawful, fraudulent, defamatory, or seriously misleading;</li>
-            <li>credible threats, incitement to violence, glorification of severe harm, or instructions for criminal acts;</li>
-            <li>content intended to sexually exploit minors or depict minors in unlawful or abusive ways;</li>
-            <li>doxxing, exposure of private personal data, or publication of sensitive information without lawful basis;</li>
-            <li>non-consensual sexual content or intimate imagery;</li>
-            <li>content designed to harass, terrorize, or degrade identifiable users or groups;</li>
-            <li>malware distribution, credential theft, or platform exploitation material;</li>
-            <li>content that materially undermines platform security, moderation, or legal compliance.</li>
-            <li><strong>child sexual abuse material (CSAM)</strong> of any kind — detected material will be immediately removed and may be reported to law enforcement authorities;</li>
-            <li>pornographic or sexually explicit images and videos;</li>
-          </ul>
-        </section>
-
-        <section class="section" id="ugc">
-          <h2>8. User-generated content</h2>
-          <p>
+</section>
+<section class="section" id="acceptable-use">
+<h2 data-heading-key="acceptable-use">6. Acceptable use</h2>
+<p>By using AGORÀ, you agree that you will not:</p>
+<ul>
+<li>use the service in violation of applicable law;</li>
+<li>post or distribute malware, malicious code, phishing content, or deceptive technical material;</li>
+<li>interfere with servers, APIs, authentication flows, storage, moderation systems, or user safety mechanisms;</li>
+<li>scrape, clone, mass-harvest, or systematically extract data beyond what the service visibly allows;</li>
+<li>artificially manipulate ranking, visibility, metrics, reactions, or discovery systems;</li>
+<li>use bots, automation, or scripts in ways that create abuse, fake engagement, or denial of service;</li>
+<li>engage in targeted harassment, intimidation, stalking, or coordinated hostility;</li>
+<li>use AGORÀ primarily for spam, commercial flooding, or deceptive promotion.</li>
+</ul>
+</section>
+<section class="section" id="prohibited-content">
+<h2 data-heading-key="prohibited-content">7. Prohibited content</h2>
+<p>The following categories of content may be removed or restricted, and may lead to account action:</p>
+<ul>
+<li>content that is unlawful, fraudulent, defamatory, or seriously misleading;</li>
+<li>credible threats, incitement to violence, glorification of severe harm, or instructions for criminal acts;</li>
+<li>content intended to sexually exploit minors or depict minors in unlawful or abusive ways;</li>
+<li>doxxing, exposure of private personal data, or publication of sensitive information without lawful basis;</li>
+<li>non-consensual sexual content or intimate imagery;</li>
+<li>content designed to harass, terrorize, or degrade identifiable users or groups;</li>
+<li>malware distribution, credential theft, or platform exploitation material;</li>
+<li>content that materially undermines platform security, moderation, or legal compliance.</li>
+<li><strong>child sexual abuse material (CSAM)</strong> of any kind — detected material will be immediately removed and may be reported to law enforcement authorities;</li>
+<li>pornographic or sexually explicit images and videos;</li>
+</ul>
+</section>
+<section class="section" id="ugc">
+<h2 data-heading-key="ugc">8. User-generated content</h2>
+<p>
             You remain responsible for all content you post, save, upload, submit, or otherwise make available through AGORÀ.
             This includes text, profile elements, images, links, comments, metadata, and other user-supplied material.
           </p>
-          <p>
+<p>
             AGORÀ does not adopt every user statement as its own and does not guarantee the truth, accuracy, legality,
             or quality of user-generated content. The existence of content on AGORÀ does not imply endorsement by the platform.
           </p>
-        </section>
-
-        <section class="section" id="license">
-          <h2>9. License granted to AGORÀ</h2>
-          <p>
+</section>
+<section class="section" id="license">
+<h2 data-heading-key="license">9. License granted to AGORÀ</h2>
+<p>
             To operate the service, you grant AGORÀ a non-exclusive, worldwide, revocable, royalty-free license to host,
             reproduce, store, adapt for technical formatting, display, distribute, and communicate your content solely to the extent
             necessary to operate, secure, improve, moderate, and present the service.
           </p>
-          <p>
+<p>
             This license does not transfer ownership of your original content to AGORÀ. It ends within a commercially reasonable period
             after your content is deleted from the active service, except where retention is reasonably necessary for backups,
             abuse prevention, legal obligations, dispute resolution, or evidentiary preservation.
           </p>
-        </section>
-
-        <section class="section" id="moderation">
-          <h2>10. Moderation and enforcement</h2>
-          <p>
+</section>
+<section class="section" id="moderation">
+<h2 data-heading-key="moderation">10. Moderation and enforcement</h2>
+<p>
             AGORÀ may monitor, review, restrict, hide, label, remove, or preserve content and accounts when reasonably necessary to:
           </p>
-          <ul>
-            <li>enforce these Terms or other platform rules;</li>
-            <li>protect users or third parties;</li>
-            <li>address abuse, fraud, spam, or technical misuse;</li>
-            <li>comply with applicable law, lawful requests, or regulatory obligations;</li>
-            <li>preserve the integrity, safety, and functionality of the platform.</li>
-          </ul>
-          <p>
+<ul>
+<li>enforce these Terms or other platform rules;</li>
+<li>protect users or third parties;</li>
+<li>address abuse, fraud, spam, or technical misuse;</li>
+<li>comply with applicable law, lawful requests, or regulatory obligations;</li>
+<li>preserve the integrity, safety, and functionality of the platform.</li>
+</ul>
+<p>
             Enforcement may include warnings, visibility reduction, feature limitation, content removal, temporary restrictions,
             account suspension, or permanent termination. AGORÀ may act with or without prior notice depending on urgency,
             severity, legal constraints, or abuse risk.
           </p>
-        </section>
-
-        <section class="section" id="reporting">
-          <h2>11. Reporting, blocks, and user controls</h2>
-          <p>
+</section>
+<section class="section" id="reporting">
+<h2 data-heading-key="reporting">11. Reporting, blocks, and user controls</h2>
+<p>
             AGORÀ may provide user tools such as reports, blocks, filters, saved posts, and visibility settings. These tools are provided
             to improve user control, but they do not guarantee complete insulation from unwanted content or behavior.
           </p>
-          <p>
+<p>
             Misuse of reporting systems, block systems, or moderation channels in bad faith may itself violate these Terms.
           </p>
-        </section>
-
-        <section class="section" id="privacy">
-          <h2>12. Privacy and data processing</h2>
-          <p>
+</section>
+<section class="section" id="privacy">
+<h2 data-heading-key="privacy">12. Privacy and data processing</h2>
+<p>
             AGORÀ may process account data, content data, usage logs, technical identifiers, device information, moderation records,
             and related operational data as necessary to provide authentication, security, functionality, analytics, abuse prevention,
             moderation, and platform improvements.
           </p>
-          <p>
+<p>
             Where a separate Privacy Policy exists, it forms an important companion document to these Terms. Use of AGORÀ may also imply
             acceptance of the platform’s privacy disclosures and operational notices.
           </p>
-        </section>
-
-        <section class="section" id="availability">
-          <h2>13. Availability and feature changes</h2>
-          <p>
+</section>
+<section class="section" id="availability">
+<h2 data-heading-key="availability">13. Availability and feature changes</h2>
+<p>
             AGORÀ is an evolving service. Features may be added, modified, restricted, renamed, redesigned, paused, or removed.
             Temporary interruptions, errors, maintenance, experiments, or regional unavailability may occur.
           </p>
-          <p>
+<p>
             AGORÀ may also impose technical limits, storage limits, access controls, anti-abuse thresholds, or region-specific limitations
             where reasonably necessary.
           </p>
-        </section>
-
-        <section class="section" id="third-parties">
-          <h2>14. Third-party services and links</h2>
-          <p>
+</section>
+<section class="section" id="third-parties">
+<h2 data-heading-key="third-parties">14. Third-party services and links</h2>
+<p>
             AGORÀ may rely on or connect with third-party services for login, maps, hosting, analytics, media delivery, security, payments,
             or future features. Those third-party services may operate under their own terms and privacy policies.
           </p>
-          <p>
+<p>
             AGORÀ is not responsible for third-party websites, external content, or third-party service outages beyond AGORÀ’s direct control.
           </p>
-        </section>
-
-        <section class="section" id="copyright">
-          <h2>15. Intellectual property</h2>
-          <p>
+</section>
+<section class="section" id="copyright">
+<h2 data-heading-key="copyright">15. Intellectual property</h2>
+<p>
             Except for user-generated content owned by users or third parties, AGORÀ and its interface elements, branding, visual identity,
             source structure, original design choices, and non-user platform materials may be protected by copyright, trademark,
             database, and other intellectual property laws.
           </p>
-          <p>
+<p>
             You may not copy, mirror, republish, reverse engineer, or exploit protected elements of AGORÀ (https://agorapolis.org/) beyond what applicable law allows.
           </p>
-        </section>
-
-        <section class="section" id="termination">
-          <h2>16. Suspension and termination</h2>
-          <p>
+</section>
+<section class="section" id="termination">
+<h2 data-heading-key="termination">16. Suspension and termination</h2>
+<p>
             AGORÀ may suspend or terminate access to all or part of the service where reasonably necessary to protect legality, safety,
             users, infrastructure, business continuity, or platform integrity.
           </p>
-          <p>
+<p>
             You may also stop using AGORÀ at any time. Termination or suspension does not automatically erase all records where retention is
             reasonably necessary for legal compliance, fraud prevention, dispute handling, backup integrity, or evidentiary purposes.
           </p>
-          <p>
+<p>
             You may permanently delete your account at any time through the account settings. Upon deletion, your profile data, posts, comments,
             and associated media will be removed from the active service. Some records may be retained for a limited period where reasonably necessary
             for legal compliance, fraud prevention, or dispute resolution, in accordance with applicable data protection law.
           </p>
-        </section>
-
-        <section class="section" id="disclaimers">
-          <h2>17. Disclaimers</h2>
-          <p>
+</section>
+<section class="section" id="disclaimers">
+<h2 data-heading-key="disclaimers">17. Disclaimers</h2>
+<p>
             AGORÀ is provided on an <strong>“as available”</strong> and <strong>“as is”</strong> basis to the maximum extent permitted by applicable law.
             AGORÀ does not guarantee uninterrupted availability, universal compatibility, permanent preservation of content,
             error-free operation, or that every moderation decision or user statement will be accurate.
           </p>
-          <p>
+<p>
             AGORÀ does not provide professional legal, medical, financial, or safety advice merely by hosting discussion between users.
           </p>
-        </section>
-
-        <section class="section" id="liability">
-          <h2>18. Limitation of liability</h2>
-          <p>
+</section>
+<section class="section" id="liability">
+<h2 data-heading-key="liability">18. Limitation of liability</h2>
+<p>
             To the maximum extent permitted by applicable law, AGORÀ and its operators shall not be liable for indirect, incidental,
             special, consequential, or punitive damages, or for loss of profits, data, goodwill, opportunities, or reputation arising from
             or related to your use of the service.
           </p>
-          <p>
+<p>
             Nothing in these Terms excludes liability that cannot lawfully be excluded under applicable law, including mandatory consumer rights
             or liability for intentional misconduct where exclusion is prohibited.
           </p>
-        </section>
-
-        <section class="section" id="indemnity">
-          <h2>19. User responsibility and indemnity</h2>
-          <p>
+</section>
+<section class="section" id="indemnity">
+<h2 data-heading-key="indemnity">19. User responsibility and indemnity</h2>
+<p>
             Where permitted by applicable law, you agree to be responsible for claims, losses, liabilities, and reasonable costs arising from
             your unlawful content, your misuse of the platform, your violation of these Terms, or your infringement of third-party rights.
           </p>
-        </section>
-
-        <section class="section" id="regional">
-          <h2>20. Regional and country-specific notes</h2>
-          <p>
+</section>
+<section class="section" id="regional">
+<h2 data-heading-key="regional">20. Regional and country-specific notes</h2>
+<p>
             AGORÀ applies a <strong>global minimum age of 16</strong>. This platform rule may be stricter than the minimum digital-consent age available
             in some countries. Where local law imposes stronger or additional user protections, those mandatory protections continue to apply.
           </p>
-          <ul>
-            <li><strong>Italy.</strong> AGORÀ’s platform minimum age remains 16, even though Italian digital-consent rules may in some contexts recognize autonomous consent from age 14.</li>
-            <li><strong>European Union / EEA.</strong> Mandatory consumer, privacy, and platform-safety rights under EU or national law remain unaffected where they cannot be waived.</li>
-            <li><strong>United Kingdom.</strong> Mandatory rights under UK law remain applicable where they cannot be excluded by contract.</li>
-            <li><strong>United States.</strong> AGORÀ is not intended for children under 13, and the platform’s own minimum age is set higher at 16 worldwide.</li>
-            <li><strong>Other jurisdictions.</strong> If your local law grants you non-waivable protections or imposes stricter age or platform rules, those rules continue to apply to the extent legally required.</li>
-          </ul>
-        </section>
-
-        <section class="section" id="changes">
-          <h2>21. Changes to these Terms</h2>
-          <p>
+<ul>
+<li><strong>Italy.</strong> AGORÀ’s platform minimum age remains 16, even though Italian digital-consent rules may in some contexts recognize autonomous consent from age 14.</li>
+<li><strong>European Union / EEA.</strong> Mandatory consumer, privacy, and platform-safety rights under EU or national law remain unaffected where they cannot be waived.</li>
+<li><strong>United Kingdom.</strong> Mandatory rights under UK law remain applicable where they cannot be excluded by contract.</li>
+<li><strong>United States.</strong> AGORÀ is not intended for children under 13, and the platform’s own minimum age is set higher at 16 worldwide.</li>
+<li><strong>Other jurisdictions.</strong> If your local law grants you non-waivable protections or imposes stricter age or platform rules, those rules continue to apply to the extent legally required.</li>
+</ul>
+</section>
+<section class="section" id="changes">
+<h2 data-heading-key="changes">21. Changes to these Terms</h2>
+<p>
             AGORÀ may update these Terms from time to time to reflect legal, technical, business, or product changes.
             When appropriate, AGORÀ may require renewed acceptance before continued use of some or all of the service.
           </p>
-          <p>
+<p>
             Continued use after a valid update may constitute acceptance of the updated Terms where this is permitted by applicable law.
           </p>
-        </section>
-
-        <section class="section" id="final">
-          <h2>22. Final provisions</h2>
-          <p>
+</section>
+<section class="section" id="final-section">
+<h2 data-heading-key="automated-screening" id="automated-screening">22. Automated screening and safety systems</h2>
+<p>
             AGORÀ employs automated content screening systems, including artificial intelligence-based image and video analysis,
             to detect and prevent the upload of prohibited content such as pornography, graphic violence, and child sexual abuse material (CSAM).
             Content flagged by automated systems may be immediately blocked, hidden, or removed without prior notice.
             Automated decisions may be reviewed by human moderators where appropriate.
           </p>
-          
-          <h2>23. Final provisions</h2>
-          <p>
+<h2 data-heading-key="final" id="final">23. Final provisions</h2>
+<p>
             If any provision of these Terms is found unenforceable, the remaining provisions shall remain in effect to the extent permitted by law.
             Failure by AGORÀ to enforce a provision immediately does not waive the right to enforce it later.
           </p>
-          <p>
+<p>
             A dedicated contact channel for legal, moderation, or platform questions may be published in a later version of the service.
           </p>
-        </section>
-      </div>
-    </section>
-
-    <section class="accept-panel">
-      <label class="accept-row">
-        <input id="acceptCheckbox" type="checkbox">
-        <div class="accept-text">
+</section>
+</div>
+</section>
+<section class="accept-panel">
+<label class="accept-row">
+<input id="acceptCheckbox" type="checkbox"/>
+<div class="accept-text" id="acceptText">
           I have read and accept the <strong>Terms of Service</strong> of AGORÀ, and I confirm that I am at least <strong>16 years old</strong>.
         </div>
-      </label>
-
-      <div class="accept-actions">
-        <div class="accept-note" id="acceptStatus">
+</label>
+<div class="accept-actions">
+<div class="accept-note" id="acceptStatus">
           You must confirm acceptance and minimum age before continuing.
         </div>
-
-        <div style="display:flex; gap:10px; flex-wrap:wrap;">
-          <a class="ghost-btn" href="index.html">Decline</a>
-          <button id="acceptBtn" class="primary-btn" type="button" disabled>
+<div style="display:flex; gap:10px; flex-wrap:wrap;">
+<a class="ghost-btn" href="index.html" id="declineBtn">Decline</a>
+<button class="primary-btn" disabled="" id="acceptBtn" type="button">
             Accept and continue
           </button>
-        </div>
-      </div>
-    </section>
-
-    <div class="footer-mini">
-      AGORÀ • thoughtful discourse, responsible use<br>
+</div>
+</div>
+</section>
+<div class="footer-mini" id="footerMini">
+      AGORÀ • thoughtful discourse, responsible use<br/>
       This document is a platform terms draft and should be reviewed against the exact legal structure, operator identity, privacy policy, and business model of the live service.
     </div>
-  </main>
+</main>
+<script>
+  const TERMS_VERSION = "2026-03-20-v3";
+  const TERMS_ACCEPT_KEY = "agora_terms_accepted_v3";
+  const SUPPORTED_LANGUAGES = [{"code": "en", "flag": "gb", "label": "EN — English"}, {"code": "es", "flag": "es", "label": "ES — Español"}, {"code": "fr", "flag": "fr", "label": "FR — Français"}, {"code": "it", "flag": "it", "label": "IT — Italiano"}, {"code": "de", "flag": "de", "label": "DE — Deutsch"}, {"code": "pt", "flag": "pt", "label": "PT — Português"}, {"code": "ru", "flag": "ru", "label": "RU — Русский"}, {"code": "zh", "flag": "cn", "label": "ZH — 中文"}, {"code": "ar", "flag": "sa", "label": "AR — العربية"}, {"code": "ja", "flag": "jp", "label": "JA — 日本語"}, {"code": "ko", "flag": "kr", "label": "KO — 한국어"}, {"code": "hi", "flag": "in", "label": "HI — हिन्दी"}, {"code": "tr", "flag": "tr", "label": "TR — Türkçe"}, {"code": "nl", "flag": "nl", "label": "NL — Nederlands"}, {"code": "pl", "flag": "pl", "label": "PL — Polski"}, {"code": "uk", "flag": "ua", "label": "UK — Українська"}, {"code": "el", "flag": "gr", "label": "EL — Ελληνικά"}];
+  const I18N = {"en": {"docTitle": "AGORÀ • Terms of Service", "brandTitle": "Terms of Service", "brandSubtitle": "AGORÀ public discourse, moderation, and account rules", "themeDark": "Dark mode", "themeLight": "Light mode", "back": "Back", "eyebrow": "Agorà legal framework", "heroTitle": "Access to AGORÀ requires acceptance of these Terms of Service.", "heroText": "AGORÀ is built for thoughtful writing, civil dialogue, sources, clarification, and logical contribution. These Terms define who may use the platform, what conduct is allowed, how moderation may work, and what rights and responsibilities apply to users.", "languageNoticeTitle": "Language note", "languageNoticeText": "The full legal text below is currently drafted in English. The English version governs in case of conflict. Browser translation may be used as a convenience until native translations are added.", "minAgeLabel": "Minimum age", "minAgeText": "AGORÀ sets a global minimum age of <strong>16 years</strong>, even where local law may permit a lower age.", "acceptanceLabel": "Acceptance", "acceptanceText": "Use of the platform requires express acceptance of these Terms and confirmation of age eligibility.", "moderationLabel": "Moderation", "moderationText": "AGORÀ may limit, hide, remove, or suspend content or accounts to protect legality, safety, and platform integrity.", "termsHeadTitle": "Terms of Service", "effectiveDateLabel": "Effective date", "versionLabel": "Version", "termsHeadDescription": "These Terms govern access to and use of AGORÀ, including accounts, user content, moderation, communication features, saved posts, games, cultural map features, and future extensions of the service.", "tocTitle": "Contents", "importantLabel": "Important", "acceptText": "I have read and accept the <strong>Terms of Service</strong> of AGORÀ, and I confirm that I am at least <strong>16 years old</strong>.", "acceptStatusDefault": "You must confirm acceptance and minimum age before continuing.", "acceptStatusReady": "Ready. Press the button to continue.", "acceptStatusSaving": "Saving…", "decline": "Decline", "acceptContinue": "Accept and continue", "footerMini": "AGORÀ • thoughtful discourse, responsible use<br>This document is a platform terms draft and should be reviewed against the exact legal structure, operator identity, privacy policy, and business model of the live service.", "headings": {"eligibility": "1. Eligibility and minimum age", "acceptance": "2. Acceptance of these Terms", "purpose": "3. Purpose of the platform", "accounts": "4. Accounts and account security", "identity": "5. Display names, identity, and impersonation", "acceptable-use": "6. Acceptable use", "prohibited-content": "7. Prohibited content", "ugc": "8. User-generated content", "license": "9. License granted to AGORÀ", "moderation": "10. Moderation and enforcement", "reporting": "11. Reporting, blocks, and user controls", "privacy": "12. Privacy and data processing", "availability": "13. Availability and feature changes", "third-parties": "14. Third-party services and links", "copyright": "15. Intellectual property", "termination": "16. Suspension and termination", "disclaimers": "17. Disclaimers", "liability": "18. Limitation of liability", "indemnity": "19. User responsibility and indemnity", "regional": "20. Regional and country-specific notes", "changes": "21. Changes to these Terms", "automated-screening": "22. Automated screening and safety systems", "final": "23. Final provisions"}}, "it": {"docTitle": "AGORÀ • Termini di Servizio", "brandTitle": "Termini di Servizio", "brandSubtitle": "AGORÀ dibattito pubblico, moderazione e regole dell’account", "themeDark": "Tema scuro", "themeLight": "Tema chiaro", "back": "Indietro", "eyebrow": "Quadro legale di Agorà", "heroTitle": "Per accedere ad AGORÀ è necessario accettare questi Termini di Servizio.", "heroText": "AGORÀ è pensata per scrittura ragionata, dialogo civile, fonti, chiarimenti e contributo logico. Questi Termini definiscono chi può usare la piattaforma, quali condotte sono ammesse, come può funzionare la moderazione e quali diritti e responsabilità si applicano agli utenti.", "languageNoticeTitle": "Nota sulla lingua", "languageNoticeText": "Il testo legale completo qui sotto è attualmente redatto in inglese. In caso di conflitto prevale la versione inglese. La traduzione del browser può essere usata come supporto finché non verranno aggiunte traduzioni native.", "minAgeLabel": "Età minima", "minAgeText": "AGORÀ impone un’età minima globale di <strong>16 anni</strong>, anche dove la legge locale potrebbe consentire un’età inferiore.", "acceptanceLabel": "Accettazione", "acceptanceText": "L’uso della piattaforma richiede l’accettazione espressa di questi Termini e la conferma del requisito di età.", "moderationLabel": "Moderazione", "moderationText": "AGORÀ può limitare, nascondere, rimuovere o sospendere contenuti o account per proteggere legalità, sicurezza e integrità della piattaforma.", "termsHeadTitle": "Termini di Servizio", "effectiveDateLabel": "Data di efficacia", "versionLabel": "Versione", "termsHeadDescription": "Questi Termini disciplinano l’accesso e l’uso di AGORÀ, inclusi account, contenuti degli utenti, moderazione, funzioni di comunicazione, post salvati, giochi, mappa culturale ed estensioni future del servizio.", "tocTitle": "Indice", "importantLabel": "Importante", "acceptText": "Ho letto e accetto i <strong>Termini di Servizio</strong> di AGORÀ e confermo di avere almeno <strong>16 anni</strong>.", "acceptStatusDefault": "Devi confermare l’accettazione e l’età minima prima di continuare.", "acceptStatusReady": "Pronto. Premi il pulsante per continuare.", "acceptStatusSaving": "Salvataggio…", "decline": "Rifiuta", "acceptContinue": "Accetta e continua", "footerMini": "AGORÀ • discorso ragionato, uso responsabile<br>Questo documento è una bozza dei termini della piattaforma e dovrebbe essere verificato rispetto alla struttura legale esatta, all’identità del gestore, alla privacy policy e al modello di business del servizio attivo.", "headings": {"eligibility": "1. Idoneità ed età minima", "acceptance": "2. Accettazione di questi Termini", "purpose": "3. Finalità della piattaforma", "accounts": "4. Account e sicurezza dell’account", "identity": "5. Nomi visualizzati, identità e impersonificazione", "acceptable-use": "6. Uso consentito", "prohibited-content": "7. Contenuti vietati", "ugc": "8. Contenuti generati dagli utenti", "license": "9. Licenza concessa ad AGORÀ", "moderation": "10. Moderazione e applicazione", "reporting": "11. Segnalazioni, blocchi e controlli utente", "privacy": "12. Privacy e trattamento dei dati", "availability": "13. Disponibilità e modifiche delle funzionalità", "third-parties": "14. Servizi e link di terze parti", "copyright": "15. Proprietà intellettuale", "termination": "16. Sospensione e cessazione", "disclaimers": "17. Esclusioni di garanzia", "liability": "18. Limitazione di responsabilità", "indemnity": "19. Responsabilità dell’utente e manleva", "regional": "20. Note regionali e specifiche per Paese", "changes": "21. Modifiche a questi Termini", "automated-screening": "22. Screening automatico e sistemi di sicurezza", "final": "23. Disposizioni finali"}}, "es": {"docTitle": "AGORÀ • Términos del Servicio", "brandTitle": "Términos del Servicio", "brandSubtitle": "AGORÀ discurso público, moderación y reglas de la cuenta", "themeDark": "Modo oscuro", "themeLight": "Modo claro", "back": "Volver", "eyebrow": "Marco legal de Agorà", "heroTitle": "El acceso a AGORÀ requiere la aceptación de estos Términos del Servicio.", "heroText": "AGORÀ está diseñada para escritura reflexiva, diálogo civil, fuentes, aclaraciones y contribución lógica. Estos Términos definen quién puede usar la plataforma, qué conducta está permitida, cómo puede funcionar la moderación y qué derechos y responsabilidades se aplican a los usuarios.", "languageNoticeTitle": "Nota sobre el idioma", "languageNoticeText": "El texto legal completo que aparece abajo está redactado actualmente en inglés. En caso de conflicto prevalece la versión en inglés. La traducción del navegador puede usarse como ayuda hasta que se añadan traducciones nativas.", "minAgeLabel": "Edad mínima", "minAgeText": "AGORÀ establece una edad mínima global de <strong>16 años</strong>, incluso cuando la ley local pueda permitir una edad inferior.", "acceptanceLabel": "Aceptación", "acceptanceText": "El uso de la plataforma requiere la aceptación expresa de estos Términos y la confirmación de la edad mínima.", "moderationLabel": "Moderación", "moderationText": "AGORÀ puede limitar, ocultar, eliminar o suspender contenido o cuentas para proteger la legalidad, la seguridad y la integridad de la plataforma.", "termsHeadTitle": "Términos del Servicio", "effectiveDateLabel": "Fecha de entrada en vigor", "versionLabel": "Versión", "termsHeadDescription": "Estos Términos regulan el acceso y uso de AGORÀ, incluidas las cuentas, el contenido de usuario, la moderación, las funciones de comunicación, las publicaciones guardadas, los juegos, el mapa cultural y las futuras ampliaciones del servicio.", "tocTitle": "Contenido", "importantLabel": "Importante", "acceptText": "He leído y acepto los <strong>Términos del Servicio</strong> de AGORÀ y confirmo que tengo al menos <strong>16 años</strong>.", "acceptStatusDefault": "Debes confirmar la aceptación y la edad mínima antes de continuar.", "acceptStatusReady": "Listo. Pulsa el botón para continuar.", "acceptStatusSaving": "Guardando…", "decline": "Rechazar", "acceptContinue": "Aceptar y continuar", "footerMini": "AGORÀ • discurso reflexivo, uso responsable<br>Este documento es un borrador de los términos de la plataforma y debe revisarse frente a la estructura legal exacta, la identidad del operador, la política de privacidad y el modelo de negocio del servicio en vivo.", "headings": {"eligibility": "1. Requisitos y edad mínima", "acceptance": "2. Aceptación de estos Términos", "purpose": "3. Finalidad de la plataforma", "accounts": "4. Cuentas y seguridad de la cuenta", "identity": "5. Nombres visibles, identidad y suplantación", "acceptable-use": "6. Uso permitido", "prohibited-content": "7. Contenido prohibido", "ugc": "8. Contenido generado por los usuarios", "license": "9. Licencia concedida a AGORÀ", "moderation": "10. Moderación y aplicación", "reporting": "11. Reportes, bloqueos y controles del usuario", "privacy": "12. Privacidad y tratamiento de datos", "availability": "13. Disponibilidad y cambios de funciones", "third-parties": "14. Servicios y enlaces de terceros", "copyright": "15. Propiedad intelectual", "termination": "16. Suspensión y terminación", "disclaimers": "17. Exenciones de responsabilidad", "liability": "18. Limitación de responsabilidad", "indemnity": "19. Responsabilidad del usuario e indemnización", "regional": "20. Notas regionales y específicas por país", "changes": "21. Cambios en estos Términos", "automated-screening": "22. Detección automática y sistemas de seguridad", "final": "23. Disposiciones finales"}}, "fr": {"docTitle": "AGORÀ • Conditions d’utilisation", "brandTitle": "Conditions d’utilisation", "brandSubtitle": "AGORÀ débat public, modération et règles du compte", "themeDark": "Mode sombre", "themeLight": "Mode clair", "back": "Retour", "eyebrow": "Cadre juridique d’Agorà", "heroTitle": "L’accès à AGORÀ nécessite l’acceptation des présentes Conditions d’utilisation.", "heroText": "AGORÀ est conçue pour l’écriture réfléchie, le dialogue civil, les sources, les clarifications et la contribution logique. Ces Conditions définissent qui peut utiliser la plateforme, quel comportement est autorisé, comment la modération peut fonctionner et quels droits et responsabilités s’appliquent aux utilisateurs.", "languageNoticeTitle": "Note sur la langue", "languageNoticeText": "Le texte juridique complet ci-dessous est actuellement rédigé en anglais. En cas de conflit, la version anglaise prévaut. La traduction du navigateur peut être utilisée à titre pratique jusqu’à l’ajout de traductions natives.", "minAgeLabel": "Âge minimum", "minAgeText": "AGORÀ fixe un âge minimum mondial de <strong>16 ans</strong>, même lorsque le droit local peut permettre un âge inférieur.", "acceptanceLabel": "Acceptation", "acceptanceText": "L’utilisation de la plateforme exige l’acceptation expresse des présentes Conditions et la confirmation de l’âge requis.", "moderationLabel": "Modération", "moderationText": "AGORÀ peut limiter, masquer, supprimer ou suspendre des contenus ou des comptes afin de protéger la légalité, la sécurité et l’intégrité de la plateforme.", "termsHeadTitle": "Conditions d’utilisation", "effectiveDateLabel": "Date d’entrée en vigueur", "versionLabel": "Version", "termsHeadDescription": "Ces Conditions régissent l’accès et l’utilisation d’AGORÀ, y compris les comptes, les contenus utilisateurs, la modération, les fonctions de communication, les publications enregistrées, les jeux, la carte culturelle et les futures extensions du service.", "tocTitle": "Sommaire", "importantLabel": "Important", "acceptText": "J’ai lu et j’accepte les <strong>Conditions d’utilisation</strong> d’AGORÀ, et je confirme avoir au moins <strong>16 ans</strong>.", "acceptStatusDefault": "Vous devez confirmer l’acceptation et l’âge minimum avant de continuer.", "acceptStatusReady": "Prêt. Appuyez sur le bouton pour continuer.", "acceptStatusSaving": "Enregistrement…", "decline": "Refuser", "acceptContinue": "Accepter et continuer", "footerMini": "AGORÀ • discours réfléchi, usage responsable<br>Ce document est un projet de conditions de plateforme et devrait être vérifié au regard de la structure juridique exacte, de l’identité de l’exploitant, de la politique de confidentialité et du modèle économique du service en ligne.", "headings": {"eligibility": "1. Admissibilité et âge minimum", "acceptance": "2. Acceptation des présentes Conditions", "purpose": "3. Objet de la plateforme", "accounts": "4. Comptes et sécurité du compte", "identity": "5. Noms affichés, identité et usurpation", "acceptable-use": "6. Utilisation autorisée", "prohibited-content": "7. Contenu interdit", "ugc": "8. Contenu généré par les utilisateurs", "license": "9. Licence accordée à AGORÀ", "moderation": "10. Modération et application", "reporting": "11. Signalements, blocages et contrôles utilisateur", "privacy": "12. Confidentialité et traitement des données", "availability": "13. Disponibilité et modifications des fonctionnalités", "third-parties": "14. Services et liens tiers", "copyright": "15. Propriété intellectuelle", "termination": "16. Suspension et résiliation", "disclaimers": "17. Exclusions de garantie", "liability": "18. Limitation de responsabilité", "indemnity": "19. Responsabilité de l’utilisateur et indemnisation", "regional": "20. Notes régionales et propres à chaque pays", "changes": "21. Modifications des présentes Conditions", "automated-screening": "22. Détection automatisée et systèmes de sécurité", "final": "23. Dispositions finales"}}, "de": {"docTitle": "AGORÀ • Nutzungsbedingungen", "brandTitle": "Nutzungsbedingungen", "brandSubtitle": "AGORÀ öffentlicher Diskurs, Moderation und Kontoregeln", "themeDark": "Dunkler Modus", "themeLight": "Heller Modus", "back": "Zurück", "eyebrow": "Rechtlicher Rahmen von Agorà", "heroTitle": "Der Zugriff auf AGORÀ erfordert die Annahme dieser Nutzungsbedingungen.", "heroText": "AGORÀ ist für durchdachtes Schreiben, zivilen Dialog, Quellen, Klarstellungen und logischen Beitrag gedacht. Diese Bedingungen legen fest, wer die Plattform nutzen darf, welches Verhalten zulässig ist, wie Moderation funktionieren kann und welche Rechte und Pflichten für Nutzer gelten.", "languageNoticeTitle": "Sprachhinweis", "languageNoticeText": "Der vollständige Rechtstext unten ist derzeit auf Englisch verfasst. Im Konfliktfall gilt die englische Fassung. Die Browser-Übersetzung kann als Hilfe genutzt werden, bis native Übersetzungen hinzugefügt werden.", "minAgeLabel": "Mindestalter", "minAgeText": "AGORÀ legt weltweit ein Mindestalter von <strong>16 Jahren</strong> fest, auch wenn lokales Recht ein niedrigeres Alter zulassen könnte.", "acceptanceLabel": "Annahme", "acceptanceText": "Die Nutzung der Plattform erfordert die ausdrückliche Annahme dieser Bedingungen und die Bestätigung des Mindestalters.", "moderationLabel": "Moderation", "moderationText": "AGORÀ kann Inhalte oder Konten einschränken, verbergen, entfernen oder sperren, um Rechtmäßigkeit, Sicherheit und Plattformintegrität zu schützen.", "termsHeadTitle": "Nutzungsbedingungen", "effectiveDateLabel": "Wirksamkeitsdatum", "versionLabel": "Version", "termsHeadDescription": "Diese Bedingungen regeln den Zugang zu und die Nutzung von AGORÀ, einschließlich Konten, Nutzerinhalten, Moderation, Kommunikationsfunktionen, gespeicherten Beiträgen, Spielen, Kulturkartenfunktionen und künftigen Erweiterungen des Dienstes.", "tocTitle": "Inhalt", "importantLabel": "Wichtig", "acceptText": "Ich habe die <strong>Nutzungsbedingungen</strong> von AGORÀ gelesen und akzeptiere sie, und ich bestätige, dass ich mindestens <strong>16 Jahre alt</strong> bin.", "acceptStatusDefault": "Du musst Annahme und Mindestalter bestätigen, bevor du fortfährst.", "acceptStatusReady": "Bereit. Drücke die Schaltfläche, um fortzufahren.", "acceptStatusSaving": "Wird gespeichert…", "decline": "Ablehnen", "acceptContinue": "Akzeptieren und fortfahren", "footerMini": "AGORÀ • durchdachter Diskurs, verantwortungsvolle Nutzung<br>Dieses Dokument ist ein Entwurf der Plattformbedingungen und sollte anhand der genauen rechtlichen Struktur, der Betreiberidentität, der Datenschutzrichtlinie und des Geschäftsmodells des Live-Dienstes geprüft werden.", "headings": {"eligibility": "1. Zulässigkeit und Mindestalter", "acceptance": "2. Annahme dieser Bedingungen", "purpose": "3. Zweck der Plattform", "accounts": "4. Konten und Kontosicherheit", "identity": "5. Anzeigenamen, Identität und Identitätsmissbrauch", "acceptable-use": "6. Zulässige Nutzung", "prohibited-content": "7. Verbotene Inhalte", "ugc": "8. Nutzergenerierte Inhalte", "license": "9. An AGORÀ gewährte Lizenz", "moderation": "10. Moderation und Durchsetzung", "reporting": "11. Meldungen, Sperren und Nutzerkontrollen", "privacy": "12. Datenschutz und Datenverarbeitung", "availability": "13. Verfügbarkeit und Funktionsänderungen", "third-parties": "14. Dienste und Links Dritter", "copyright": "15. Geistiges Eigentum", "termination": "16. Sperrung und Beendigung", "disclaimers": "17. Haftungsausschlüsse", "liability": "18. Haftungsbeschränkung", "indemnity": "19. Nutzerverantwortung und Freistellung", "regional": "20. Regionale und länderspezifische Hinweise", "changes": "21. Änderungen dieser Bedingungen", "automated-screening": "22. Automatisches Screening und Sicherheitssysteme", "final": "23. Schlussbestimmungen"}}, "pt": {"docTitle": "AGORÀ • Termos de Serviço", "brandTitle": "Termos de Serviço", "brandSubtitle": "AGORÀ discurso público, moderação e regras da conta", "themeDark": "Modo escuro", "themeLight": "Modo claro", "back": "Voltar", "eyebrow": "Estrutura legal da Agorà", "heroTitle": "O acesso ao AGORÀ requer a aceitação destes Termos de Serviço.", "heroText": "AGORÀ foi criada para escrita ponderada, diálogo civil, fontes, esclarecimentos e contribuição lógica. Estes Termos definem quem pode usar a plataforma, que conduta é permitida, como a moderação pode funcionar e quais direitos e responsabilidades se aplicam aos usuários.", "languageNoticeTitle": "Nota sobre o idioma", "languageNoticeText": "O texto jurídico completo abaixo está atualmente redigido em inglês. Em caso de conflito, prevalece a versão em inglês. A tradução do navegador pode ser usada como conveniência até que traduções nativas sejam adicionadas.", "minAgeLabel": "Idade mínima", "minAgeText": "AGORÀ define uma idade mínima global de <strong>16 anos</strong>, mesmo quando a lei local possa permitir idade inferior.", "acceptanceLabel": "Aceitação", "acceptanceText": "O uso da plataforma exige a aceitação expressa destes Termos e a confirmação do requisito de idade.", "moderationLabel": "Moderação", "moderationText": "AGORÀ pode limitar, ocultar, remover ou suspender conteúdos ou contas para proteger a legalidade, a segurança e a integridade da plataforma.", "termsHeadTitle": "Termos de Serviço", "effectiveDateLabel": "Data de vigência", "versionLabel": "Versão", "termsHeadDescription": "Estes Termos regem o acesso e o uso do AGORÀ, incluindo contas, conteúdo do usuário, moderação, recursos de comunicação, publicações salvas, jogos, mapa cultural e futuras extensões do serviço.", "tocTitle": "Conteúdo", "importantLabel": "Importante", "acceptText": "Li e aceito os <strong>Termos de Serviço</strong> do AGORÀ e confirmo que tenho pelo menos <strong>16 anos</strong>.", "acceptStatusDefault": "Você deve confirmar a aceitação e a idade mínima antes de continuar.", "acceptStatusReady": "Pronto. Pressione o botão para continuar.", "acceptStatusSaving": "Salvando…", "decline": "Recusar", "acceptContinue": "Aceitar e continuar", "footerMini": "AGORÀ • discurso cuidadoso, uso responsável<br>Este documento é um rascunho dos termos da plataforma e deve ser revisado em relação à estrutura jurídica exata, à identidade do operador, à política de privacidade e ao modelo de negócios do serviço ativo.", "headings": {"eligibility": "1. Elegibilidade e idade mínima", "acceptance": "2. Aceitação destes Termos", "purpose": "3. Finalidade da plataforma", "accounts": "4. Contas e segurança da conta", "identity": "5. Nomes de exibição, identidade e falsificação", "acceptable-use": "6. Uso aceitável", "prohibited-content": "7. Conteúdo proibido", "ugc": "8. Conteúdo gerado pelo usuário", "license": "9. Licença concedida ao AGORÀ", "moderation": "10. Moderação e aplicação", "reporting": "11. Denúncias, bloqueios e controles do usuário", "privacy": "12. Privacidade e tratamento de dados", "availability": "13. Disponibilidade e alterações de funcionalidades", "third-parties": "14. Serviços e links de terceiros", "copyright": "15. Propriedade intelectual", "termination": "16. Suspensão e encerramento", "disclaimers": "17. Isenções de responsabilidade", "liability": "18. Limitação de responsabilidade", "indemnity": "19. Responsabilidade do usuário e indenização", "regional": "20. Notas regionais e específicas por país", "changes": "21. Alterações destes Termos", "automated-screening": "22. Triagem automatizada e sistemas de segurança", "final": "23. Disposições finais"}}, "ru": {"docTitle": "AGORÀ • Условия использования", "brandTitle": "Условия использования", "brandSubtitle": "AGORÀ публичная дискуссия, модерация и правила аккаунта", "themeDark": "Тёмная тема", "themeLight": "Светлая тема", "back": "Назад", "eyebrow": "Правовая основа Agorà", "heroTitle": "Доступ к AGORÀ требует принятия этих Условий использования.", "heroText": "AGORÀ создана для вдумчивого письма, цивилизованного диалога, источников, разъяснений и логического вклада. Эти Условия определяют, кто может пользоваться платформой, какое поведение допустимо, как может работать модерация и какие права и обязанности применяются к пользователям.", "languageNoticeTitle": "Языковая заметка", "languageNoticeText": "Полный юридический текст ниже в настоящее время составлен на английском языке. В случае расхождения преимущественную силу имеет английская версия. Перевод браузера можно использовать как вспомогательный вариант, пока не будут добавлены нативные переводы.", "minAgeLabel": "Минимальный возраст", "minAgeText": "AGORÀ устанавливает глобальный минимальный возраст <strong>16 лет</strong>, даже если местное право допускает более низкий возраст.", "acceptanceLabel": "Принятие", "acceptanceText": "Использование платформы требует явного принятия этих Условий и подтверждения соответствующего возраста.", "moderationLabel": "Модерация", "moderationText": "AGORÀ может ограничивать, скрывать, удалять или приостанавливать контент или аккаунты для защиты законности, безопасности и целостности платформы.", "termsHeadTitle": "Условия использования", "effectiveDateLabel": "Дата вступления в силу", "versionLabel": "Версия", "termsHeadDescription": "Эти Условия регулируют доступ к AGORÀ и её использование, включая аккаунты, пользовательский контент, модерацию, функции связи, сохранённые публикации, игры, культурную карту и будущие расширения сервиса.", "tocTitle": "Содержание", "importantLabel": "Важно", "acceptText": "Я прочитал(а) и принимаю <strong>Условия использования</strong> AGORÀ и подтверждаю, что мне не менее <strong>16 лет</strong>.", "acceptStatusDefault": "Перед продолжением необходимо подтвердить принятие и минимальный возраст.", "acceptStatusReady": "Готово. Нажмите кнопку, чтобы продолжить.", "acceptStatusSaving": "Сохранение…", "decline": "Отклонить", "acceptContinue": "Принять и продолжить", "footerMini": "AGORÀ • вдумчивый дискурс, ответственное использование<br>Этот документ является проектом условий платформы и должен быть проверен с учётом точной юридической структуры, личности оператора, политики конфиденциальности и бизнес-модели действующего сервиса.", "headings": {"eligibility": "1. Право на использование и минимальный возраст", "acceptance": "2. Принятие этих Условий", "purpose": "3. Назначение платформы", "accounts": "4. Аккаунты и безопасность аккаунта", "identity": "5. Отображаемые имена, личность и выдача себя за другого", "acceptable-use": "6. Допустимое использование", "prohibited-content": "7. Запрещённый контент", "ugc": "8. Пользовательский контент", "license": "9. Лицензия, предоставляемая AGORÀ", "moderation": "10. Модерация и применение мер", "reporting": "11. Жалобы, блокировки и пользовательские настройки", "privacy": "12. Конфиденциальность и обработка данных", "availability": "13. Доступность и изменения функций", "third-parties": "14. Сторонние сервисы и ссылки", "copyright": "15. Интеллектуальная собственность", "termination": "16. Приостановление и прекращение", "disclaimers": "17. Оговорки", "liability": "18. Ограничение ответственности", "indemnity": "19. Ответственность пользователя и возмещение", "regional": "20. Региональные и страновые примечания", "changes": "21. Изменения этих Условий", "automated-screening": "22. Автоматическая проверка и системы безопасности", "final": "23. Заключительные положения"}}, "zh": {"docTitle": "AGORÀ • 服务条款", "brandTitle": "服务条款", "brandSubtitle": "AGORÀ 公共讨论、审核与账户规则", "themeDark": "深色模式", "themeLight": "浅色模式", "back": "返回", "eyebrow": "Agorà 法律框架", "heroTitle": "访问 AGORÀ 需要接受本服务条款。", "heroText": "AGORÀ 旨在支持深思熟虑的写作、文明对话、来源引用、澄清说明和逻辑性贡献。本条款规定了谁可以使用平台、允许哪些行为、审核如何运作，以及用户享有哪些权利和承担哪些责任。", "languageNoticeTitle": "语言说明", "languageNoticeText": "下方完整法律文本目前以英文起草。如有冲突，以英文版本为准。在添加原生翻译之前，可将浏览器翻译作为辅助参考。", "minAgeLabel": "最低年龄", "minAgeText": "AGORÀ 设定全球最低年龄为 <strong>16 岁</strong>，即使当地法律可能允许更低年龄。", "acceptanceLabel": "接受", "acceptanceText": "使用平台需要明确接受本条款并确认符合年龄要求。", "moderationLabel": "审核", "moderationText": "为保护合法性、安全性和平台完整性，AGORÀ 可限制、隐藏、删除或暂停内容或账户。", "termsHeadTitle": "服务条款", "effectiveDateLabel": "生效日期", "versionLabel": "版本", "termsHeadDescription": "本条款规范对 AGORÀ 的访问和使用，包括账户、用户内容、审核、沟通功能、已保存帖子、游戏、文化地图功能以及未来的服务扩展。", "tocTitle": "目录", "importantLabel": "重要", "acceptText": "我已阅读并接受 AGORÀ 的<strong>服务条款</strong>，并确认我至少年满 <strong>16 岁</strong>。", "acceptStatusDefault": "继续之前，您必须确认接受条款并确认最低年龄。", "acceptStatusReady": "已准备好。按下按钮继续。", "acceptStatusSaving": "正在保存…", "decline": "拒绝", "acceptContinue": "接受并继续", "footerMini": "AGORÀ • 深思熟虑的讨论，负责任的使用<br>本文件是平台条款草案，应结合实际服务的准确法律结构、运营者身份、隐私政策和商业模式进行审查。", "headings": {"eligibility": "1. 使用资格与最低年龄", "acceptance": "2. 接受本条款", "purpose": "3. 平台目的", "accounts": "4. 账户与账户安全", "identity": "5. 显示名称、身份与冒充", "acceptable-use": "6. 可接受的使用", "prohibited-content": "7. 禁止内容", "ugc": "8. 用户生成内容", "license": "9. 授予 AGORÀ 的许可", "moderation": "10. 审核与执行", "reporting": "11. 举报、屏蔽与用户控制", "privacy": "12. 隐私与数据处理", "availability": "13. 可用性与功能变更", "third-parties": "14. 第三方服务与链接", "copyright": "15. 知识产权", "termination": "16. 暂停与终止", "disclaimers": "17. 免责声明", "liability": "18. 责任限制", "indemnity": "19. 用户责任与赔偿", "regional": "20. 地区和国家特别说明", "changes": "21. 本条款的变更", "automated-screening": "22. 自动筛查与安全系统", "final": "23. 最终条款"}}, "ar": {"docTitle": "AGORÀ • شروط الخدمة", "brandTitle": "شروط الخدمة", "brandSubtitle": "AGORÀ الخطاب العام والإشراف وقواعد الحساب", "themeDark": "الوضع الداكن", "themeLight": "الوضع الفاتح", "back": "رجوع", "eyebrow": "الإطار القانوني لـ Agorà", "heroTitle": "يتطلب الوصول إلى AGORÀ قبول شروط الخدمة هذه.", "heroText": "تم إنشاء AGORÀ للكتابة المتأنية والحوار المدني والمصادر والتوضيح والمساهمة المنطقية. تحدد هذه الشروط من يمكنه استخدام المنصة، وما السلوك المسموح به، وكيف قد تعمل الإشرافات، وما الحقوق والمسؤوليات المطبقة على المستخدمين.", "languageNoticeTitle": "ملاحظة لغوية", "languageNoticeText": "النص القانوني الكامل أدناه محرر حالياً باللغة الإنجليزية. وفي حال وجود تعارض تسود النسخة الإنجليزية. ويمكن استخدام ترجمة المتصفح كوسيلة مساعدة إلى أن تتم إضافة ترجمات أصلية.", "minAgeLabel": "الحد الأدنى للعمر", "minAgeText": "تحدد AGORÀ حداً أدنى عالمياً للعمر يبلغ <strong>16 سنة</strong> حتى حيث قد يسمح القانون المحلي بعمر أقل.", "acceptanceLabel": "القبول", "acceptanceText": "يتطلب استخدام المنصة قبولاً صريحاً لهذه الشروط وتأكيد استيفاء شرط العمر.", "moderationLabel": "الإشراف", "moderationText": "قد تقوم AGORÀ بتقييد المحتوى أو الحسابات أو إخفائها أو حذفها أو تعليقها لحماية المشروعية والسلامة وسلامة المنصة.", "termsHeadTitle": "شروط الخدمة", "effectiveDateLabel": "تاريخ السريان", "versionLabel": "الإصدار", "termsHeadDescription": "تنظم هذه الشروط الوصول إلى AGORÀ واستخدامها، بما في ذلك الحسابات ومحتوى المستخدم والإشراف وميزات الاتصال والمنشورات المحفوظة والألعاب وميزات الخريطة الثقافية والتوسعات المستقبلية للخدمة.", "tocTitle": "المحتويات", "importantLabel": "مهم", "acceptText": "لقد قرأت ووافقت على <strong>شروط الخدمة</strong> الخاصة بـ AGORÀ، وأؤكد أن عمري لا يقل عن <strong>16 سنة</strong>.", "acceptStatusDefault": "يجب عليك تأكيد القبول والحد الأدنى للعمر قبل المتابعة.", "acceptStatusReady": "جاهز. اضغط الزر للمتابعة.", "acceptStatusSaving": "جارٍ الحفظ…", "decline": "أرفض", "acceptContinue": "أوافق وأتابع", "footerMini": "AGORÀ • خطاب متأنٍ واستخدام مسؤول<br>هذه الوثيقة مسودة لشروط المنصة ويجب مراجعتها في ضوء الهيكل القانوني الدقيق وهوية المشغل وسياسة الخصوصية ونموذج العمل للخدمة الحية.", "headings": {"eligibility": "1. الأهلية والحد الأدنى للعمر", "acceptance": "2. قبول هذه الشروط", "purpose": "3. غرض المنصة", "accounts": "4. الحسابات وأمن الحساب", "identity": "5. أسماء العرض والهوية والانتحال", "acceptable-use": "6. الاستخدام المقبول", "prohibited-content": "7. المحتوى المحظور", "ugc": "8. المحتوى الذي ينشئه المستخدم", "license": "9. الترخيص الممنوح إلى AGORÀ", "moderation": "10. الإشراف والإنفاذ", "reporting": "11. البلاغات والحظر وأدوات المستخدم", "privacy": "12. الخصوصية ومعالجة البيانات", "availability": "13. التوفر وتغييرات الميزات", "third-parties": "14. خدمات وروابط الأطراف الثالثة", "copyright": "15. الملكية الفكرية", "termination": "16. التعليق والإنهاء", "disclaimers": "17. إخلاءات المسؤولية", "liability": "18. تحديد المسؤولية", "indemnity": "19. مسؤولية المستخدم والتعويض", "regional": "20. ملاحظات إقليمية وخاصة بكل بلد", "changes": "21. التغييرات على هذه الشروط", "automated-screening": "22. الفحص الآلي وأنظمة السلامة", "final": "23. الأحكام النهائية"}}, "ja": {"docTitle": "AGORÀ • 利用規約", "brandTitle": "利用規約", "brandSubtitle": "AGORÀ 公共的対話、モデレーション、アカウント規則", "themeDark": "ダークモード", "themeLight": "ライトモード", "back": "戻る", "eyebrow": "Agorà 法的枠組み", "heroTitle": "AGORÀ にアクセスするには、この利用規約への同意が必要です。", "heroText": "AGORÀ は、思慮ある文章、礼節ある対話、情報源、明確化、そして論理的な貢献のために作られています。これらの規約は、誰がプラットフォームを利用できるか、どのような行為が許されるか、モデレーションがどのように機能し得るか、そして利用者にどのような権利と責任が適用されるかを定めます。", "languageNoticeTitle": "言語に関する注記", "languageNoticeText": "下記の完全な法的文書は現在英語で作成されています。内容に相違がある場合は英語版が優先されます。ネイティブ翻訳が追加されるまでは、ブラウザ翻訳を補助的に利用できます。", "minAgeLabel": "最低年齢", "minAgeText": "AGORÀ は、現地法でより低い年齢が認められる場合でも、世界共通の最低年齢を <strong>16歳</strong> に設定しています。", "acceptanceLabel": "同意", "acceptanceText": "プラットフォームの利用には、本規約への明示的な同意と年齢要件の確認が必要です。", "moderationLabel": "モデレーション", "moderationText": "AGORÀ は、合法性、安全性、プラットフォームの完全性を守るため、コンテンツやアカウントを制限、非表示、削除、停止することがあります。", "termsHeadTitle": "利用規約", "effectiveDateLabel": "発効日", "versionLabel": "バージョン", "termsHeadDescription": "本規約は、アカウント、ユーザーコンテンツ、モデレーション、コミュニケーション機能、保存済み投稿、ゲーム、文化マップ機能、および将来のサービス拡張を含む AGORÀ へのアクセスと利用を規律します。", "tocTitle": "目次", "importantLabel": "重要", "acceptText": "私は AGORÀ の<strong>利用規約</strong>を読み、これに同意します。また、私は少なくとも <strong>16歳</strong> であることを確認します。", "acceptStatusDefault": "続行する前に、同意と最低年齢の確認が必要です。", "acceptStatusReady": "準備完了。ボタンを押して続行してください。", "acceptStatusSaving": "保存中…", "decline": "同意しない", "acceptContinue": "同意して続行", "footerMini": "AGORÀ • 思慮深い対話、責任ある利用<br>この文書はプラットフォーム利用規約の草案であり、実際のサービスの正確な法的構造、運営主体、プライバシーポリシー、ビジネスモデルに照らして確認されるべきです。", "headings": {"eligibility": "1. 利用資格と最低年齢", "acceptance": "2. 本規約への同意", "purpose": "3. プラットフォームの目的", "accounts": "4. アカウントとアカウントの安全性", "identity": "5. 表示名、本人性、なりすまし", "acceptable-use": "6. 許容される利用", "prohibited-content": "7. 禁止コンテンツ", "ugc": "8. ユーザー生成コンテンツ", "license": "9. AGORÀ に付与されるライセンス", "moderation": "10. モデレーションと執行", "reporting": "11. 報告、ブロック、ユーザー管理", "privacy": "12. プライバシーとデータ処理", "availability": "13. 提供状況と機能変更", "third-parties": "14. 第三者サービスとリンク", "copyright": "15. 知的財産", "termination": "16. 停止と終了", "disclaimers": "17. 免責", "liability": "18. 責任制限", "indemnity": "19. ユーザー責任と補償", "regional": "20. 地域および国別の注記", "changes": "21. 本規約の変更", "automated-screening": "22. 自動スクリーニングと安全システム", "final": "23. 最終規定"}}, "ko": {"docTitle": "AGORÀ • 서비스 약관", "brandTitle": "서비스 약관", "brandSubtitle": "AGORÀ 공개 담론, 모더레이션 및 계정 규칙", "themeDark": "다크 모드", "themeLight": "라이트 모드", "back": "뒤로", "eyebrow": "Agorà 법적 프레임워크", "heroTitle": "AGORÀ에 접근하려면 이 서비스 약관에 동의해야 합니다.", "heroText": "AGORÀ는 사려 깊은 글쓰기, 시민적 대화, 출처, 설명, 논리적 기여를 위해 만들어졌습니다. 이 약관은 누가 플랫폼을 사용할 수 있는지, 어떤 행위가 허용되는지, 모더레이션이 어떻게 작동할 수 있는지, 그리고 사용자에게 어떤 권리와 책임이 적용되는지를 정의합니다.", "languageNoticeTitle": "언어 안내", "languageNoticeText": "아래의 전체 법률 문서는 현재 영어로 작성되어 있습니다. 충돌이 있을 경우 영어 버전이 우선합니다. 기본 번역이 추가되기 전까지 브라우저 번역을 편의상 사용할 수 있습니다.", "minAgeLabel": "최소 연령", "minAgeText": "AGORÀ는 현지 법률이 더 낮은 연령을 허용할 수 있는 경우에도 전 세계 최소 연령을 <strong>16세</strong>로 정합니다.", "acceptanceLabel": "동의", "acceptanceText": "플랫폼 사용에는 이 약관에 대한 명시적 동의와 연령 요건 확인이 필요합니다.", "moderationLabel": "모더레이션", "moderationText": "AGORÀ는 합법성, 안전성, 플랫폼 무결성을 보호하기 위해 콘텐츠나 계정을 제한, 숨김, 삭제 또는 정지할 수 있습니다.", "termsHeadTitle": "서비스 약관", "effectiveDateLabel": "시행일", "versionLabel": "버전", "termsHeadDescription": "이 약관은 계정, 사용자 콘텐츠, 모더레이션, 커뮤니케이션 기능, 저장된 게시물, 게임, 문화 지도 기능 및 향후 서비스 확장을 포함하여 AGORÀ에 대한 접근과 사용을 규율합니다.", "tocTitle": "목차", "importantLabel": "중요", "acceptText": "저는 AGORÀ의 <strong>서비스 약관</strong>을 읽고 이에 동의하며, 제 나이가 최소 <strong>16세</strong> 이상임을 확인합니다.", "acceptStatusDefault": "계속하기 전에 약관 동의와 최소 연령을 확인해야 합니다.", "acceptStatusReady": "준비되었습니다. 계속하려면 버튼을 누르세요.", "acceptStatusSaving": "저장 중…", "decline": "거부", "acceptContinue": "동의하고 계속", "footerMini": "AGORÀ • 사려 깊은 담론, 책임 있는 사용<br>이 문서는 플랫폼 약관 초안이며 실제 서비스의 정확한 법적 구조, 운영자 신원, 개인정보처리방침 및 비즈니스 모델에 비추어 검토되어야 합니다.", "headings": {"eligibility": "1. 이용 자격 및 최소 연령", "acceptance": "2. 이 약관의 수락", "purpose": "3. 플랫폼의 목적", "accounts": "4. 계정 및 계정 보안", "identity": "5. 표시 이름, 신원 및 사칭", "acceptable-use": "6. 허용되는 사용", "prohibited-content": "7. 금지 콘텐츠", "ugc": "8. 사용자 생성 콘텐츠", "license": "9. AGORÀ에 부여되는 라이선스", "moderation": "10. 모더레이션 및 집행", "reporting": "11. 신고, 차단 및 사용자 제어", "privacy": "12. 개인정보 보호 및 데이터 처리", "availability": "13. 가용성 및 기능 변경", "third-parties": "14. 제3자 서비스 및 링크", "copyright": "15. 지식재산권", "termination": "16. 정지 및 종료", "disclaimers": "17. 면책조항", "liability": "18. 책임의 제한", "indemnity": "19. 사용자 책임 및 면책", "regional": "20. 지역 및 국가별 안내", "changes": "21. 이 약관의 변경", "automated-screening": "22. 자동 심사 및 안전 시스템", "final": "23. 최종 조항"}}, "hi": {"docTitle": "AGORÀ • सेवा की शर्तें", "brandTitle": "सेवा की शर्तें", "brandSubtitle": "AGORÀ सार्वजनिक विमर्श, मॉडरेशन और खाता नियम", "themeDark": "डार्क मोड", "themeLight": "लाइट मोड", "back": "वापस", "eyebrow": "Agorà कानूनी ढाँचा", "heroTitle": "AGORÀ तक पहुँचने के लिए इन सेवा की शर्तों को स्वीकार करना आवश्यक है।", "heroText": "AGORÀ विचारशील लेखन, सभ्य संवाद, स्रोतों, स्पष्टीकरण और तार्किक योगदान के लिए बनाई गई है। ये शर्तें बताती हैं कि प्लेटफ़ॉर्म का उपयोग कौन कर सकता है, कौन‑सा आचरण अनुमत है, मॉडरेशन कैसे काम कर सकता है, और उपयोगकर्ताओं पर कौन‑से अधिकार और जिम्मेदारियाँ लागू होती हैं।", "languageNoticeTitle": "भाषा संबंधी सूचना", "languageNoticeText": "नीचे दिया गया पूर्ण कानूनी पाठ वर्तमान में अंग्रेज़ी में तैयार किया गया है। किसी भी टकराव की स्थिति में अंग्रेज़ी संस्करण प्रभावी होगा। मूल अनुवाद जोड़े जाने तक ब्राउज़र अनुवाद को सुविधा के रूप में उपयोग किया जा सकता है।", "minAgeLabel": "न्यूनतम आयु", "minAgeText": "AGORÀ वैश्विक न्यूनतम आयु <strong>16 वर्ष</strong> निर्धारित करती है, भले ही स्थानीय कानून कम आयु की अनुमति देता हो।", "acceptanceLabel": "स्वीकृति", "acceptanceText": "प्लेटफ़ॉर्म का उपयोग इन शर्तों की स्पष्ट स्वीकृति और आयु पात्रता की पुष्टि की मांग करता है।", "moderationLabel": "मॉडरेशन", "moderationText": "AGORÀ वैधता, सुरक्षा और प्लेटफ़ॉर्म की अखंडता की रक्षा के लिए सामग्री या खातों को सीमित, छिपा, हटा या निलंबित कर सकती है।", "termsHeadTitle": "सेवा की शर्तें", "effectiveDateLabel": "प्रभावी तिथि", "versionLabel": "संस्करण", "termsHeadDescription": "ये शर्तें AGORÀ तक पहुँच और उपयोग को नियंत्रित करती हैं, जिनमें खाते, उपयोगकर्ता सामग्री, मॉडरेशन, संचार सुविधाएँ, सहेजे गए पोस्ट, गेम, सांस्कृतिक मानचित्र सुविधाएँ और सेवा के भविष्य के विस्तार शामिल हैं।", "tocTitle": "विषयसूची", "importantLabel": "महत्वपूर्ण", "acceptText": "मैंने AGORÀ की <strong>सेवा की शर्तें</strong> पढ़ ली हैं और उन्हें स्वीकार करता/करती हूँ, तथा पुष्टि करता/करती हूँ कि मेरी आयु कम से कम <strong>16 वर्ष</strong> है।", "acceptStatusDefault": "जारी रखने से पहले आपको स्वीकृति और न्यूनतम आयु की पुष्टि करनी होगी।", "acceptStatusReady": "तैयार। जारी रखने के लिए बटन दबाएँ।", "acceptStatusSaving": "सहेजा जा रहा है…", "decline": "अस्वीकार करें", "acceptContinue": "स्वीकार करें और जारी रखें", "footerMini": "AGORÀ • विचारशील संवाद, जिम्मेदार उपयोग<br>यह दस्तावेज़ प्लेटफ़ॉर्म की शर्तों का मसौदा है और इसे वास्तविक सेवा की सटीक कानूनी संरचना, ऑपरेटर की पहचान, गोपनीयता नीति और व्यवसाय मॉडल के संदर्भ में जाँचा जाना चाहिए।", "headings": {"eligibility": "1. पात्रता और न्यूनतम आयु", "acceptance": "2. इन शर्तों की स्वीकृति", "purpose": "3. प्लेटफ़ॉर्म का उद्देश्य", "accounts": "4. खाते और खाता सुरक्षा", "identity": "5. प्रदर्शित नाम, पहचान और प्रतिरूपण", "acceptable-use": "6. स्वीकार्य उपयोग", "prohibited-content": "7. निषिद्ध सामग्री", "ugc": "8. उपयोगकर्ता-निर्मित सामग्री", "license": "9. AGORÀ को दी गई लाइसेंस", "moderation": "10. मॉडरेशन और प्रवर्तन", "reporting": "11. रिपोर्ट, ब्लॉक और उपयोगकर्ता नियंत्रण", "privacy": "12. गोपनीयता और डेटा प्रसंस्करण", "availability": "13. उपलब्धता और फीचर परिवर्तन", "third-parties": "14. तृतीय-पक्ष सेवाएँ और लिंक", "copyright": "15. बौद्धिक संपदा", "termination": "16. निलंबन और समाप्ति", "disclaimers": "17. अस्वीकरण", "liability": "18. दायित्व की सीमा", "indemnity": "19. उपयोगकर्ता जिम्मेदारी और क्षतिपूर्ति", "regional": "20. क्षेत्रीय और देश-विशिष्ट टिप्पणियाँ", "changes": "21. इन शर्तों में परिवर्तन", "automated-screening": "22. स्वचालित स्क्रीनिंग और सुरक्षा प्रणालियाँ", "final": "23. अंतिम प्रावधान"}}, "tr": {"docTitle": "AGORÀ • Hizmet Şartları", "brandTitle": "Hizmet Şartları", "brandSubtitle": "AGORÀ kamusal tartışma, moderasyon ve hesap kuralları", "themeDark": "Koyu mod", "themeLight": "Açık mod", "back": "Geri", "eyebrow": "Agorà yasal çerçevesi", "heroTitle": "AGORÀ erişimi için bu Hizmet Şartlarının kabul edilmesi gerekir.", "heroText": "AGORÀ düşünceli yazım, medeni diyalog, kaynaklar, açıklamalar ve mantıksal katkı için tasarlanmıştır. Bu Şartlar, platformu kimlerin kullanabileceğini, hangi davranışların izinli olduğunu, moderasyonun nasıl işleyebileceğini ve kullanıcılara hangi hak ve sorumlulukların uygulandığını tanımlar.", "languageNoticeTitle": "Dil notu", "languageNoticeText": "Aşağıdaki tam hukuki metin şu anda İngilizce olarak hazırlanmıştır. Çelişki halinde İngilizce sürüm geçerlidir. Yerel çeviriler eklenene kadar tarayıcı çevirisi kolaylık amacıyla kullanılabilir.", "minAgeLabel": "Asgari yaş", "minAgeText": "AGORÀ, yerel yasa daha düşük bir yaşa izin verse bile küresel asgari yaşı <strong>16</strong> olarak belirler.", "acceptanceLabel": "Kabul", "acceptanceText": "Platformun kullanımı, bu Şartların açıkça kabul edilmesini ve yaş uygunluğunun onaylanmasını gerektirir.", "moderationLabel": "Moderasyon", "moderationText": "AGORÀ, yasallığı, güvenliği ve platform bütünlüğünü korumak için içerikleri veya hesapları sınırlayabilir, gizleyebilir, kaldırabilir ya da askıya alabilir.", "termsHeadTitle": "Hizmet Şartları", "effectiveDateLabel": "Yürürlük tarihi", "versionLabel": "Sürüm", "termsHeadDescription": "Bu Şartlar; hesaplar, kullanıcı içerikleri, moderasyon, iletişim özellikleri, kaydedilmiş gönderiler, oyunlar, kültürel harita özellikleri ve hizmetin gelecekteki uzantıları dâhil olmak üzere AGORÀ’ya erişim ve kullanımını düzenler.", "tocTitle": "İçindekiler", "importantLabel": "Önemli", "acceptText": "AGORÀ <strong>Hizmet Şartlarını</strong> okudum ve kabul ediyorum; ayrıca en az <strong>16 yaşında</strong> olduğumu onaylıyorum.", "acceptStatusDefault": "Devam etmeden önce kabulü ve asgari yaşı onaylamalısınız.", "acceptStatusReady": "Hazır. Devam etmek için düğmeye basın.", "acceptStatusSaving": "Kaydediliyor…", "decline": "Reddet", "acceptContinue": "Kabul et ve devam et", "footerMini": "AGORÀ • düşünceli söylem, sorumlu kullanım<br>Bu belge platform şartlarının taslağıdır ve canlı hizmetin tam hukuki yapısı, işletmeci kimliği, gizlilik politikası ve iş modeli ile karşılaştırılarak gözden geçirilmelidir.", "headings": {"eligibility": "1. Uygunluk ve asgari yaş", "acceptance": "2. Bu Şartların kabulü", "purpose": "3. Platformun amacı", "accounts": "4. Hesaplar ve hesap güvenliği", "identity": "5. Görünen adlar, kimlik ve taklit", "acceptable-use": "6. Kabul edilebilir kullanım", "prohibited-content": "7. Yasak içerik", "ugc": "8. Kullanıcı tarafından oluşturulan içerik", "license": "9. AGORÀ’ya verilen lisans", "moderation": "10. Moderasyon ve yaptırım", "reporting": "11. Bildirimler, engeller ve kullanıcı kontrolleri", "privacy": "12. Gizlilik ve veri işleme", "availability": "13. Kullanılabilirlik ve özellik değişiklikleri", "third-parties": "14. Üçüncü taraf hizmetleri ve bağlantıları", "copyright": "15. Fikri mülkiyet", "termination": "16. Askıya alma ve sonlandırma", "disclaimers": "17. Feragatnameler", "liability": "18. Sorumluluğun sınırlandırılması", "indemnity": "19. Kullanıcı sorumluluğu ve tazmin", "regional": "20. Bölgesel ve ülkeye özgü notlar", "changes": "21. Bu Şartlardaki değişiklikler", "automated-screening": "22. Otomatik tarama ve güvenlik sistemleri", "final": "23. Son hükümler"}}, "nl": {"docTitle": "AGORÀ • Servicevoorwaarden", "brandTitle": "Servicevoorwaarden", "brandSubtitle": "AGORÀ openbaar debat, moderatie en accountregels", "themeDark": "Donkere modus", "themeLight": "Lichte modus", "back": "Terug", "eyebrow": "Juridisch kader van Agorà", "heroTitle": "Toegang tot AGORÀ vereist aanvaarding van deze Servicevoorwaarden.", "heroText": "AGORÀ is gebouwd voor doordacht schrijven, beschaafde dialoog, bronnen, verduidelijking en logische bijdrage. Deze voorwaarden bepalen wie het platform mag gebruiken, welk gedrag is toegestaan, hoe moderatie kan werken en welke rechten en verantwoordelijkheden voor gebruikers gelden.", "languageNoticeTitle": "Taalopmerking", "languageNoticeText": "De volledige juridische tekst hieronder is momenteel in het Engels opgesteld. Bij een conflict geldt de Engelse versie. Browservertaling kan als hulpmiddel worden gebruikt totdat eigen vertalingen zijn toegevoegd.", "minAgeLabel": "Minimumleeftijd", "minAgeText": "AGORÀ hanteert wereldwijd een minimumleeftijd van <strong>16 jaar</strong>, ook waar lokaal recht mogelijk een lagere leeftijd toestaat.", "acceptanceLabel": "Aanvaarding", "acceptanceText": "Gebruik van het platform vereist uitdrukkelijke aanvaarding van deze voorwaarden en bevestiging van de leeftijdsvereiste.", "moderationLabel": "Moderatie", "moderationText": "AGORÀ kan inhoud of accounts beperken, verbergen, verwijderen of opschorten om legaliteit, veiligheid en platformintegriteit te beschermen.", "termsHeadTitle": "Servicevoorwaarden", "effectiveDateLabel": "Ingangsdatum", "versionLabel": "Versie", "termsHeadDescription": "Deze voorwaarden regelen de toegang tot en het gebruik van AGORÀ, waaronder accounts, gebruikersinhoud, moderatie, communicatiefuncties, opgeslagen berichten, spellen, culturele kaartfuncties en toekomstige uitbreidingen van de dienst.", "tocTitle": "Inhoud", "importantLabel": "Belangrijk", "acceptText": "Ik heb de <strong>Servicevoorwaarden</strong> van AGORÀ gelezen en aanvaard, en ik bevestig dat ik ten minste <strong>16 jaar</strong> oud ben.", "acceptStatusDefault": "Je moet aanvaarding en minimumleeftijd bevestigen voordat je verdergaat.", "acceptStatusReady": "Klaar. Druk op de knop om verder te gaan.", "acceptStatusSaving": "Opslaan…", "decline": "Weigeren", "acceptContinue": "Accepteren en doorgaan", "footerMini": "AGORÀ • doordacht discours, verantwoord gebruik<br>Dit document is een concept van de platformvoorwaarden en moet worden getoetst aan de exacte juridische structuur, de identiteit van de exploitant, het privacybeleid en het bedrijfsmodel van de live dienst.", "headings": {"eligibility": "1. Geschiktheid en minimumleeftijd", "acceptance": "2. Aanvaarding van deze voorwaarden", "purpose": "3. Doel van het platform", "accounts": "4. Accounts en accountbeveiliging", "identity": "5. Weergavenamen, identiteit en imitatie", "acceptable-use": "6. Toelaatbaar gebruik", "prohibited-content": "7. Verboden inhoud", "ugc": "8. Door gebruikers gegenereerde inhoud", "license": "9. Aan AGORÀ verleende licentie", "moderation": "10. Moderatie en handhaving", "reporting": "11. Meldingen, blokkeringen en gebruikerscontroles", "privacy": "12. Privacy en gegevensverwerking", "availability": "13. Beschikbaarheid en functiewijzigingen", "third-parties": "14. Diensten en links van derden", "copyright": "15. Intellectuele eigendom", "termination": "16. Opschorting en beëindiging", "disclaimers": "17. Disclaimers", "liability": "18. Beperking van aansprakelijkheid", "indemnity": "19. Verantwoordelijkheid van de gebruiker en vrijwaring", "regional": "20. Regionale en landspecifieke opmerkingen", "changes": "21. Wijzigingen in deze voorwaarden", "automated-screening": "22. Geautomatiseerde screening en veiligheidssystemen", "final": "23. Slotbepalingen"}}, "pl": {"docTitle": "AGORÀ • Warunki korzystania z usługi", "brandTitle": "Warunki korzystania z usługi", "brandSubtitle": "AGORÀ dyskurs publiczny, moderacja i zasady konta", "themeDark": "Tryb ciemny", "themeLight": "Tryb jasny", "back": "Wstecz", "eyebrow": "Ramy prawne Agorà", "heroTitle": "Dostęp do AGORÀ wymaga zaakceptowania niniejszych Warunków korzystania z usługi.", "heroText": "AGORÀ została stworzona do przemyślanego pisania, cywilizowanego dialogu, źródeł, wyjaśnień i logicznego wkładu. Niniejsze Warunki określają, kto może korzystać z platformy, jakie zachowanie jest dozwolone, jak może działać moderacja oraz jakie prawa i obowiązki mają użytkownicy.", "languageNoticeTitle": "Uwaga językowa", "languageNoticeText": "Pełny tekst prawny poniżej jest obecnie sporządzony w języku angielskim. W razie rozbieżności obowiązuje wersja angielska. Tłumaczenie przeglądarki może być używane pomocniczo do czasu dodania natywnych tłumaczeń.", "minAgeLabel": "Minimalny wiek", "minAgeText": "AGORÀ ustala globalny minimalny wiek na <strong>16 lat</strong>, nawet jeśli lokalne prawo może dopuszczać niższy wiek.", "acceptanceLabel": "Akceptacja", "acceptanceText": "Korzystanie z platformy wymaga wyraźnej akceptacji niniejszych Warunków oraz potwierdzenia spełnienia wymogu wieku.", "moderationLabel": "Moderacja", "moderationText": "AGORÀ może ograniczać, ukrywać, usuwać lub zawieszać treści lub konta w celu ochrony legalności, bezpieczeństwa i integralności platformy.", "termsHeadTitle": "Warunki korzystania z usługi", "effectiveDateLabel": "Data wejścia w życie", "versionLabel": "Wersja", "termsHeadDescription": "Niniejsze Warunki regulują dostęp do AGORÀ i korzystanie z niej, w tym konta, treści użytkowników, moderację, funkcje komunikacyjne, zapisane posty, gry, funkcje mapy kulturowej oraz przyszłe rozszerzenia usługi.", "tocTitle": "Spis treści", "importantLabel": "Ważne", "acceptText": "Przeczytałem(-am) i akceptuję <strong>Warunki korzystania z usługi</strong> AGORÀ oraz potwierdzam, że mam co najmniej <strong>16 lat</strong>.", "acceptStatusDefault": "Przed kontynuowaniem musisz potwierdzić akceptację i minimalny wiek.", "acceptStatusReady": "Gotowe. Naciśnij przycisk, aby kontynuować.", "acceptStatusSaving": "Zapisywanie…", "decline": "Odrzuć", "acceptContinue": "Akceptuję i kontynuuję", "footerMini": "AGORÀ • przemyślany dyskurs, odpowiedzialne korzystanie<br>Ten dokument jest projektem warunków platformy i powinien zostać zweryfikowany pod kątem dokładnej struktury prawnej, tożsamości operatora, polityki prywatności i modelu biznesowego działającej usługi.", "headings": {"eligibility": "1. Uprawnienia i minimalny wiek", "acceptance": "2. Akceptacja niniejszych Warunków", "purpose": "3. Cel platformy", "accounts": "4. Konta i bezpieczeństwo konta", "identity": "5. Nazwy wyświetlane, tożsamość i podszywanie się", "acceptable-use": "6. Dopuszczalne korzystanie", "prohibited-content": "7. Zabronione treści", "ugc": "8. Treści tworzone przez użytkowników", "license": "9. Licencja udzielona AGORÀ", "moderation": "10. Moderacja i egzekwowanie", "reporting": "11. Zgłoszenia, blokady i kontrola użytkownika", "privacy": "12. Prywatność i przetwarzanie danych", "availability": "13. Dostępność i zmiany funkcji", "third-parties": "14. Usługi i linki stron trzecich", "copyright": "15. Własność intelektualna", "termination": "16. Zawieszenie i zakończenie", "disclaimers": "17. Zastrzeżenia", "liability": "18. Ograniczenie odpowiedzialności", "indemnity": "19. Odpowiedzialność użytkownika i zwolnienie z odpowiedzialności", "regional": "20. Uwagi regionalne i krajowe", "changes": "21. Zmiany niniejszych Warunków", "automated-screening": "22. Zautomatyzowane skanowanie i systemy bezpieczeństwa", "final": "23. Postanowienia końcowe"}}, "uk": {"docTitle": "AGORÀ • Умови користування", "brandTitle": "Умови користування", "brandSubtitle": "AGORÀ публічний дискурс, модерація та правила облікового запису", "themeDark": "Темна тема", "themeLight": "Світла тема", "back": "Назад", "eyebrow": "Правова рамка Agorà", "heroTitle": "Доступ до AGORÀ вимагає прийняття цих Умов користування.", "heroText": "AGORÀ створена для продуманого письма, цивілізованого діалогу, джерел, уточнень і логічного внеску. Ці Умови визначають, хто може користуватися платформою, яка поведінка дозволена, як може працювати модерація та які права й обов’язки застосовуються до користувачів.", "languageNoticeTitle": "Мовна примітка", "languageNoticeText": "Повний юридичний текст нижче наразі складений англійською мовою. У разі розбіжностей переважає англійська версія. Переклад браузера можна використовувати як допоміжний варіант, доки не буде додано нативні переклади.", "minAgeLabel": "Мінімальний вік", "minAgeText": "AGORÀ встановлює глобальний мінімальний вік <strong>16 років</strong>, навіть якщо місцеве право допускає нижчий вік.", "acceptanceLabel": "Прийняття", "acceptanceText": "Користування платформою вимагає явного прийняття цих Умов і підтвердження вікової відповідності.", "moderationLabel": "Модерація", "moderationText": "AGORÀ може обмежувати, приховувати, видаляти або призупиняти контент чи облікові записи для захисту законності, безпеки та цілісності платформи.", "termsHeadTitle": "Умови користування", "effectiveDateLabel": "Дата набрання чинності", "versionLabel": "Версія", "termsHeadDescription": "Ці Умови регулюють доступ до AGORÀ та її використання, включно з обліковими записами, контентом користувачів, модерацією, функціями спілкування, збереженими дописами, іграми, можливостями культурної мапи та майбутніми розширеннями сервісу.", "tocTitle": "Зміст", "importantLabel": "Важливо", "acceptText": "Я прочитав(-ла) і приймаю <strong>Умови користування</strong> AGORÀ та підтверджую, що мені щонайменше <strong>16 років</strong>.", "acceptStatusDefault": "Перш ніж продовжити, потрібно підтвердити прийняття та мінімальний вік.", "acceptStatusReady": "Готово. Натисніть кнопку, щоб продовжити.", "acceptStatusSaving": "Збереження…", "decline": "Відхилити", "acceptContinue": "Прийняти й продовжити", "footerMini": "AGORÀ • продуманий дискурс, відповідальне використання<br>Цей документ є проєктом умов платформи і має бути перевірений з урахуванням точної правової структури, особи оператора, політики конфіденційності та бізнес-моделі чинного сервісу.", "headings": {"eligibility": "1. Право на використання та мінімальний вік", "acceptance": "2. Прийняття цих Умов", "purpose": "3. Призначення платформи", "accounts": "4. Облікові записи та безпека облікового запису", "identity": "5. Імена відображення, особа та видавання себе за іншого", "acceptable-use": "6. Допустиме використання", "prohibited-content": "7. Заборонений контент", "ugc": "8. Контент, створений користувачами", "license": "9. Ліцензія, надана AGORÀ", "moderation": "10. Модерація та застосування", "reporting": "11. Скарги, блокування та засоби контролю користувача", "privacy": "12. Конфіденційність і обробка даних", "availability": "13. Доступність і зміни функцій", "third-parties": "14. Сторонні сервіси та посилання", "copyright": "15. Інтелектуальна власність", "termination": "16. Призупинення та припинення", "disclaimers": "17. Застереження", "liability": "18. Обмеження відповідальності", "indemnity": "19. Відповідальність користувача та відшкодування", "regional": "20. Регіональні та країнові примітки", "changes": "21. Зміни до цих Умов", "automated-screening": "22. Автоматична перевірка та системи безпеки", "final": "23. Прикінцеві положення"}}, "el": {"docTitle": "AGORÀ • Όροι Χρήσης", "brandTitle": "Όροι Χρήσης", "brandSubtitle": "AGORÀ δημόσιος λόγος, εποπτεία και κανόνες λογαριασμού", "themeDark": "Σκοτεινή λειτουργία", "themeLight": "Φωτεινή λειτουργία", "back": "Πίσω", "eyebrow": "Νομικό πλαίσιο της Agorà", "heroTitle": "Η πρόσβαση στο AGORÀ απαιτεί την αποδοχή αυτών των Όρων Χρήσης.", "heroText": "Το AGORÀ έχει σχεδιαστεί για στοχαστική γραφή, πολιτισμένο διάλογο, πηγές, διευκρινίσεις και λογική συνεισφορά. Αυτοί οι Όροι καθορίζουν ποιος μπορεί να χρησιμοποιεί την πλατφόρμα, ποια συμπεριφορά επιτρέπεται, πώς μπορεί να λειτουργεί η εποπτεία και ποια δικαιώματα και ευθύνες ισχύουν για τους χρήστες.", "languageNoticeTitle": "Σημείωση γλώσσας", "languageNoticeText": "Το πλήρες νομικό κείμενο παρακάτω έχει προς το παρόν συνταχθεί στα αγγλικά. Σε περίπτωση σύγκρουσης υπερισχύει η αγγλική έκδοση. Η μετάφραση του προγράμματος περιήγησης μπορεί να χρησιμοποιηθεί βοηθητικά έως ότου προστεθούν εγγενείς μεταφράσεις.", "minAgeLabel": "Ελάχιστη ηλικία", "minAgeText": "Το AGORÀ ορίζει παγκόσμιο ελάχιστο όριο ηλικίας τα <strong>16 έτη</strong>, ακόμη και όπου η τοπική νομοθεσία μπορεί να επιτρέπει χαμηλότερη ηλικία.", "acceptanceLabel": "Αποδοχή", "acceptanceText": "Η χρήση της πλατφόρμας απαιτεί ρητή αποδοχή αυτών των Όρων και επιβεβαίωση του ηλικιακού ορίου.", "moderationLabel": "Εποπτεία", "moderationText": "Το AGORÀ μπορεί να περιορίζει, να αποκρύπτει, να αφαιρεί ή να αναστέλλει περιεχόμενο ή λογαριασμούς για την προστασία της νομιμότητας, της ασφάλειας και της ακεραιότητας της πλατφόρμας.", "termsHeadTitle": "Όροι Χρήσης", "effectiveDateLabel": "Ημερομηνία έναρξης ισχύος", "versionLabel": "Έκδοση", "termsHeadDescription": "Αυτοί οι Όροι διέπουν την πρόσβαση και τη χρήση του AGORÀ, συμπεριλαμβανομένων λογαριασμών, περιεχομένου χρηστών, εποπτείας, λειτουργιών επικοινωνίας, αποθηκευμένων αναρτήσεων, παιχνιδιών, χαρακτηριστικών πολιτιστικού χάρτη και μελλοντικών επεκτάσεων της υπηρεσίας.", "tocTitle": "Περιεχόμενα", "importantLabel": "Σημαντικό", "acceptText": "Έχω διαβάσει και αποδέχομαι τους <strong>Όρους Χρήσης</strong> του AGORÀ και επιβεβαιώνω ότι είμαι τουλάχιστον <strong>16 ετών</strong>.", "acceptStatusDefault": "Πρέπει να επιβεβαιώσετε την αποδοχή και το ελάχιστο όριο ηλικίας πριν συνεχίσετε.", "acceptStatusReady": "Έτοιμο. Πατήστε το κουμπί για να συνεχίσετε.", "acceptStatusSaving": "Αποθήκευση…", "decline": "Απόρριψη", "acceptContinue": "Αποδοχή και συνέχεια", "footerMini": "AGORÀ • στοχαστικός λόγος, υπεύθυνη χρήση<br>Το παρόν έγγραφο είναι προσχέδιο όρων της πλατφόρμας και θα πρέπει να ελεγχθεί σε σχέση με την ακριβή νομική δομή, την ταυτότητα του φορέα εκμετάλλευσης, την πολιτική απορρήτου και το επιχειρηματικό μοντέλο της ενεργής υπηρεσίας.", "headings": {"eligibility": "1. Καταλληλότητα και ελάχιστη ηλικία", "acceptance": "2. Αποδοχή αυτών των Όρων", "purpose": "3. Σκοπός της πλατφόρμας", "accounts": "4. Λογαριασμοί και ασφάλεια λογαριασμού", "identity": "5. Ονόματα εμφάνισης, ταυτότητα και πλαστοπροσωπία", "acceptable-use": "6. Αποδεκτή χρήση", "prohibited-content": "7. Απαγορευμένο περιεχόμενο", "ugc": "8. Περιεχόμενο που δημιουργείται από χρήστες", "license": "9. Άδεια που παραχωρείται στο AGORÀ", "moderation": "10. Εποπτεία και επιβολή", "reporting": "11. Αναφορές, αποκλεισμοί και έλεγχοι χρήστη", "privacy": "12. Απόρρητο και επεξεργασία δεδομένων", "availability": "13. Διαθεσιμότητα και αλλαγές λειτουργιών", "third-parties": "14. Υπηρεσίες και σύνδεσμοι τρίτων", "copyright": "15. Πνευματική ιδιοκτησία", "termination": "16. Αναστολή και τερματισμός", "disclaimers": "17. Αποποιήσεις", "liability": "18. Περιορισμός ευθύνης", "indemnity": "19. Ευθύνη χρήστη και αποζημίωση", "regional": "20. Περιφερειακές και ειδικές ανά χώρα σημειώσεις", "changes": "21. Αλλαγές σε αυτούς τους Όρους", "automated-screening": "22. Αυτοματοποιημένος έλεγχος και συστήματα ασφάλειας", "final": "23. Τελικές διατάξεις"}}};
 
-  <script>
-    const TERMS_VERSION = "2026-03-17-v2";
-    const TERMS_ACCEPT_KEY = "agora_terms_accepted_v2";
+  const acceptCheckbox = document.getElementById("acceptCheckbox");
+  const acceptBtn = document.getElementById("acceptBtn");
+  const acceptStatus = document.getElementById("acceptStatus");
+  const effectiveDate = document.getElementById("effectiveDate");
+  const termsVersionLabel = document.getElementById("termsVersionLabel");
+  const langPicker = document.getElementById("langPicker");
+  const langToggleBtn = document.getElementById("langToggleBtn");
+  const langPickerDropdown = document.getElementById("langPickerDropdown");
+  const currentLangFlag = document.getElementById("currentLangFlag");
+  const currentLangCode = document.getElementById("currentLangCode");
+  const backTopBtn = document.getElementById("backTopBtn");
+  const declineBtn = document.getElementById("declineBtn");
+  const themeToggleBtn = document.getElementById("themeToggleBtn");
 
-    const acceptCheckbox = document.getElementById("acceptCheckbox");
-    const acceptBtn = document.getElementById("acceptBtn");
-    const acceptStatus = document.getElementById("acceptStatus");
-    const effectiveDate = document.getElementById("effectiveDate");
-    const termsVersionLabel = document.getElementById("termsVersionLabel");
+  effectiveDate.textContent = "2026-03-20";
+  termsVersionLabel.textContent = TERMS_VERSION;
 
-    effectiveDate.textContent = "2026-03-17";
-    termsVersionLabel.textContent = TERMS_VERSION;
+  function getStoredLanguage() {
+    const params = new URLSearchParams(window.location.search);
+    const paramLang = params.get("lang");
+    if (paramLang && I18N[paramLang]) return paramLang;
 
-    function refreshAcceptUi(){
-      const checked = !!acceptCheckbox.checked;
-      acceptBtn.disabled = !checked;
-      acceptStatus.textContent = checked
-        ? "Ready. Press the button to continue."
-        : "You must confirm acceptance and minimum age before continuing.";
+    const keys = ["agora_lang", "selected_lang", "lang", "language", "site_lang"];
+    for (const key of keys) {
+      const value = localStorage.getItem(key);
+      if (value && I18N[value]) return value;
     }
 
-    acceptCheckbox.addEventListener("change", refreshAcceptUi);
+    const nav = (navigator.language || navigator.userLanguage || "en").toLowerCase();
+    const short = nav.split('-')[0];
+    return I18N[short] ? short : "en";
+  }
 
-    acceptBtn.addEventListener("click", async () => {
-      if (!acceptCheckbox.checked) return;
-      acceptBtn.disabled = true;
-      acceptStatus.textContent = "Saving…";
+  let currentLang = getStoredLanguage();
 
-      const payload = {
-        accepted: true,
-        version: TERMS_VERSION,
-        min_age_confirmed: true,
-        accepted_at: new Date().toISOString()
-      };
+  function persistLanguage(lang) {
+    currentLang = I18N[lang] ? lang : "en";
+    ["agora_lang", "selected_lang", "lang", "language", "site_lang"].forEach(key => {
+      try { localStorage.setItem(key, currentLang); } catch (e) {}
+    });
+  }
 
-      // Salva sempre in localStorage (fallback per utenti non loggati)
-      localStorage.setItem(TERMS_ACCEPT_KEY, JSON.stringify(payload));
+  function setDirAndLang(lang) {
+    document.documentElement.setAttribute("lang", lang === "en" ? "en" : lang);
+    document.documentElement.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+  }
 
-      // Se l'utente è loggato, salva anche nel DB
-      const token = localStorage.getItem("agora_token");
-      if (token) {
-        try {
-          await fetch("https://agora-api.convergegame.workers.dev/api/terms/accept", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": "Bearer " + token
-            },
-            body: JSON.stringify({ version: TERMS_ACCEPT_KEY })
-          });
-        } catch (e) {
-          console.warn("Terms accept API failed, localStorage fallback used", e);
-        }
-      }
+  function t(lang) {
+    return I18N[lang] || I18N.en;
+  }
 
-      window.location.href = "index.html";
+  function renderLanguageOptions() {
+    langPickerDropdown.innerHTML = "";
+    for (const item of SUPPORTED_LANGUAGES) {
+      const option = document.createElement("div");
+      option.className = "lang-option" + (item.code === currentLang ? " active" : "");
+      option.dataset.lang = item.code;
+      option.dataset.flag = item.flag;
+      option.setAttribute("role", "option");
+      option.setAttribute("aria-selected", item.code === currentLang ? "true" : "false");
+      option.innerHTML = `<img src="https://flagcdn.com/w20/${item.flag}.png" class="lang-flag" alt=""> ${item.label}`;
+      option.addEventListener("click", () => {
+        persistLanguage(item.code);
+        applyTranslations();
+        closeLangMenu();
+      });
+      langPickerDropdown.appendChild(option);
+    }
+
+    const current = SUPPORTED_LANGUAGES.find(x => x.code === currentLang) || SUPPORTED_LANGUAGES[1];
+    currentLangFlag.src = `https://flagcdn.com/w20/${current.flag}.png`;
+    currentLangFlag.alt = current.label;
+    currentLangCode.textContent = current.code.toUpperCase();
+  }
+
+  function openLangMenu() {
+    langPicker.classList.add("open");
+    langToggleBtn.setAttribute("aria-expanded", "true");
+  }
+  function closeLangMenu() {
+    langPicker.classList.remove("open");
+    langToggleBtn.setAttribute("aria-expanded", "false");
+  }
+
+  langToggleBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (langPicker.classList.contains("open")) closeLangMenu(); else openLangMenu();
+  });
+  document.addEventListener("click", (e) => {
+    if (!langPicker.contains(e.target)) closeLangMenu();
+  });
+
+  function localizedThemeLabel(locale) {
+    const theme = document.documentElement.getAttribute("data-theme");
+    return theme === "dark" ? locale.themeLight : locale.themeDark;
+  }
+
+  function updateThemeButtonLabel() {
+    themeToggleBtn.textContent = localizedThemeLabel(t(currentLang));
+  }
+
+  function localizeStatic(locale) {
+    document.title = locale.docTitle;
+    document.getElementById("brandTitle").textContent = locale.brandTitle;
+    document.getElementById("brandSubtitle").textContent = locale.brandSubtitle;
+    document.getElementById("heroEyebrow").textContent = locale.eyebrow;
+    document.getElementById("heroTitle").textContent = locale.heroTitle;
+    document.getElementById("heroText").textContent = locale.heroText;
+    document.getElementById("languageNoticeTitle").textContent = locale.languageNoticeTitle;
+    document.getElementById("languageNoticeText").textContent = locale.languageNoticeText;
+    document.getElementById("minAgeLabel").textContent = locale.minAgeLabel;
+    document.getElementById("minAgeText").innerHTML = locale.minAgeText;
+    document.getElementById("acceptanceLabel").textContent = locale.acceptanceLabel;
+    document.getElementById("acceptanceText").innerHTML = locale.acceptanceText;
+    document.getElementById("moderationLabel").textContent = locale.moderationLabel;
+    document.getElementById("moderationText").innerHTML = locale.moderationText;
+    document.getElementById("termsHeadTitle").textContent = locale.termsHeadTitle;
+    document.getElementById("effectiveDateLabel").textContent = locale.effectiveDateLabel;
+    document.getElementById("versionLabel").textContent = locale.versionLabel;
+    document.getElementById("termsHeadDescription").textContent = locale.termsHeadDescription;
+    document.getElementById("tocTitle").textContent = locale.tocTitle;
+    document.getElementById("importantLabel").textContent = locale.importantLabel;
+    document.getElementById("acceptText").innerHTML = locale.acceptText;
+    backTopBtn.textContent = locale.back;
+    declineBtn.textContent = locale.decline;
+    acceptBtn.textContent = locale.acceptContinue;
+    document.getElementById("footerMini").innerHTML = locale.footerMini;
+
+    document.querySelectorAll("[data-heading-key]").forEach(el => {
+      const key = el.dataset.headingKey;
+      if (locale.headings[key]) el.textContent = locale.headings[key];
+    });
+    document.querySelectorAll("[data-toc-key]").forEach(el => {
+      const key = el.dataset.tocKey;
+      if (locale.headings[key]) el.textContent = locale.headings[key];
     });
 
+    updateThemeButtonLabel();
     refreshAcceptUi();
-  </script>
+  }
+
+  function applyTranslations() {
+    const locale = t(currentLang);
+    setDirAndLang(currentLang);
+    renderLanguageOptions();
+    localizeStatic(locale);
+    const langQuery = `?lang=${encodeURIComponent(currentLang)}`;
+    backTopBtn.href = `index.html${langQuery}`;
+    declineBtn.href = `index.html${langQuery}`;
+  }
+
+  function refreshAcceptUi() {
+    const checked = !!acceptCheckbox.checked;
+    const locale = t(currentLang);
+    acceptBtn.disabled = !checked;
+    acceptStatus.textContent = checked ? locale.acceptStatusReady : locale.acceptStatusDefault;
+  }
+
+  acceptCheckbox.addEventListener("change", refreshAcceptUi);
+
+  const observer = new MutationObserver(() => updateThemeButtonLabel());
+  observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+
+  acceptBtn.addEventListener("click", async () => {
+    if (!acceptCheckbox.checked) return;
+    acceptBtn.disabled = true;
+    acceptStatus.textContent = t(currentLang).acceptStatusSaving;
+
+    const payload = {
+      accepted: true,
+      version: TERMS_VERSION,
+      min_age_confirmed: true,
+      accepted_at: new Date().toISOString(),
+      lang: currentLang
+    };
+
+    localStorage.setItem(TERMS_ACCEPT_KEY, JSON.stringify(payload));
+
+    const token = localStorage.getItem("agora_token");
+    if (token) {
+      try {
+        await fetch("https://agora-api.convergegame.workers.dev/api/terms/accept", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token
+          },
+          body: JSON.stringify({ version: TERMS_VERSION, lang: currentLang })
+        });
+      } catch (e) {
+        console.warn("Terms accept API failed, localStorage fallback used", e);
+      }
+    }
+
+    window.location.href = `index.html?lang=${encodeURIComponent(currentLang)}`;
+  });
+
+  persistLanguage(currentLang);
+  applyTranslations();
+</script>
 </body>
 </html>
