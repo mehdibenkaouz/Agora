@@ -642,16 +642,30 @@ function showLobby(waiting=true){
   document.getElementById("lobbyNote").textContent = waiting ? "No players online." : "Starting the session…";
 }
 function hideLobby(){ document.getElementById("lobbyOverlay").classList.remove("open"); }
-async function apiJson(url, options={}){
-  const token = getAuthToken();
-  if(!token){
-    return { res: null, data: { ok:false, error:"missing_token" } };
-  }
-  const res = await fetch(url, {
-    ...options,
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, ...(options.headers || {}) }
+const API_BASE = "https://agora-api.convergegame.workers.dev";
+
+async function apiJson(path, opts={}){
+  const token =
+    localStorage.getItem("token") ||
+    localStorage.getItem("authToken") ||
+    localStorage.getItem("agora_token") ||
+    "";
+
+  const headers = {
+    "Content-Type": "application/json",
+    ...(opts.headers || {})
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...opts,
+    headers
   });
-  const data = await res.json().catch(() => ({}));
+
+  let data = null;
+  try { data = await res.json(); }
+  catch { data = { ok:false, error:"invalid_json_response" }; }
+
   return { res, data };
 }
 async function leaveLobby(){
@@ -722,14 +736,50 @@ async function matchmakingTick(){
 }
 async function syncOnlineState(){
   if(!onlineMode || !onlineSessionId) return;
-  const { data } = await apiJson(`/api/games/session/${encodeURIComponent(onlineSessionId)}`);
+
+  const { res, data } = await apiJson(`/api/games/session/${encodeURIComponent(onlineSessionId)}`);
+
+  console.log("[SESSION SYNC]", {
+    sessionId: onlineSessionId,
+    status: res?.status,
+    ok: res?.ok,
+    data
+  });
+
   if(!data?.ok || !data.session) return;
-  if((data.session.version||0)!==onlineVersion){ onlineVersion=data.session.version||0; applySerializedState(data.session.state); }
+
+  if((data.session.version || 0) !== onlineVersion){
+    onlineVersion = data.session.version || 0;
+    applySerializedState(data.session.state);
+  }
 }
 async function pushOnlineState(){
   if(!onlineMode || !onlineSessionId) return;
-  const { data } = await apiJson(`/api/games/session/${encodeURIComponent(onlineSessionId)}/move`, { method:"POST", body: JSON.stringify({ version: onlineVersion, state: serializeGameState() }) });
-  if(data?.ok) onlineVersion=data.version; else if(data?.error === "version_conflict"){ onlineVersion=data.version||onlineVersion; if(data.state) applySerializedState(data.state); }
+
+  const { res, data } = await apiJson(
+    `/api/games/session/${encodeURIComponent(onlineSessionId)}/move`,
+    {
+      method:"POST",
+      body: JSON.stringify({
+        version: onlineVersion,
+        state: serializeGameState()
+      })
+    }
+  );
+
+  console.log("[SESSION MOVE]", {
+    sessionId: onlineSessionId,
+    status: res?.status,
+    ok: res?.ok,
+    data
+  });
+
+  if(data?.ok){
+    onlineVersion = data.version;
+  } else if(data?.error === "version_conflict"){
+    onlineVersion = data.version || onlineVersion;
+    if(data.state) applySerializedState(data.state);
+  }
 }
 
 // ── Controls ───────────────────────────────────────────────────────
