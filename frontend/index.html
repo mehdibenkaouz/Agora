@@ -3686,6 +3686,7 @@
     const TOKEN_KEY = "agora_token";
 
     const TERMS_ACCEPT_KEY = "agora_terms_accepted_v3";
+    const TERMS_VERSION = "2026-03-20-v3";
 
     // function applyTheme(theme){
     //   const root = document.documentElement;
@@ -7807,7 +7808,7 @@ async function runSearch() {
       // Se l'utente è loggato, verifica accettazione terms lato server
       if (CURRENT_USER) {
         const meRes = CURRENT_USER;
-        if (!meRes.terms_accepted_version || meRes.terms_accepted_version !== TERMS_ACCEPT_KEY) {
+        if (!meRes.terms_accepted_version || meRes.terms_accepted_version !== TERMS_VERSION) {
           window.location.href = "terms.html";
           return;
         }
