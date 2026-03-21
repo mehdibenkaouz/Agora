@@ -182,6 +182,73 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 :root[data-theme="dark"] .popup-btn{color:#0a0d12;}
 .popup-btn:hover{opacity:.85;}
 
+/* ── CONFIRM MODAL ── */
+.confirm-overlay{
+  position:fixed;inset:0;z-index:9999;
+  background:rgba(0,0,0,0.45);
+  display:none;align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);
+  animation:confirmFadeIn .2s ease;
+}
+.confirm-overlay.open{display:flex;}
+@keyframes confirmFadeIn{from{opacity:0}to{opacity:1}}
+.confirm-box{
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:28px 24px 22px;
+  max-width:340px;width:calc(100% - 40px);
+  box-shadow:var(--shadow);
+  text-align:center;
+  animation:confirmSlideUp .25s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes confirmSlideUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+.confirm-icon{font-size:1.6rem;margin-bottom:10px;}
+.confirm-title{
+  font-family:'Cinzel',serif;font-size:.85rem;
+  letter-spacing:.06em;font-weight:600;
+  margin-bottom:6px;color:var(--text);
+}
+.confirm-msg{
+  font-size:.8rem;color:var(--muted);
+  line-height:1.6;margin-bottom:20px;
+}
+.confirm-actions{display:flex;gap:10px;}
+.confirm-actions button{
+  flex:1;padding:10px;border-radius:12px;
+  font-family:'Cinzel',serif;font-size:.68rem;
+  letter-spacing:.06em;text-transform:uppercase;
+  cursor:pointer;transition:all .15s;
+}
+.confirm-cancel{
+  border:1px solid var(--line);background:transparent;color:var(--muted);
+}
+.confirm-cancel:hover{background:var(--line);}
+.confirm-ok{
+  border:none;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));
+  color:#fff;box-shadow:0 4px 14px rgba(87,25,41,0.3);
+}
+:root[data-theme="dark"] .confirm-ok{color:#0a0d12;}
+.confirm-ok:hover{transform:translateY(-1px);}
+.confirm-ok.danger{background:linear-gradient(135deg,#8b2239,#a62e4a);}
+:root[data-theme="dark"] .confirm-ok.danger{background:linear-gradient(135deg,#6b1a2d,#8b2239);color:#f0d8d8;}
+
+/* toast */
+.toast{
+  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);z-index:10000;
+  background:var(--panel);border:1px solid var(--line);
+  border-radius:14px;padding:12px 22px;
+  box-shadow:var(--shadow);
+  font-family:'Lora',serif;font-size:.82rem;color:var(--text);
+  display:none;align-items:center;gap:8px;
+  animation:toastIn .3s cubic-bezier(.34,1.56,.64,1);
+}
+.toast.show{display:flex;}
+.toast.hiding{animation:toastOut .25s ease forwards;}
+@keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@keyframes toastOut{from{opacity:1;transform:translateX(-50%) translateY(0)}to{opacity:0;transform:translateX(-50%) translateY(12px)}}
+
 /* ── FAB (add session) ── */
 .fab{
   position:absolute;bottom:28px;right:24px;z-index:900;
@@ -633,6 +700,22 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   </div>
 </div>
 
+<!-- Confirm dialog -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-icon" id="confirmIcon">🗑️</div>
+    <div class="confirm-title" id="confirmTitle">Eliminare sessione?</div>
+    <div class="confirm-msg" id="confirmMsg">Questa azione è irreversibile.</div>
+    <div class="confirm-actions">
+      <button class="confirm-cancel" id="confirmCancel">Annulla</button>
+      <button class="confirm-ok danger" id="confirmOk">Elimina</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
 // ── Theme ──────────────────────────────────────────────────────────
 // const THEME_KEY="agora_theme";
@@ -673,6 +756,37 @@ const TOPIC_COLORS={
 // ── API ────────────────────────────────────────────────────────────
 const API_BASE="https://agora-api.convergegame.workers.dev";
 const TOKEN_KEY="agora_token";
+// ── Elegant confirm & toast ──────────────────────────────────────
+function agoraConfirm({icon="🗑️",title="Conferma",msg="Sei sicuro?",ok="Conferma",cancel="Annulla",danger=false}={}){
+  return new Promise(resolve=>{
+    const overlay=document.getElementById("confirmOverlay");
+    document.getElementById("confirmIcon").textContent=icon;
+    document.getElementById("confirmTitle").textContent=title;
+    document.getElementById("confirmMsg").textContent=msg;
+    const okBtn=document.getElementById("confirmOk");
+    okBtn.textContent=ok;
+    okBtn.className="confirm-ok"+(danger?" danger":"");
+    document.getElementById("confirmCancel").textContent=cancel;
+    overlay.classList.add("open");
+    function cleanup(val){overlay.classList.remove("open");okBtn.onclick=null;document.getElementById("confirmCancel").onclick=null;resolve(val);}
+    okBtn.onclick=()=>cleanup(true);
+    document.getElementById("confirmCancel").onclick=()=>cleanup(false);
+    overlay.addEventListener("click",e=>{if(e.target===overlay)cleanup(false);},{once:true});
+  });
+}
+
+let _toastTimer=null;
+function agoraToast(text,duration=2800){
+  const el=document.getElementById("toast");
+  clearTimeout(_toastTimer);
+  el.classList.remove("hiding");
+  el.textContent=text;
+  el.classList.add("show");
+  _toastTimer=setTimeout(()=>{
+    el.classList.add("hiding");
+    setTimeout(()=>{el.classList.remove("show","hiding");},280);
+  },duration);
+}
 let sessions=[];
 let currentUserId=null;
 (async function initUser(){
@@ -878,9 +992,17 @@ window.contactSession=function(id){
 };
 
 window.deleteSession=async function(id){
-  if(!confirm("Vuoi eliminare questa sessione?")) return;
+  const confirmed=await agoraConfirm({
+    icon:"🗑️",
+    title:"Eliminare sessione?",
+    msg:"La sessione verrà rimossa dalla mappa e dalla lista.",
+    ok:"Elimina",
+    cancel:"Annulla",
+    danger:true
+  });
+  if(!confirmed) return;
   const token=localStorage.getItem(TOKEN_KEY);
-  if(!token){alert("Devi effettuare il login.");return;}
+  if(!token){agoraToast("⚠️ Devi effettuare il login.");return;}
   try{
     const res=await fetch(`${API_BASE}/api/map/sessions/${id}`,{
       method:"DELETE",
@@ -888,12 +1010,13 @@ window.deleteSession=async function(id){
     });
     const data=await res.json();
     if(data.ok){
+      agoraToast("✅ Sessione eliminata.");
       await loadSessions();
     }else{
-      alert("Impossibile eliminare: "+(data.error||"errore sconosciuto"));
+      agoraToast("⚠️ "+(data.error||"Errore sconosciuto"));
     }
   }catch(e){
-    alert("Errore di connessione.");
+    agoraToast("⚠️ Errore di connessione.");
   }
 };
 // ── FILTER ─────────────────────────────────────────────────────────
@@ -1007,11 +1130,11 @@ document.getElementById("modalSubmit").addEventListener("click",async()=>{
   const type=document.getElementById("fType").value;
   const place=document.getElementById("fPlace").value.trim();
   const duration=document.getElementById("fDuration").value;
-  if(!name||!topic){alert("Inserisci almeno il nome e l'argomento.");return;}
+  if(!name||!topic){agoraToast("⚠️ Inserisci almeno il nome e l'argomento.");return;}
 
   const token=localStorage.getItem(TOKEN_KEY);
   if(!token){
-    alert("Devi effettuare il login per condividere una sessione.\nTorna alla home e accedi con la tua email.");
+    agoraToast("⚠️ Effettua il login per condividere una sessione.");
     return;
   }
   const btn=document.getElementById("modalSubmit");
@@ -1029,10 +1152,10 @@ document.getElementById("modalSubmit").addEventListener("click",async()=>{
       await loadSessions();
       setTimeout(()=>focusSession(''+data.id),300);
     }else{
-      alert("Errore: "+( data.error||"sconosciuto"));
+      agoraToast("⚠️ "+(data.error||"Errore sconosciuto"));
     }
   }catch(e){
-    alert("Errore di connessione.");
+    agoraToast("⚠️ Errore di connessione.");
   }finally{
     btn.textContent="Pubblica →";btn.disabled=false;
   }
@@ -1040,7 +1163,7 @@ document.getElementById("modalSubmit").addEventListener("click",async()=>{
 
 // ── GEOLOCATION ────────────────────────────────────────────────────
 function locateUser(){
-  if(!navigator.geolocation){alert("Geolocalizzazione non supportata dal browser.");return;}
+  if(!navigator.geolocation){agoraToast("⚠️ Geolocalizzazione non supportata dal browser.");return;}
   navigator.geolocation.getCurrentPosition(pos=>{
     userLat=pos.coords.latitude;
     userLng=pos.coords.longitude;
@@ -1050,7 +1173,7 @@ function locateUser(){
     userMarker=L.circleMarker([userLat,userLng],{
       radius:10,fillColor:"#571929",color:"white",weight:2,fillOpacity:.9
     }).addTo(map).bindPopup("📍 Sei qui");
-  },()=>alert("Impossibile rilevare la posizione. Controlla i permessi del browser."));
+  },()=>agoraToast("⚠️ Impossibile rilevare la posizione. Controlla i permessi del browser."));
 }
 
 document.getElementById("locBtn").addEventListener("click",locateUser);
