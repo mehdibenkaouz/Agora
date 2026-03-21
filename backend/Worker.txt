@@ -363,6 +363,15 @@ export default {
         await env.dbagora.prepare(
           "DELETE FROM bug_reports WHERE user_id = ?1"
         ).bind(uid).run();
+        // Game lobbies
+        await env.dbagora.prepare(
+          "DELETE FROM game_lobbies WHERE player_id = ?1"
+        ).bind(uid).run();
+
+        // Game sessions
+        await env.dbagora.prepare(
+          "DELETE FROM game_sessions WHERE player1_id = ?1 OR player2_id = ?1"
+        ).bind(uid).run();
         // Sessions
         await env.dbagora.prepare(
           "DELETE FROM sessions WHERE user_id = ?1"
@@ -1450,6 +1459,236 @@ export default {
         ).bind(sessionId, session.user_id).run();
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
+            // ── GAMES: MATCHMAKING + ONLINE SESSIONS ──────────────────────
+      if (url.pathname === "/api/games/matchmaking/join" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const gameKey = String(body.game_key || "").trim().slice(0, 80);
+
+        const authUser = await requireAuthUserId(request, env, ALLOWED_ORIGIN);
+        if (authUser.error) return authUser.error;
+        const playerId = authUser.userId;
+
+        const initialState = body.initial_state ?? null;
+
+        if (!gameKey || !playerId) {
+          return json({ ok: false, error: "missing_fields" }, 400, ALLOWED_ORIGIN);
+        }
+
+        const now = new Date().toISOString();
+        const staleLobby = new Date(Date.now() - 30 * 1000).toISOString();
+        const staleSession = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+
+        await env.dbagora.prepare(
+          "DELETE FROM game_lobbies WHERE last_seen_at < ?1"
+        ).bind(staleLobby).run();
+
+        await env.dbagora.prepare(
+          "UPDATE game_sessions SET status = 'abandoned' WHERE status = 'active' AND updated_at < ?1"
+        ).bind(staleSession).run();
+
+        const active = await env.dbagora.prepare(
+          `SELECT id, game_key, player1_id, player2_id, state_json, version, status, created_at, updated_at
+           FROM game_sessions
+           WHERE game_key = ?1 AND status = 'active' AND (player1_id = ?2 OR player2_id = ?2)
+           ORDER BY created_at DESC LIMIT 1`
+        ).bind(gameKey, playerId).first();
+
+        if (active) {
+          return json({
+            ok: true,
+            status: "matched",
+            role: active.player1_id === playerId ? "player1" : "player2",
+            session: {
+              id: active.id,
+              game_key: active.game_key,
+              version: active.version,
+              status: active.status,
+              created_at: active.created_at,
+              updated_at: active.updated_at,
+              player1_id: active.player1_id,
+              player2_id: active.player2_id,
+              state: safeJsonParse(active.state_json)
+            }
+          }, 200, ALLOWED_ORIGIN);
+        }
+
+        await env.dbagora.prepare(
+          `INSERT INTO game_lobbies (id, game_key, player_id, status, session_id, initial_state_json, created_at, last_seen_at)
+           VALUES (?1, ?2, ?3, 'waiting', NULL, ?4, ?5, ?5)
+           ON CONFLICT(game_key, player_id) DO UPDATE SET
+             status = 'waiting',
+             session_id = NULL,
+             initial_state_json = excluded.initial_state_json,
+             last_seen_at = excluded.last_seen_at`
+        ).bind(crypto.randomUUID(), gameKey, playerId, JSON.stringify(initialState), now).run();
+
+        const other = await env.dbagora.prepare(
+          `SELECT id, player_id, initial_state_json, created_at
+           FROM game_lobbies
+           WHERE game_key = ?1 AND player_id != ?2 AND status = 'waiting' AND last_seen_at >= ?3
+           ORDER BY created_at ASC LIMIT 1`
+        ).bind(gameKey, playerId, staleLobby).first();
+
+        if (other) {
+          const sessionId = crypto.randomUUID();
+          const chosenStateJson = other.initial_state_json && other.initial_state_json !== 'null'
+            ? other.initial_state_json
+            : JSON.stringify(initialState);
+
+          const lockOther = await env.dbagora.prepare(
+            "UPDATE game_lobbies SET status = 'matched', session_id = ?1, last_seen_at = ?2 WHERE game_key = ?3 AND player_id = ?4 AND status = 'waiting'"
+          ).bind(sessionId, now, gameKey, other.player_id).run();
+
+          const lockSelf = await env.dbagora.prepare(
+            "UPDATE game_lobbies SET status = 'matched', session_id = ?1, last_seen_at = ?2 WHERE game_key = ?3 AND player_id = ?4 AND status = 'waiting'"
+          ).bind(sessionId, now, gameKey, playerId).run();
+
+          if ((lockOther?.meta?.changes ?? 0) > 0 && (lockSelf?.meta?.changes ?? 0) > 0) {
+            await env.dbagora.prepare(
+              `INSERT INTO game_sessions (id, game_key, player1_id, player2_id, state_json, version, status, created_at, updated_at)
+               VALUES (?1, ?2, ?3, ?4, ?5, 1, 'active', ?6, ?6)`
+            ).bind(sessionId, gameKey, other.player_id, playerId, chosenStateJson, now).run();
+
+            return json({
+              ok: true,
+              status: "matched",
+              role: "player2",
+              session: {
+                id: sessionId,
+                game_key: gameKey,
+                version: 1,
+                status: 'active',
+                created_at: now,
+                updated_at: now,
+                player1_id: other.player_id,
+                player2_id: playerId,
+                state: safeJsonParse(chosenStateJson)
+              }
+            }, 200, ALLOWED_ORIGIN);
+          }
+        }
+
+        const linkedLobby = await env.dbagora.prepare(
+          `SELECT session_id FROM game_lobbies
+           WHERE game_key = ?1 AND player_id = ?2 AND status = 'matched' AND session_id IS NOT NULL
+           ORDER BY last_seen_at DESC LIMIT 1`
+        ).bind(gameKey, playerId).first();
+
+        if (linkedLobby?.session_id) {
+          const matched = await env.dbagora.prepare(
+            `SELECT id, game_key, player1_id, player2_id, state_json, version, status, created_at, updated_at
+             FROM game_sessions WHERE id = ?1 LIMIT 1`
+          ).bind(linkedLobby.session_id).first();
+
+          if (matched) {
+            return json({
+              ok: true,
+              status: "matched",
+              role: matched.player1_id === playerId ? "player1" : "player2",
+              session: {
+                id: matched.id,
+                game_key: matched.game_key,
+                version: matched.version,
+                status: matched.status,
+                created_at: matched.created_at,
+                updated_at: matched.updated_at,
+                player1_id: matched.player1_id,
+                player2_id: matched.player2_id,
+                state: safeJsonParse(matched.state_json)
+              }
+            }, 200, ALLOWED_ORIGIN);
+          }
+        }
+
+        return json({ ok: true, status: "waiting" }, 200, ALLOWED_ORIGIN);
+      }
+
+      if (url.pathname === "/api/games/matchmaking/leave" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const gameKey = String(body.game_key || "").trim().slice(0, 80);
+
+        const authUser = await requireAuthUserId(request, env, ALLOWED_ORIGIN);
+        if (authUser.error) return authUser.error;
+        const playerId = authUser.userId;
+        if (!gameKey || !playerId) return json({ ok: false, error: "missing_fields" }, 400, ALLOWED_ORIGIN);
+
+        await env.dbagora.prepare(
+          "DELETE FROM game_lobbies WHERE game_key = ?1 AND player_id = ?2"
+        ).bind(gameKey, playerId).run();
+
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      const gameSessionGetMatch = url.pathname.match(/^\/api\/games\/session\/([^/]+)$/);
+      if (gameSessionGetMatch && request.method === "GET") {
+        const sessionId = decodeURIComponent(gameSessionGetMatch[1] || "").trim();
+
+        const authUser = await requireAuthUserId(request, env, ALLOWED_ORIGIN);
+        if (authUser.error) return authUser.error;
+        const playerId = authUser.userId;
+        if (!sessionId) return json({ ok: false, error: "missing_session_id" }, 400, ALLOWED_ORIGIN);
+
+        const row = await env.dbagora.prepare(
+          `SELECT id, game_key, player1_id, player2_id, state_json, version, status, created_at, updated_at
+           FROM game_sessions WHERE id = ?1 LIMIT 1`
+        ).bind(sessionId).first();
+
+        if (!row) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
+        if (playerId && row.player1_id !== playerId && row.player2_id !== playerId) {
+          return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        }
+
+        return json({ ok: true, session: {
+          id: row.id,
+          game_key: row.game_key,
+          version: row.version,
+          status: row.status,
+          created_at: row.created_at,
+          updated_at: row.updated_at,
+          player1_id: row.player1_id,
+          player2_id: row.player2_id,
+          state: safeJsonParse(row.state_json)
+        }}, 200, ALLOWED_ORIGIN);
+      }
+
+      const gameSessionMoveMatch = url.pathname.match(/^\/api\/games\/session\/([^/]+)\/move$/);
+      if (gameSessionMoveMatch && request.method === "POST") {
+        const sessionId = decodeURIComponent(gameSessionMoveMatch[1] || "").trim();
+        if (!sessionId) return json({ ok: false, error: "missing_session_id" }, 400, ALLOWED_ORIGIN);
+        const body = await request.json().catch(() => ({}));
+
+        const authUser = await requireAuthUserId(request, env, ALLOWED_ORIGIN);
+        if (authUser.error) return authUser.error;
+        const playerId = authUser.userId;
+
+        const version = Number(body.version || 0);
+        const nextState = body.state ?? null;
+        if (!playerId || !Number.isFinite(version)) {
+          return json({ ok: false, error: "invalid_input" }, 400, ALLOWED_ORIGIN);
+        }
+
+        const row = await env.dbagora.prepare(
+          `SELECT id, player1_id, player2_id, state_json, version, status
+           FROM game_sessions WHERE id = ?1 LIMIT 1`
+        ).bind(sessionId).first();
+
+        if (!row) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
+        if (row.status !== 'active') return json({ ok: false, error: "inactive_session" }, 409, ALLOWED_ORIGIN);
+        if (row.player1_id !== playerId && row.player2_id !== playerId) {
+          return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        }
+        if (version !== Number(row.version || 0)) {
+          return json({ ok: false, error: "version_conflict", version: row.version, state: safeJsonParse(row.state_json) }, 409, ALLOWED_ORIGIN);
+        }
+
+        const now = new Date().toISOString();
+        const newVersion = Number(row.version || 0) + 1;
+        await env.dbagora.prepare(
+          "UPDATE game_sessions SET state_json = ?1, version = ?2, updated_at = ?3 WHERE id = ?4"
+        ).bind(JSON.stringify(nextState), newVersion, now, sessionId).run();
+
+        return json({ ok: true, version: newVersion, updated_at: now }, 200, ALLOWED_ORIGIN);
+      }
 
       // ── BLOCKS ───────────────────────────────────────────────────────
       if (url.pathname === "/api/blocks" && request.method === "GET") {
@@ -2356,6 +2595,29 @@ function b64urlBytes(bytes) {
   let bin = "";
   for (const b of bytes) bin += String.fromCharCode(b);
   return btoa(bin).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function safeJsonParse(value) {
+  if (!value) return null;
+  try { return JSON.parse(value); } catch { return null; }
+}
+
+async function requireAuthUserId(request, env, allowedOrigin) {
+  const auth = request.headers.get("Authorization") || "";
+  const token = parseBearer(auth);
+  if (!token) {
+    return { error: json({ ok: false, error: "missing_token" }, 401, allowedOrigin) };
+  }
+
+  const session = await env.dbagora.prepare(
+    "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+  ).bind(token, new Date().toISOString()).first();
+
+  if (!session) {
+    return { error: json({ ok: false, error: "invalid_token" }, 401, allowedOrigin) };
+  }
+
+  return { userId: session.user_id };
 }
 
 function timeAgo(isoStr) {

@@ -676,19 +676,49 @@ async function startOnlineLobby(){
   lobbyTimer=setInterval(matchmakingTick,2500);
 }
 async function matchmakingTick(){
-  const { data } = await apiJson("/api/games/matchmaking/join", { method:"POST", body: JSON.stringify({ game_key: GAME_KEY, initial_state: serializeGameState() }) });
+  const { res, data } = await apiJson("/api/games/matchmaking/join", {
+    method:"POST",
+    body: JSON.stringify({
+      game_key: GAME_KEY,
+      initial_state: serializeGameState()
+    })
+  });
+
+  console.log("[MATCHMAKING JOIN]", {
+    status: res?.status,
+    ok: res?.ok,
+    data
+  });
+
   if(data?.error === "missing_token"){
     document.getElementById("lobbyStatus").textContent = "Login required";
     document.getElementById("lobbyNote").textContent = "Please log in before entering the 2 Players lobby.";
     return;
   }
-  if(!data?.ok) return;
+
+  if(!data?.ok){
+    document.getElementById("lobbyStatus").textContent = `Matchmaking error`;
+    document.getElementById("lobbyNote").textContent = `${data?.error || "unknown_error"} (${res?.status || "no_status"})`;
+    return;
+  }
+
   if(data.status === "matched" && data.session){
-    clearInterval(lobbyTimer); lobbyTimer=null;
-    onlineMode=true; onlineSessionId=data.session.id; onlineVersion=data.session.version||1; mySeat=data.role;
-    updateSideLabels(); hideLobby(); applySerializedState(data.session.state || serializeGameState());
-    clearInterval(sessionTimer); sessionTimer=setInterval(syncOnlineState,1500);
-  } else showLobby(true);
+    console.log("[MATCH FOUND]", data);
+    clearInterval(lobbyTimer);
+    lobbyTimer = null;
+    onlineMode = true;
+    onlineSessionId = data.session.id;
+    onlineVersion = data.session.version || 1;
+    mySeat = data.role;
+    updateSideLabels();
+    hideLobby();
+    applySerializedState(data.session.state || serializeGameState());
+    clearInterval(sessionTimer);
+    sessionTimer = setInterval(syncOnlineState, 1500);
+  } else {
+    document.getElementById("lobbyStatus").textContent = "Searching for another player…";
+    document.getElementById("lobbyNote").textContent = "No players online.";
+  }
 }
 async function syncOnlineState(){
   if(!onlineMode || !onlineSessionId) return;
