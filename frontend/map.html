@@ -529,6 +529,29 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   border-color: var(--brand);
 }
 .lod3-snap-btn:active { transform: scale(.93); }
+
+/* ── LANGUAGE PICKER ───────────────────────────────────────────── */
+.lang-picker{position:relative;}
+.lang-toggle{
+  min-width:74px;height:36px;border-radius:999px;
+  border:1px solid var(--line);background:transparent;color:var(--text);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  padding:0 12px;font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;
+}
+.lang-toggle:hover{background:var(--line);}
+.lang-flag{width:18px;height:12px;object-fit:cover;border-radius:2px;box-shadow:0 0 0 1px rgba(0,0,0,.12);}
+.lang-picker-dropdown{
+  position:absolute;top:calc(100% + 8px);right:0;min-width:220px;max-height:280px;overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);
+  padding:8px;display:none;z-index:1100;
+}
+.lang-picker.open .lang-picker-dropdown{display:block;}
+.lang-option{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer;color:var(--text);font-size:.82rem;}
+.lang-option:hover,.lang-option.active{background:var(--line);}
+@media(max-width:640px){
+  .lang-toggle{min-width:64px;height:34px;padding:0 10px;font-size:.62rem;}
+  .lang-picker-dropdown{right:0;min-width:190px;max-width:80vw;}
+}
 </style>
 </head>
 <body>
@@ -537,12 +560,19 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   <button class="sidebar-toggle" id="sidebarToggle" title="Menu">
     <svg viewBox="0 0 24 24"><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></svg>
   </button>
-  <a href="index.html" class="topbar-brand">← AGORÀ</a>
+  <a href="index.html" class="topbar-brand" id="backHomeLink">← AGORÀ</a>
   <div class="topbar-center">
-    <span class="topbar-title">Study Map</span>
-    <span class="topbar-sub">trova persone con cui studiare e incontrarti</span>
+    <span class="topbar-title" id="mapPageTitle">Study Map</span>
+    <span class="topbar-sub" id="mapPageSubtitle">find people to study and meet with</span>
   </div>
   <div class="topbar-right">
+    <div class="lang-picker" id="langPicker">
+      <button aria-expanded="false" aria-haspopup="listbox" class="lang-toggle" id="langToggleBtn" type="button" title="Language">
+        <img alt="" class="lang-flag" id="currentLangFlag" src="https://flagcdn.com/w20/gb.png"/>
+        <span id="currentLangCode">EN</span>
+      </button>
+      <div aria-label="Language selector" class="lang-picker-dropdown" id="langPickerDropdown" role="listbox"></div>
+    </div>
     <button class="btn-icon" id="themeBtn" title="Toggle theme">
       <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
     </button>
@@ -557,47 +587,47 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
   <aside class="sidebar" id="sidebar">
 
     <div class="sidebar-head">
-      <div class="sidebar-title">Sessioni vicino a te</div>
+      <div class="sidebar-title" id="sidebarTitle">Sessions near you</div>
       <div class="sidebar-sub" id="sessionCount">— sessioni trovate</div>
     </div>
 
     <div class="filters">
 
       <div class="filter-section">
-        <div class="filter-label">Cerca sessioni</div>
+        <div class="filter-label" id="searchSessionsLabel">Search sessions</div>
         <div class="search-box">
           <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg>
-          <input type="text" id="searchInput" placeholder="argomento, nome…">
+          <input type="text" id="searchInput" placeholder="topic, name…">
         </div>
       </div>
 
       <div class="filter-section">
-        <div class="filter-label">Tipo</div>
+        <div class="filter-label" id="typeLabel">Type</div>
         <div class="type-btns">
           <button class="type-btn active" data-type="all">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18"/><path d="M3 12h18"/></svg>
-            Tutti
+            <span id="typeAllText">All</span>
           </button>
           <button class="type-btn" data-type="persona">
             <svg viewBox="0 0 24 24"><path d="M20 21a8 8 0 0 0-16 0"/><circle cx="12" cy="8" r="4"/></svg>
-            Persona
+            <span id="typePersonaText">Person</span>
           </button>
           <button class="type-btn" data-type="luogo">
             <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>
-            Luogo
+            <span id="typeLuogoText">Place</span>
           </button>
         </div>
       </div>
 
 <div class="filter-section">
         <div class="poi-toggle" id="poiToggle">
-          <span class="poi-toggle-label">📍 Luoghi culturali MapTiler (musei, biblioteche, università…)</span>
+          <span class="poi-toggle-label" id="poiToggleLabel">📍 MapTiler cultural places (museums, libraries, universities…)</span>
           <div class="poi-switch on" id="poiSwitch"></div>
         </div>
       </div>
 
       <div class="filter-section">
-        <div class="filter-label">Area tematica</div>
+        <div class="filter-label" id="topicAreaLabel">Topic area</div>
         <div class="tag-group" id="topicFilters"></div>
       </div>
 
@@ -613,33 +643,33 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 
     <!-- City search overlay -->
     <div class="city-search-wrap" id="citySearchWrap">
-      <input type="text" id="cityInput" placeholder="🌍 Cerca città, quartiere…" autocomplete="off">
-      <button class="city-search-btn" id="citySearchBtn" title="Vai alla città">
+      <input type="text" id="cityInput" placeholder="🌍 Search city, district…" autocomplete="off">
+      <button class="city-search-btn" id="citySearchBtn" title="Go to city">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M16 16l4 4"/></svg>
       </button>
       <div class="city-suggestions" id="citySuggestions"></div>
     </div>
     <div class="loc-banner" id="locBanner">
-      <span>📍 Vuoi vedere le sessioni vicino a te?</span>
-      <button class="loc-banner-btn" id="locBtn">Consenti</button>
+      <span id="locBannerText">📍 Do you want to see sessions near you?</span>
+      <button class="loc-banner-btn" id="locBtn">Allow</button>
       <button class="btn-icon" onclick="document.getElementById('locBanner').classList.add('hidden')" style="width:24px;height:24px;border:none;">
         <svg viewBox="0 0 24 24" width="12" height="12"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
       </button>
     </div>
 
     <!-- Locate me -->
-    <button class="locate-btn" id="locateBtn" title="Centrami sulla mappa">
+    <button class="locate-btn" id="locateBtn" title="Center me on the map">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 2"/></svg>
     </button>
 
     <div class="poi-status hidden" id="poiStatus">
       <span class="poi-dot"></span>
-      <span id="poiStatusText">Caricamento luoghi culturali…</span>
+      <span id="poiStatusText">Loading cultural places…</span>
     </div>
 
 
     <!-- FAB -->
-    <button class="fab" id="fabBtn" title="Aggiungi sessione">
+    <button class="fab" id="fabBtn" title="Add session">
       <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
     </button>
   </div>
@@ -649,53 +679,53 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 <!-- ADD SESSION MODAL -->
 <div class="modal-overlay" id="modalOverlay">
   <div class="modal">
-    <div class="modal-title">Nuova Sessione</div>
-    <div class="modal-sub">Pubblica dove e cosa vuoi studiare — o un luogo dove incontrarti</div>
+    <div class="modal-title" id="modalTitle">New Session</div>
+    <div class="modal-sub" id="modalSub">Post where and what you want to study — or a place where to meet</div>
 
     <div class="form-group">
-      <label class="form-label">Il tuo nome / nickname</label>
-      <input class="form-input" id="fName" placeholder="Es. Marco, Studio_Philosophy…">
+      <label class="form-label" id="fNameLabel">Your name / nickname</label>
+      <input class="form-input" id="fName" placeholder="E.g. Marco, Study_Philosophy…">
     </div>
 
     <div class="form-group">
-      <label class="form-label">Tipo di sessione</label>
+      <label class="form-label" id="fTypeLabel">Session type</label>
       <select class="form-select" id="fType">
-        <option value="persona">Persona — sono io, mi sposto</option>
-        <option value="luogo">Luogo fisso — biblioteca, caffè, università…</option>
+        <option value="persona">Person — I move around</option>
+        <option value="luogo">Fixed place — library, café, university…</option>
       </select>
     </div>
 
     <div class="form-group" id="fPlaceGroup">
-      <label class="form-label">Nome del luogo</label>
-      <input class="form-input" id="fPlace" placeholder="Es. Biblioteca Universitaria, Bar Centrale…">
+      <label class="form-label" id="fPlaceLabel">Place name</label>
+      <input class="form-input" id="fPlace" placeholder="E.g. University Library, Central Café…">
     </div>
 
     <div class="form-group">
-      <label class="form-label">Argomento / descrizione</label>
-      <textarea class="form-textarea" id="fTopic" placeholder="Es. Studio analisi matematica per l'esame di giovedì, o semplicemente chiacchiere di filosofia…"></textarea>
+      <label class="form-label" id="fTopicLabel">Topic / description</label>
+      <textarea class="form-textarea" id="fTopic" placeholder="E.g. Studying calculus for Thursday's exam, or simply philosophy chats…"></textarea>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Tag tematici</label>
+      <label class="form-label" id="fTagsLabel">Topic tags</label>
       <div class="tag-picker" id="tagPicker"></div>
     </div>
 
     <div class="form-group">
-      <label class="form-label">Disponibile per</label>
+      <label class="form-label" id="fDurationLabel">Available for</label>
       <select class="form-select" id="fDuration">
-        <option value="30 min">30 minuti</option>
-        <option value="1 ora" selected>1 ora</option>
-        <option value="2 ore">2 ore</option>
-        <option value="tutto il giorno">Tutto il giorno</option>
-        <option value="questa settimana">Questa settimana</option>
+        <option value="30 min">30 minutes</option>
+        <option value="1 ora" selected>1 hour</option>
+        <option value="2 ore">2 hours</option>
+        <option value="tutto il giorno">All day</option>
+        <option value="questa settimana">This week</option>
       </select>
     </div>
 
     <div class="form-group" id="fGeoStatus" style="font-size:.78rem;color:var(--muted);display:none;"></div>
 
     <div class="form-actions">
-      <button class="btn-cancel" id="modalCancel">Annulla</button>
-      <button class="btn-submit" id="modalSubmit">Pubblica →</button>
+      <button class="btn-cancel" id="modalCancel">Cancel</button>
+      <button class="btn-submit" id="modalSubmit">Publish →</button>
     </div>
   </div>
 </div>
@@ -704,11 +734,11 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 <div class="confirm-overlay" id="confirmOverlay">
   <div class="confirm-box">
     <div class="confirm-icon" id="confirmIcon">🗑️</div>
-    <div class="confirm-title" id="confirmTitle">Eliminare sessione?</div>
-    <div class="confirm-msg" id="confirmMsg">Questa azione è irreversibile.</div>
+    <div class="confirm-title" id="confirmTitle">Delete session?</div>
+    <div class="confirm-msg" id="confirmMsg">This action is irreversible.</div>
     <div class="confirm-actions">
-      <button class="confirm-cancel" id="confirmCancel">Annulla</button>
-      <button class="confirm-ok danger" id="confirmOk">Elimina</button>
+      <button class="confirm-cancel" id="confirmCancel">Cancel</button>
+      <button class="confirm-ok danger" id="confirmOk">Delete</button>
     </div>
   </div>
 </div>
@@ -738,12 +768,2053 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 //   applyTheme(isDark?"light":"dark");
 // });
 
-// ── Topics ─────────────────────────────────────────────────────────
+// ── Language ───────────────────────────────────────────────────────
+const SUPPORTED_LANGUAGES = [
+  {
+    "code": "en",
+    "flag": "gb",
+    "label": "EN — English"
+  },
+  {
+    "code": "es",
+    "flag": "es",
+    "label": "ES — Español"
+  },
+  {
+    "code": "fr",
+    "flag": "fr",
+    "label": "FR — Français"
+  },
+  {
+    "code": "it",
+    "flag": "it",
+    "label": "IT — Italiano"
+  },
+  {
+    "code": "de",
+    "flag": "de",
+    "label": "DE — Deutsch"
+  },
+  {
+    "code": "pt",
+    "flag": "pt",
+    "label": "PT — Português"
+  },
+  {
+    "code": "ru",
+    "flag": "ru",
+    "label": "RU — Русский"
+  },
+  {
+    "code": "zh",
+    "flag": "cn",
+    "label": "ZH — 中文"
+  },
+  {
+    "code": "ar",
+    "flag": "sa",
+    "label": "AR — العربية"
+  },
+  {
+    "code": "ja",
+    "flag": "jp",
+    "label": "JA — 日本語"
+  },
+  {
+    "code": "ko",
+    "flag": "kr",
+    "label": "KO — 한국어"
+  },
+  {
+    "code": "hi",
+    "flag": "in",
+    "label": "HI — हिन्दी"
+  },
+  {
+    "code": "tr",
+    "flag": "tr",
+    "label": "TR — Türkçe"
+  },
+  {
+    "code": "nl",
+    "flag": "nl",
+    "label": "NL — Nederlands"
+  },
+  {
+    "code": "pl",
+    "flag": "pl",
+    "label": "PL — Polski"
+  },
+  {
+    "code": "uk",
+    "flag": "ua",
+    "label": "UK — Українська"
+  },
+  {
+    "code": "el",
+    "flag": "gr",
+    "label": "EL — Ελληνικά"
+  }
+];
+const I18N = {
+  "en": {
+    "docTitle": "AGORÀ — Study Map",
+    "menu": "Menu",
+    "language": "Language",
+    "mapPageTitle": "Study Map",
+    "mapPageSubtitle": "find people to study and meet with",
+    "sidebarTitle": "Sessions near you",
+    "loadingSessions": "Loading…",
+    "searchSessionsLabel": "Search sessions",
+    "searchInputPlaceholder": "topic, name…",
+    "typeLabel": "Type",
+    "typeAllText": "All",
+    "typePersonaText": "Person",
+    "typeLuogoText": "Place",
+    "poiToggleLabel": "📍 MapTiler cultural places (museums, libraries, universities…)",
+    "topicAreaLabel": "Topic area",
+    "cityInputPlaceholder": "🌍 Search city, district…",
+    "citySearchTitle": "Go to city",
+    "locBannerText": "📍 Do you want to see sessions near you?",
+    "locBtn": "Allow",
+    "locateBtnTitle": "Center me on the map",
+    "poiStatusLoading": "Loading cultural places…",
+    "fabBtnTitle": "Add session",
+    "modalTitle": "New Session",
+    "modalSub": "Post where and what you want to study — or a place where to meet",
+    "fNameLabel": "Your name / nickname",
+    "fNamePlaceholder": "E.g. Marco, Study_Philosophy…",
+    "fTypeLabel": "Session type",
+    "fTypePersona": "Person — I move around",
+    "fTypeLuogo": "Fixed place — library, café, university…",
+    "fPlaceLabel": "Place name",
+    "fPlacePlaceholder": "E.g. University Library, Central Café…",
+    "fTopicLabel": "Topic / description",
+    "fTopicPlaceholder": "E.g. Studying calculus for Thursday's exam, or simply philosophy chats…",
+    "fTagsLabel": "Topic tags",
+    "fDurationLabel": "Available for",
+    "modalCancel": "Cancel",
+    "modalSubmit": "Publish →",
+    "confirmDefaultTitle": "Confirm",
+    "confirmDefaultMsg": "Are you sure?",
+    "confirmDefaultOk": "Confirm",
+    "confirmDefaultCancel": "Cancel",
+    "snapTitle": "Optimal view for cultural places (zoom 15)",
+    "personType": "Person",
+    "placeType": "Place",
+    "contactBtn": "Contact →",
+    "deleteSessionBtn": "Delete session",
+    "deleteSessionPopupBtn": "Delete session ✕",
+    "yours": "(yours)",
+    "emptyList": "No sessions found.<br>Be the first to add one! ✨",
+    "deleteSessionTitle": "Delete session?",
+    "deleteSessionMsg": "The session will be removed from the map and the list.",
+    "delete": "Delete",
+    "loginRequired": "⚠️ You need to log in.",
+    "sessionDeleted": "✅ Session deleted.",
+    "unknownError": "Unknown error",
+    "connectionError": "⚠️ Connection error.",
+    "geoDetecting": "📍 Detecting position…",
+    "geoDetected": "✅ Position detected!",
+    "geoFallbackCenter": "⚠️ Position unavailable — the map center will be used.",
+    "nameAndTopicRequired": "⚠️ Enter at least your name and topic.",
+    "loginToShare": "⚠️ Log in to share a session.",
+    "publishing": "Publishing…",
+    "geolocationUnsupported": "⚠️ Geolocation is not supported by the browser.",
+    "youAreHere": "📍 You are here",
+    "geolocationDenied": "⚠️ Unable to detect your position. Check your browser permissions.",
+    "poiKindMuseum": "Museum",
+    "poiKindLibrary": "Library",
+    "poiKindUniversity": "University",
+    "poiKindGallery": "Gallery",
+    "poiKindTheatre": "Theatre",
+    "poiKindArchive": "Archive",
+    "poiKindGeneric": "Cultural place",
+    "poiMissingKey": "Enter your MapTiler API key to enable cultural places",
+    "poiMissingKeyInline": "MapTiler ready: enter your API key in the file",
+    "poiZoomMore": "Zoom in to {zoom}+ to see cultural places",
+    "poiVisibleCount": "{count} cultural places in view",
+    "poiLoading": "Loading MapTiler cultural places…",
+    "poiNoneHere": "No cultural place found in this view",
+    "poiUpdatingBlocks": "Updating {count} cultural-place blocks…",
+    "citySearchNeedsKey": "MapTiler city search requires the API key",
+    "placeFallback": "Place",
+    "providerLabel": "Provider",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "{count} session found",
+    "sessionCount_other": "{count} sessions found",
+    "topicSearchExtra": "",
+    "themeDark": "Switch to dark mode",
+    "themeLight": "Switch to light mode"
+  },
+  "it": {
+    "docTitle": "AGORÀ — Mappa Studio",
+    "menu": "Menu",
+    "language": "Lingua",
+    "mapPageTitle": "Mappa Studio",
+    "mapPageSubtitle": "trova persone con cui studiare e incontrarti",
+    "sidebarTitle": "Sessioni vicino a te",
+    "loadingSessions": "Caricamento…",
+    "searchSessionsLabel": "Cerca sessioni",
+    "searchInputPlaceholder": "argomento, nome…",
+    "typeLabel": "Tipo",
+    "typeAllText": "Tutti",
+    "typePersonaText": "Persona",
+    "typeLuogoText": "Luogo",
+    "poiToggleLabel": "📍 Luoghi culturali MapTiler (musei, biblioteche, università…)",
+    "topicAreaLabel": "Area tematica",
+    "cityInputPlaceholder": "🌍 Cerca città, quartiere…",
+    "citySearchTitle": "Vai alla città",
+    "locBannerText": "📍 Vuoi vedere le sessioni vicino a te?",
+    "locBtn": "Consenti",
+    "locateBtnTitle": "Centrami sulla mappa",
+    "poiStatusLoading": "Caricamento luoghi culturali…",
+    "fabBtnTitle": "Aggiungi sessione",
+    "modalTitle": "Nuova Sessione",
+    "modalSub": "Pubblica dove e cosa vuoi studiare — o un luogo dove incontrarti",
+    "fNameLabel": "Il tuo nome / nickname",
+    "fNamePlaceholder": "Es. Marco, Studio_Philosophy…",
+    "fTypeLabel": "Tipo di sessione",
+    "fTypePersona": "Persona — sono io, mi sposto",
+    "fTypeLuogo": "Luogo fisso — biblioteca, caffè, università…",
+    "fPlaceLabel": "Nome del luogo",
+    "fPlacePlaceholder": "Es. Biblioteca Universitaria, Bar Centrale…",
+    "fTopicLabel": "Argomento / descrizione",
+    "fTopicPlaceholder": "Es. Studio analisi matematica per l'esame di giovedì, o semplicemente chiacchiere di filosofia…",
+    "fTagsLabel": "Tag tematici",
+    "fDurationLabel": "Disponibile per",
+    "modalCancel": "Annulla",
+    "modalSubmit": "Pubblica →",
+    "confirmDefaultTitle": "Conferma",
+    "confirmDefaultMsg": "Sei sicuro?",
+    "confirmDefaultOk": "Conferma",
+    "confirmDefaultCancel": "Annulla",
+    "snapTitle": "Vista ottimale per luoghi culturali (zoom 15)",
+    "personType": "Persona",
+    "placeType": "Luogo",
+    "contactBtn": "Contatta →",
+    "deleteSessionBtn": "Elimina sessione",
+    "deleteSessionPopupBtn": "Elimina sessione ✕",
+    "yours": "(tua)",
+    "emptyList": "Nessuna sessione trovata.<br>Sii il primo ad aggiungerla! ✨",
+    "deleteSessionTitle": "Eliminare sessione?",
+    "deleteSessionMsg": "La sessione verrà rimossa dalla mappa e dalla lista.",
+    "delete": "Elimina",
+    "loginRequired": "⚠️ Devi effettuare il login.",
+    "sessionDeleted": "✅ Sessione eliminata.",
+    "unknownError": "Errore sconosciuto",
+    "connectionError": "⚠️ Errore di connessione.",
+    "geoDetecting": "📍 Rilevamento posizione…",
+    "geoDetected": "✅ Posizione rilevata!",
+    "geoFallbackCenter": "⚠️ Posizione non disponibile — useremo il centro mappa.",
+    "nameAndTopicRequired": "⚠️ Inserisci almeno il nome e l'argomento.",
+    "loginToShare": "⚠️ Effettua il login per condividere una sessione.",
+    "publishing": "Pubblicazione…",
+    "geolocationUnsupported": "⚠️ Geolocalizzazione non supportata dal browser.",
+    "youAreHere": "📍 Sei qui",
+    "geolocationDenied": "⚠️ Impossibile rilevare la posizione. Controlla i permessi del browser.",
+    "poiKindMuseum": "Museo",
+    "poiKindLibrary": "Biblioteca",
+    "poiKindUniversity": "Università",
+    "poiKindGallery": "Galleria",
+    "poiKindTheatre": "Teatro",
+    "poiKindArchive": "Archivio",
+    "poiKindGeneric": "Luogo culturale",
+    "poiMissingKey": "Inserisci la tua API key MapTiler per abilitare i luoghi culturali",
+    "poiMissingKeyInline": "MapTiler pronto: inserisci la tua API key nel file",
+    "poiZoomMore": "Aumenta lo zoom a {zoom}+ per i luoghi culturali",
+    "poiVisibleCount": "{count} luoghi culturali in vista",
+    "poiLoading": "Carico luoghi culturali MapTiler…",
+    "poiNoneHere": "Nessun luogo culturale trovato in questa vista",
+    "poiUpdatingBlocks": "Aggiorno {count} blocchi di luoghi culturali…",
+    "citySearchNeedsKey": "Per la ricerca città con MapTiler serve la API key",
+    "placeFallback": "Luogo",
+    "providerLabel": "Provider",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "{count} sessione trovata",
+    "sessionCount_other": "{count} sessioni trovate",
+    "topicSearchExtra": "",
+    "themeDark": "Passa al tema scuro",
+    "themeLight": "Passa al tema chiaro"
+  },
+  "es": {
+    "docTitle": "AGORÀ — Mapa de Estudio",
+    "menu": "Menú",
+    "language": "Idioma",
+    "mapPageTitle": "Mapa de Estudio",
+    "mapPageSubtitle": "encuentra personas con quienes estudiar y reunirte",
+    "sidebarTitle": "Sesiones cerca de ti",
+    "loadingSessions": "Cargando…",
+    "searchSessionsLabel": "Buscar sesiones",
+    "searchInputPlaceholder": "tema, nombre…",
+    "typeLabel": "Tipo",
+    "typeAllText": "Todo",
+    "typePersonaText": "Persona",
+    "typeLuogoText": "Lugar",
+    "poiToggleLabel": "📍 Lugares culturales de MapTiler (museos, bibliotecas, universidades…)",
+    "topicAreaLabel": "Área temática",
+    "cityInputPlaceholder": "🌍 Buscar ciudad, barrio…",
+    "citySearchTitle": "Ir a la ciudad",
+    "locBannerText": "📍 ¿Quieres ver sesiones cerca de ti?",
+    "locBtn": "Permitir",
+    "locateBtnTitle": "Centrarme en el mapa",
+    "poiStatusLoading": "Cargando lugares culturales…",
+    "fabBtnTitle": "Añadir sesión",
+    "modalTitle": "Nueva Sesión",
+    "modalSub": "Publica dónde y qué quieres estudiar — o un lugar donde encontrarte",
+    "fNameLabel": "Tu nombre / apodo",
+    "fNamePlaceholder": "Ej. Marco, Study_Philosophy…",
+    "fTypeLabel": "Tipo de sesión",
+    "fTypePersona": "Persona — me desplazo",
+    "fTypeLuogo": "Lugar fijo — biblioteca, café, universidad…",
+    "fPlaceLabel": "Nombre del lugar",
+    "fPlacePlaceholder": "Ej. Biblioteca Universitaria, Café Central…",
+    "fTopicLabel": "Tema / descripción",
+    "fTopicPlaceholder": "Ej. Estudio cálculo para el examen del jueves, o simplemente charlas de filosofía…",
+    "fTagsLabel": "Etiquetas temáticas",
+    "fDurationLabel": "Disponible durante",
+    "modalCancel": "Cancelar",
+    "modalSubmit": "Publicar →",
+    "confirmDefaultTitle": "Confirmar",
+    "confirmDefaultMsg": "¿Estás seguro?",
+    "confirmDefaultOk": "Confirmar",
+    "confirmDefaultCancel": "Cancelar",
+    "snapTitle": "Vista óptima para lugares culturales (zoom 15)",
+    "personType": "Persona",
+    "placeType": "Lugar",
+    "contactBtn": "Contactar →",
+    "deleteSessionBtn": "Eliminar sesión",
+    "deleteSessionPopupBtn": "Eliminar sesión ✕",
+    "yours": "(tuya)",
+    "emptyList": "No se encontraron sesiones.<br>¡Sé el primero en añadir una! ✨",
+    "deleteSessionTitle": "¿Eliminar sesión?",
+    "deleteSessionMsg": "La sesión se eliminará del mapa y de la lista.",
+    "delete": "Eliminar",
+    "loginRequired": "⚠️ Debes iniciar sesión.",
+    "sessionDeleted": "✅ Sesión eliminada.",
+    "unknownError": "Error desconocido",
+    "connectionError": "⚠️ Error de conexión.",
+    "geoDetecting": "📍 Detectando posición…",
+    "geoDetected": "✅ ¡Posición detectada!",
+    "geoFallbackCenter": "⚠️ Posición no disponible — se usará el centro del mapa.",
+    "nameAndTopicRequired": "⚠️ Introduce al menos tu nombre y el tema.",
+    "loginToShare": "⚠️ Inicia sesión para compartir una sesión.",
+    "publishing": "Publicando…",
+    "geolocationUnsupported": "⚠️ La geolocalización no es compatible con el navegador.",
+    "youAreHere": "📍 Estás aquí",
+    "geolocationDenied": "⚠️ No se puede detectar la posición. Revisa los permisos del navegador.",
+    "poiKindMuseum": "Museo",
+    "poiKindLibrary": "Biblioteca",
+    "poiKindUniversity": "Universidad",
+    "poiKindGallery": "Galería",
+    "poiKindTheatre": "Teatro",
+    "poiKindArchive": "Archivo",
+    "poiKindGeneric": "Lugar cultural",
+    "poiMissingKey": "Introduce tu API key de MapTiler para activar los lugares culturales",
+    "poiMissingKeyInline": "MapTiler listo: introduce tu API key en el archivo",
+    "poiZoomMore": "Aumenta el zoom a {zoom}+ para ver lugares culturales",
+    "poiVisibleCount": "{count} lugares culturales visibles",
+    "poiLoading": "Cargando lugares culturales de MapTiler…",
+    "poiNoneHere": "No se encontró ningún lugar cultural en esta vista",
+    "poiUpdatingBlocks": "Actualizando {count} bloques de lugares culturales…",
+    "citySearchNeedsKey": "La búsqueda de ciudades con MapTiler requiere la API key",
+    "placeFallback": "Lugar",
+    "providerLabel": "Proveedor",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "{count} sesión encontrada",
+    "sessionCount_other": "{count} sesiones encontradas",
+    "topicSearchExtra": "",
+    "themeDark": "Cambiar al modo oscuro",
+    "themeLight": "Cambiar al modo claro"
+  },
+  "fr": {
+    "docTitle": "AGORÀ — Carte d’étude",
+    "menu": "Menu",
+    "language": "Langue",
+    "mapPageTitle": "Carte d’étude",
+    "mapPageSubtitle": "trouve des personnes avec qui étudier et te rencontrer",
+    "sidebarTitle": "Sessions près de toi",
+    "loadingSessions": "Chargement…",
+    "searchSessionsLabel": "Rechercher des sessions",
+    "searchInputPlaceholder": "sujet, nom…",
+    "typeLabel": "Type",
+    "typeAllText": "Tout",
+    "typePersonaText": "Personne",
+    "typeLuogoText": "Lieu",
+    "poiToggleLabel": "📍 Lieux culturels MapTiler (musées, bibliothèques, universités…)",
+    "topicAreaLabel": "Domaine thématique",
+    "cityInputPlaceholder": "🌍 Rechercher une ville, un quartier…",
+    "citySearchTitle": "Aller à la ville",
+    "locBannerText": "📍 Veux-tu voir les sessions près de toi ?",
+    "locBtn": "Autoriser",
+    "locateBtnTitle": "Me centrer sur la carte",
+    "poiStatusLoading": "Chargement des lieux culturels…",
+    "fabBtnTitle": "Ajouter une session",
+    "modalTitle": "Nouvelle session",
+    "modalSub": "Publie où et quoi tu veux étudier — ou un lieu pour te retrouver",
+    "fNameLabel": "Ton nom / pseudo",
+    "fNamePlaceholder": "Ex. Marco, Study_Philosophy…",
+    "fTypeLabel": "Type de session",
+    "fTypePersona": "Personne — je me déplace",
+    "fTypeLuogo": "Lieu fixe — bibliothèque, café, université…",
+    "fPlaceLabel": "Nom du lieu",
+    "fPlacePlaceholder": "Ex. Bibliothèque universitaire, Café Central…",
+    "fTopicLabel": "Sujet / description",
+    "fTopicPlaceholder": "Ex. Révision du calcul pour l’examen de jeudi, ou simplement discussions philosophiques…",
+    "fTagsLabel": "Tags thématiques",
+    "fDurationLabel": "Disponible pendant",
+    "modalCancel": "Annuler",
+    "modalSubmit": "Publier →",
+    "confirmDefaultTitle": "Confirmer",
+    "confirmDefaultMsg": "Es-tu sûr ?",
+    "confirmDefaultOk": "Confirmer",
+    "confirmDefaultCancel": "Annuler",
+    "snapTitle": "Vue optimale pour les lieux culturels (zoom 15)",
+    "personType": "Personne",
+    "placeType": "Lieu",
+    "contactBtn": "Contacter →",
+    "deleteSessionBtn": "Supprimer la session",
+    "deleteSessionPopupBtn": "Supprimer la session ✕",
+    "yours": "(la tienne)",
+    "emptyList": "Aucune session trouvée.<br>Sois le premier à en ajouter une ! ✨",
+    "deleteSessionTitle": "Supprimer la session ?",
+    "deleteSessionMsg": "La session sera retirée de la carte et de la liste.",
+    "delete": "Supprimer",
+    "loginRequired": "⚠️ Tu dois te connecter.",
+    "sessionDeleted": "✅ Session supprimée.",
+    "unknownError": "Erreur inconnue",
+    "connectionError": "⚠️ Erreur de connexion.",
+    "geoDetecting": "📍 Détection de la position…",
+    "geoDetected": "✅ Position détectée !",
+    "geoFallbackCenter": "⚠️ Position indisponible — le centre de la carte sera utilisé.",
+    "nameAndTopicRequired": "⚠️ Saisis au moins ton nom et le sujet.",
+    "loginToShare": "⚠️ Connecte-toi pour partager une session.",
+    "publishing": "Publication…",
+    "geolocationUnsupported": "⚠️ La géolocalisation n’est pas prise en charge par le navigateur.",
+    "youAreHere": "📍 Vous êtes ici",
+    "geolocationDenied": "⚠️ Impossible de détecter la position. Vérifie les autorisations du navigateur.",
+    "poiKindMuseum": "Musée",
+    "poiKindLibrary": "Bibliothèque",
+    "poiKindUniversity": "Université",
+    "poiKindGallery": "Galerie",
+    "poiKindTheatre": "Théâtre",
+    "poiKindArchive": "Archive",
+    "poiKindGeneric": "Lieu culturel",
+    "poiMissingKey": "Saisis ta clé API MapTiler pour activer les lieux culturels",
+    "poiMissingKeyInline": "MapTiler prêt : saisis ta clé API dans le fichier",
+    "poiZoomMore": "Zoome jusqu’à {zoom}+ pour voir les lieux culturels",
+    "poiVisibleCount": "{count} lieux culturels visibles",
+    "poiLoading": "Chargement des lieux culturels MapTiler…",
+    "poiNoneHere": "Aucun lieu culturel trouvé dans cette vue",
+    "poiUpdatingBlocks": "Mise à jour de {count} blocs de lieux culturels…",
+    "citySearchNeedsKey": "La recherche de ville avec MapTiler nécessite la clé API",
+    "placeFallback": "Lieu",
+    "providerLabel": "Fournisseur",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "{count} session trouvée",
+    "sessionCount_other": "{count} sessions trouvées",
+    "topicSearchExtra": "",
+    "themeDark": "Passer au mode sombre",
+    "themeLight": "Passer au mode clair"
+  },
+  "de": {
+    "docTitle": "AGORÀ — Lernkarte",
+    "menu": "Menü",
+    "language": "Sprache",
+    "mapPageTitle": "Lernkarte",
+    "mapPageSubtitle": "finde Leute, mit denen du lernen und dich treffen kannst",
+    "sidebarTitle": "Sitzungen in deiner Nähe",
+    "loadingSessions": "Lädt…",
+    "searchSessionsLabel": "Sitzungen suchen",
+    "searchInputPlaceholder": "Thema, Name…",
+    "typeLabel": "Typ",
+    "typeAllText": "Alle",
+    "typePersonaText": "Person",
+    "typeLuogoText": "Ort",
+    "poiToggleLabel": "📍 Kulturelle Orte von MapTiler (Museen, Bibliotheken, Universitäten…)",
+    "topicAreaLabel": "Themenbereich",
+    "cityInputPlaceholder": "🌍 Stadt, Viertel suchen…",
+    "citySearchTitle": "Zur Stadt gehen",
+    "locBannerText": "📍 Möchtest du Sitzungen in deiner Nähe sehen?",
+    "locBtn": "Erlauben",
+    "locateBtnTitle": "Mich auf der Karte zentrieren",
+    "poiStatusLoading": "Kulturelle Orte werden geladen…",
+    "fabBtnTitle": "Sitzung hinzufügen",
+    "modalTitle": "Neue Sitzung",
+    "modalSub": "Veröffentliche, wo und was du lernen möchtest — oder einen Ort zum Treffen",
+    "fNameLabel": "Dein Name / Spitzname",
+    "fNamePlaceholder": "Z. B. Marco, Study_Philosophy…",
+    "fTypeLabel": "Sitzungstyp",
+    "fTypePersona": "Person — ich bewege mich",
+    "fTypeLuogo": "Fester Ort — Bibliothek, Café, Universität…",
+    "fPlaceLabel": "Name des Ortes",
+    "fPlacePlaceholder": "Z. B. Universitätsbibliothek, Central Café…",
+    "fTopicLabel": "Thema / Beschreibung",
+    "fTopicPlaceholder": "Z. B. Analysis für die Prüfung am Donnerstag lernen oder einfach Philosophiegespräche…",
+    "fTagsLabel": "Themen-Tags",
+    "fDurationLabel": "Verfügbar für",
+    "modalCancel": "Abbrechen",
+    "modalSubmit": "Veröffentlichen →",
+    "confirmDefaultTitle": "Bestätigen",
+    "confirmDefaultMsg": "Bist du sicher?",
+    "confirmDefaultOk": "Bestätigen",
+    "confirmDefaultCancel": "Abbrechen",
+    "snapTitle": "Optimale Ansicht für kulturelle Orte (Zoom 15)",
+    "personType": "Person",
+    "placeType": "Ort",
+    "contactBtn": "Kontaktieren →",
+    "deleteSessionBtn": "Sitzung löschen",
+    "deleteSessionPopupBtn": "Sitzung löschen ✕",
+    "yours": "(deine)",
+    "emptyList": "Keine Sitzungen gefunden.<br>Sei der Erste, der eine hinzufügt! ✨",
+    "deleteSessionTitle": "Sitzung löschen?",
+    "deleteSessionMsg": "Die Sitzung wird von der Karte und aus der Liste entfernt.",
+    "delete": "Löschen",
+    "loginRequired": "⚠️ Du musst dich anmelden.",
+    "sessionDeleted": "✅ Sitzung gelöscht.",
+    "unknownError": "Unbekannter Fehler",
+    "connectionError": "⚠️ Verbindungsfehler.",
+    "geoDetecting": "📍 Position wird ermittelt…",
+    "geoDetected": "✅ Position erkannt!",
+    "geoFallbackCenter": "⚠️ Position nicht verfügbar — die Kartenmitte wird verwendet.",
+    "nameAndTopicRequired": "⚠️ Gib mindestens deinen Namen und das Thema ein.",
+    "loginToShare": "⚠️ Melde dich an, um eine Sitzung zu teilen.",
+    "publishing": "Wird veröffentlicht…",
+    "geolocationUnsupported": "⚠️ Geolokalisierung wird vom Browser nicht unterstützt.",
+    "youAreHere": "📍 Du bist hier",
+    "geolocationDenied": "⚠️ Position kann nicht ermittelt werden. Prüfe die Browser-Berechtigungen.",
+    "poiKindMuseum": "Museum",
+    "poiKindLibrary": "Bibliothek",
+    "poiKindUniversity": "Universität",
+    "poiKindGallery": "Galerie",
+    "poiKindTheatre": "Theater",
+    "poiKindArchive": "Archiv",
+    "poiKindGeneric": "Kultureller Ort",
+    "poiMissingKey": "Gib deinen MapTiler-API-Schlüssel ein, um kulturelle Orte zu aktivieren",
+    "poiMissingKeyInline": "MapTiler bereit: API-Schlüssel in die Datei eintragen",
+    "poiZoomMore": "Für kulturelle Orte auf {zoom}+ zoomen",
+    "poiVisibleCount": "{count} kulturelle Orte sichtbar",
+    "poiLoading": "MapTiler-Kulturorte werden geladen…",
+    "poiNoneHere": "In dieser Ansicht wurde kein kultureller Ort gefunden",
+    "poiUpdatingBlocks": "{count} Blöcke kultureller Orte werden aktualisiert…",
+    "citySearchNeedsKey": "Die Stadtsuche mit MapTiler benötigt den API-Schlüssel",
+    "placeFallback": "Ort",
+    "providerLabel": "Anbieter",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "{count} Sitzung gefunden",
+    "sessionCount_other": "{count} Sitzungen gefunden",
+    "topicSearchExtra": "",
+    "themeDark": "Zum Dunkelmodus wechseln",
+    "themeLight": "Zum Hellmodus wechseln"
+  },
+  "pt": {
+    "docTitle": "AGORÀ — Mapa de Estudo",
+    "menu": "Menu",
+    "language": "Idioma",
+    "mapPageTitle": "Mapa de Estudo",
+    "mapPageSubtitle": "encontre pessoas para estudar e se encontrar",
+    "sidebarTitle": "Sessões perto de você",
+    "loadingSessions": "Carregando…",
+    "searchSessionsLabel": "Pesquisar sessões",
+    "searchInputPlaceholder": "tema, nome…",
+    "typeLabel": "Tipo",
+    "typeAllText": "Todos",
+    "typePersonaText": "Pessoa",
+    "typeLuogoText": "Lugar",
+    "poiToggleLabel": "📍 Lugares culturais do MapTiler (museus, bibliotecas, universidades…)",
+    "topicAreaLabel": "Área temática",
+    "cityInputPlaceholder": "🌍 Procurar cidade, bairro…",
+    "citySearchTitle": "Ir para a cidade",
+    "locBannerText": "📍 Quer ver sessões perto de você?",
+    "locBtn": "Permitir",
+    "locateBtnTitle": "Centralizar-me no mapa",
+    "poiStatusLoading": "Carregando lugares culturais…",
+    "fabBtnTitle": "Adicionar sessão",
+    "modalTitle": "Nova Sessão",
+    "modalSub": "Publique onde e o que você quer estudar — ou um lugar para se encontrar",
+    "fNameLabel": "Seu nome / apelido",
+    "fNamePlaceholder": "Ex. Marco, Study_Philosophy…",
+    "fTypeLabel": "Tipo de sessão",
+    "fTypePersona": "Pessoa — eu me desloco",
+    "fTypeLuogo": "Lugar fixo — biblioteca, café, universidade…",
+    "fPlaceLabel": "Nome do lugar",
+    "fPlacePlaceholder": "Ex. Biblioteca Universitária, Café Central…",
+    "fTopicLabel": "Tema / descrição",
+    "fTopicPlaceholder": "Ex. Estudando cálculo para a prova de quinta, ou simplesmente conversas sobre filosofia…",
+    "fTagsLabel": "Tags temáticas",
+    "fDurationLabel": "Disponível por",
+    "modalCancel": "Cancelar",
+    "modalSubmit": "Publicar →",
+    "confirmDefaultTitle": "Confirmar",
+    "confirmDefaultMsg": "Tem certeza?",
+    "confirmDefaultOk": "Confirmar",
+    "confirmDefaultCancel": "Cancelar",
+    "snapTitle": "Visualização ideal para lugares culturais (zoom 15)",
+    "personType": "Pessoa",
+    "placeType": "Lugar",
+    "contactBtn": "Contato →",
+    "deleteSessionBtn": "Excluir sessão",
+    "deleteSessionPopupBtn": "Excluir sessão ✕",
+    "yours": "(sua)",
+    "emptyList": "Nenhuma sessão encontrada.<br>Seja o primeiro a adicionar uma! ✨",
+    "deleteSessionTitle": "Excluir sessão?",
+    "deleteSessionMsg": "A sessão será removida do mapa e da lista.",
+    "delete": "Excluir",
+    "loginRequired": "⚠️ Você precisa fazer login.",
+    "sessionDeleted": "✅ Sessão excluída.",
+    "unknownError": "Erro desconhecido",
+    "connectionError": "⚠️ Erro de conexão.",
+    "geoDetecting": "📍 Detectando posição…",
+    "geoDetected": "✅ Posição detectada!",
+    "geoFallbackCenter": "⚠️ Posição indisponível — o centro do mapa será usado.",
+    "nameAndTopicRequired": "⚠️ Digite pelo menos seu nome e o tema.",
+    "loginToShare": "⚠️ Faça login para compartilhar uma sessão.",
+    "publishing": "Publicando…",
+    "geolocationUnsupported": "⚠️ A geolocalização não é suportada pelo navegador.",
+    "youAreHere": "📍 Você está aqui",
+    "geolocationDenied": "⚠️ Não foi possível detectar a posição. Verifique as permissões do navegador.",
+    "poiKindMuseum": "Museu",
+    "poiKindLibrary": "Biblioteca",
+    "poiKindUniversity": "Universidade",
+    "poiKindGallery": "Galeria",
+    "poiKindTheatre": "Teatro",
+    "poiKindArchive": "Arquivo",
+    "poiKindGeneric": "Lugar cultural",
+    "poiMissingKey": "Insira sua chave de API do MapTiler para ativar lugares culturais",
+    "poiMissingKeyInline": "MapTiler pronto: insira sua chave de API no arquivo",
+    "poiZoomMore": "Aproxime para {zoom}+ para ver lugares culturais",
+    "poiVisibleCount": "{count} lugares culturais visíveis",
+    "poiLoading": "Carregando lugares culturais do MapTiler…",
+    "poiNoneHere": "Nenhum lugar cultural encontrado nesta visualização",
+    "poiUpdatingBlocks": "Atualizando {count} blocos de lugares culturais…",
+    "citySearchNeedsKey": "A pesquisa de cidades do MapTiler requer a chave de API",
+    "placeFallback": "Lugar",
+    "providerLabel": "Provedor",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "{count} sessão encontrada",
+    "sessionCount_other": "{count} sessões encontradas",
+    "topicSearchExtra": "",
+    "themeDark": "Mudar para o modo escuro",
+    "themeLight": "Mudar para o modo claro"
+  },
+  "ru": {
+    "docTitle": "AGORÀ — Карта обучения",
+    "menu": "Меню",
+    "language": "Язык",
+    "mapPageTitle": "Карта обучения",
+    "mapPageSubtitle": "найдите людей, с которыми можно учиться и встречаться",
+    "sidebarTitle": "Сессии рядом с вами",
+    "loadingSessions": "Загрузка…",
+    "searchSessionsLabel": "Поиск сессий",
+    "searchInputPlaceholder": "тема, имя…",
+    "typeLabel": "Тип",
+    "typeAllText": "Все",
+    "typePersonaText": "Человек",
+    "typeLuogoText": "Место",
+    "poiToggleLabel": "📍 Культурные места MapTiler (музеи, библиотеки, университеты…)",
+    "topicAreaLabel": "Тематическая область",
+    "cityInputPlaceholder": "🌍 Поиск города, района…",
+    "citySearchTitle": "Перейти к городу",
+    "locBannerText": "📍 Хотите увидеть сессии рядом с вами?",
+    "locBtn": "Разрешить",
+    "locateBtnTitle": "Центрировать меня на карте",
+    "poiStatusLoading": "Загрузка культурных мест…",
+    "fabBtnTitle": "Добавить сессию",
+    "modalTitle": "Новая сессия",
+    "modalSub": "Опубликуйте, где и что вы хотите изучать — или место для встречи",
+    "fNameLabel": "Ваше имя / ник",
+    "fNamePlaceholder": "Напр. Marco, Study_Philosophy…",
+    "fTypeLabel": "Тип сессии",
+    "fTypePersona": "Человек — я перемещаюсь",
+    "fTypeLuogo": "Постоянное место — библиотека, кафе, университет…",
+    "fPlaceLabel": "Название места",
+    "fPlacePlaceholder": "Напр. Университетская библиотека, Central Café…",
+    "fTopicLabel": "Тема / описание",
+    "fTopicPlaceholder": "Напр. Изучаю математический анализ к экзамену в четверг или просто философские беседы…",
+    "fTagsLabel": "Тематические теги",
+    "fDurationLabel": "Доступен на",
+    "modalCancel": "Отмена",
+    "modalSubmit": "Опубликовать →",
+    "confirmDefaultTitle": "Подтвердить",
+    "confirmDefaultMsg": "Вы уверены?",
+    "confirmDefaultOk": "Подтвердить",
+    "confirmDefaultCancel": "Отмена",
+    "snapTitle": "Оптимальный вид для культурных мест (масштаб 15)",
+    "personType": "Человек",
+    "placeType": "Место",
+    "contactBtn": "Связаться →",
+    "deleteSessionBtn": "Удалить сессию",
+    "deleteSessionPopupBtn": "Удалить сессию ✕",
+    "yours": "(ваша)",
+    "emptyList": "Сессии не найдены.<br>Станьте первым, кто добавит её! ✨",
+    "deleteSessionTitle": "Удалить сессию?",
+    "deleteSessionMsg": "Сессия будет удалена с карты и из списка.",
+    "delete": "Удалить",
+    "loginRequired": "⚠️ Вам нужно войти в систему.",
+    "sessionDeleted": "✅ Сессия удалена.",
+    "unknownError": "Неизвестная ошибка",
+    "connectionError": "⚠️ Ошибка соединения.",
+    "geoDetecting": "📍 Определение позиции…",
+    "geoDetected": "✅ Позиция определена!",
+    "geoFallbackCenter": "⚠️ Позиция недоступна — будет использован центр карты.",
+    "nameAndTopicRequired": "⚠️ Укажите хотя бы имя и тему.",
+    "loginToShare": "⚠️ Войдите, чтобы поделиться сессией.",
+    "publishing": "Публикация…",
+    "geolocationUnsupported": "⚠️ Геолокация не поддерживается браузером.",
+    "youAreHere": "📍 Вы здесь",
+    "geolocationDenied": "⚠️ Не удалось определить позицию. Проверьте разрешения браузера.",
+    "poiKindMuseum": "Музей",
+    "poiKindLibrary": "Библиотека",
+    "poiKindUniversity": "Университет",
+    "poiKindGallery": "Галерея",
+    "poiKindTheatre": "Театр",
+    "poiKindArchive": "Архив",
+    "poiKindGeneric": "Культурное место",
+    "poiMissingKey": "Введите ключ API MapTiler, чтобы включить культурные места",
+    "poiMissingKeyInline": "MapTiler готов: введите ключ API в файл",
+    "poiZoomMore": "Увеличьте масштаб до {zoom}+ для просмотра культурных мест",
+    "poiVisibleCount": "{count} культурных мест в области просмотра",
+    "poiLoading": "Загрузка культурных мест MapTiler…",
+    "poiNoneHere": "В этом виде культурные места не найдены",
+    "poiUpdatingBlocks": "Обновление {count} блоков культурных мест…",
+    "citySearchNeedsKey": "Для поиска городов через MapTiler нужен ключ API",
+    "placeFallback": "Место",
+    "providerLabel": "Поставщик",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "Найдена {count} сессия",
+    "sessionCount_other": "Найдено {count} сессий",
+    "topicSearchExtra": "",
+    "themeDark": "Переключиться на тёмную тему",
+    "themeLight": "Переключиться на светлую тему"
+  },
+  "zh": {
+    "docTitle": "AGORÀ — 学习地图",
+    "menu": "菜单",
+    "language": "语言",
+    "mapPageTitle": "学习地图",
+    "mapPageSubtitle": "寻找一起学习和见面的人",
+    "sidebarTitle": "你附近的学习会话",
+    "loadingSessions": "加载中…",
+    "searchSessionsLabel": "搜索会话",
+    "searchInputPlaceholder": "主题、姓名…",
+    "typeLabel": "类型",
+    "typeAllText": "全部",
+    "typePersonaText": "个人",
+    "typeLuogoText": "地点",
+    "poiToggleLabel": "📍 MapTiler 文化地点（博物馆、图书馆、大学…）",
+    "topicAreaLabel": "主题领域",
+    "cityInputPlaceholder": "🌍 搜索城市、街区…",
+    "citySearchTitle": "前往城市",
+    "locBannerText": "📍 你想查看你附近的会话吗？",
+    "locBtn": "允许",
+    "locateBtnTitle": "在地图上定位我",
+    "poiStatusLoading": "正在加载文化地点…",
+    "fabBtnTitle": "添加会话",
+    "modalTitle": "新会话",
+    "modalSub": "发布你想在哪里、学什么——或者一个见面的地点",
+    "fNameLabel": "你的名字 / 昵称",
+    "fNamePlaceholder": "例如：Marco, Study_Philosophy…",
+    "fTypeLabel": "会话类型",
+    "fTypePersona": "个人——我会移动",
+    "fTypeLuogo": "固定地点——图书馆、咖啡馆、大学…",
+    "fPlaceLabel": "地点名称",
+    "fPlacePlaceholder": "例如：大学图书馆、Central Café…",
+    "fTopicLabel": "主题 / 描述",
+    "fTopicPlaceholder": "例如：为周四考试学习微积分，或者只是聊哲学…",
+    "fTagsLabel": "主题标签",
+    "fDurationLabel": "可用时长",
+    "modalCancel": "取消",
+    "modalSubmit": "发布 →",
+    "confirmDefaultTitle": "确认",
+    "confirmDefaultMsg": "你确定吗？",
+    "confirmDefaultOk": "确认",
+    "confirmDefaultCancel": "取消",
+    "snapTitle": "文化地点的最佳视图（缩放 15）",
+    "personType": "个人",
+    "placeType": "地点",
+    "contactBtn": "联系 →",
+    "deleteSessionBtn": "删除会话",
+    "deleteSessionPopupBtn": "删除会话 ✕",
+    "yours": "（你的）",
+    "emptyList": "未找到会话。<br>成为第一个添加的人吧！ ✨",
+    "deleteSessionTitle": "删除会话？",
+    "deleteSessionMsg": "该会话将从地图和列表中移除。",
+    "delete": "删除",
+    "loginRequired": "⚠️ 你需要登录。",
+    "sessionDeleted": "✅ 会话已删除。",
+    "unknownError": "未知错误",
+    "connectionError": "⚠️ 连接错误。",
+    "geoDetecting": "📍 正在检测位置…",
+    "geoDetected": "✅ 已检测到位置！",
+    "geoFallbackCenter": "⚠️ 无法获取位置——将使用地图中心。",
+    "nameAndTopicRequired": "⚠️ 请至少填写你的名字和主题。",
+    "loginToShare": "⚠️ 请登录后再分享会话。",
+    "publishing": "发布中…",
+    "geolocationUnsupported": "⚠️ 浏览器不支持地理定位。",
+    "youAreHere": "📍 你在这里",
+    "geolocationDenied": "⚠️ 无法检测位置。请检查浏览器权限。",
+    "poiKindMuseum": "博物馆",
+    "poiKindLibrary": "图书馆",
+    "poiKindUniversity": "大学",
+    "poiKindGallery": "画廊",
+    "poiKindTheatre": "剧院",
+    "poiKindArchive": "档案馆",
+    "poiKindGeneric": "文化地点",
+    "poiMissingKey": "请输入你的 MapTiler API 密钥以启用文化地点",
+    "poiMissingKeyInline": "MapTiler 已就绪：请在文件中输入 API 密钥",
+    "poiZoomMore": "请放大到 {zoom}+ 以查看文化地点",
+    "poiVisibleCount": "当前视图中有 {count} 个文化地点",
+    "poiLoading": "正在加载 MapTiler 文化地点…",
+    "poiNoneHere": "此视图中未找到文化地点",
+    "poiUpdatingBlocks": "正在更新 {count} 个文化地点块…",
+    "citySearchNeedsKey": "MapTiler 城市搜索需要 API 密钥",
+    "placeFallback": "地点",
+    "providerLabel": "提供方",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "找到 {count} 个会话",
+    "sessionCount_other": "找到 {count} 个会话",
+    "topicSearchExtra": "",
+    "themeDark": "切换到深色模式",
+    "themeLight": "切换到浅色模式"
+  },
+  "ar": {
+    "docTitle": "AGORÀ — خريطة الدراسة",
+    "menu": "القائمة",
+    "language": "اللغة",
+    "mapPageTitle": "خريطة الدراسة",
+    "mapPageSubtitle": "اعثر على أشخاص للدراسة واللقاء معهم",
+    "sidebarTitle": "الجلسات القريبة منك",
+    "loadingSessions": "جارٍ التحميل…",
+    "searchSessionsLabel": "البحث عن الجلسات",
+    "searchInputPlaceholder": "الموضوع، الاسم…",
+    "typeLabel": "النوع",
+    "typeAllText": "الكل",
+    "typePersonaText": "شخص",
+    "typeLuogoText": "مكان",
+    "poiToggleLabel": "📍 أماكن ثقافية من MapTiler (متاحف، مكتبات، جامعات…)",
+    "topicAreaLabel": "المجال الموضوعي",
+    "cityInputPlaceholder": "🌍 ابحث عن مدينة أو حي…",
+    "citySearchTitle": "الانتقال إلى المدينة",
+    "locBannerText": "📍 هل تريد رؤية الجلسات القريبة منك؟",
+    "locBtn": "سماح",
+    "locateBtnTitle": "تمركزي على الخريطة",
+    "poiStatusLoading": "جارٍ تحميل الأماكن الثقافية…",
+    "fabBtnTitle": "إضافة جلسة",
+    "modalTitle": "جلسة جديدة",
+    "modalSub": "انشر أين وماذا تريد أن تدرس — أو مكاناً للقاء",
+    "fNameLabel": "اسمك / لقبك",
+    "fNamePlaceholder": "مثال: Marco, Study_Philosophy…",
+    "fTypeLabel": "نوع الجلسة",
+    "fTypePersona": "شخص — أتنقل",
+    "fTypeLuogo": "مكان ثابت — مكتبة، مقهى، جامعة…",
+    "fPlaceLabel": "اسم المكان",
+    "fPlacePlaceholder": "مثال: مكتبة الجامعة، المقهى المركزي…",
+    "fTopicLabel": "الموضوع / الوصف",
+    "fTopicPlaceholder": "مثال: أدرس التفاضل لامتحان الخميس، أو مجرد أحاديث فلسفية…",
+    "fTagsLabel": "وسوم الموضوع",
+    "fDurationLabel": "متاح لمدة",
+    "modalCancel": "إلغاء",
+    "modalSubmit": "نشر →",
+    "confirmDefaultTitle": "تأكيد",
+    "confirmDefaultMsg": "هل أنت متأكد؟",
+    "confirmDefaultOk": "تأكيد",
+    "confirmDefaultCancel": "إلغاء",
+    "snapTitle": "العرض الأمثل للأماكن الثقافية (تكبير 15)",
+    "personType": "شخص",
+    "placeType": "مكان",
+    "contactBtn": "تواصل →",
+    "deleteSessionBtn": "حذف الجلسة",
+    "deleteSessionPopupBtn": "حذف الجلسة ✕",
+    "yours": "(لك)",
+    "emptyList": "لم يتم العثور على جلسات.<br>كن أول من يضيف واحدة! ✨",
+    "deleteSessionTitle": "حذف الجلسة؟",
+    "deleteSessionMsg": "ستتم إزالة الجلسة من الخريطة والقائمة.",
+    "delete": "حذف",
+    "loginRequired": "⚠️ يجب عليك تسجيل الدخول.",
+    "sessionDeleted": "✅ تم حذف الجلسة.",
+    "unknownError": "خطأ غير معروف",
+    "connectionError": "⚠️ خطأ في الاتصال.",
+    "geoDetecting": "📍 جارٍ تحديد الموقع…",
+    "geoDetected": "✅ تم تحديد الموقع!",
+    "geoFallbackCenter": "⚠️ الموقع غير متاح — سيتم استخدام مركز الخريطة.",
+    "nameAndTopicRequired": "⚠️ أدخل على الأقل اسمك والموضوع.",
+    "loginToShare": "⚠️ سجّل الدخول لمشاركة جلسة.",
+    "publishing": "جارٍ النشر…",
+    "geolocationUnsupported": "⚠️ المتصفح لا يدعم تحديد الموقع الجغرافي.",
+    "youAreHere": "📍 أنت هنا",
+    "geolocationDenied": "⚠️ تعذر تحديد الموقع. تحقق من أذونات المتصفح.",
+    "poiKindMuseum": "متحف",
+    "poiKindLibrary": "مكتبة",
+    "poiKindUniversity": "جامعة",
+    "poiKindGallery": "معرض",
+    "poiKindTheatre": "مسرح",
+    "poiKindArchive": "أرشيف",
+    "poiKindGeneric": "مكان ثقافي",
+    "poiMissingKey": "أدخل مفتاح MapTiler API لتفعيل الأماكن الثقافية",
+    "poiMissingKeyInline": "MapTiler جاهز: أدخل مفتاح API في الملف",
+    "poiZoomMore": "قرّب إلى {zoom}+ لرؤية الأماكن الثقافية",
+    "poiVisibleCount": "{count} مكاناً ثقافياً في العرض",
+    "poiLoading": "جارٍ تحميل الأماكن الثقافية من MapTiler…",
+    "poiNoneHere": "لم يتم العثور على مكان ثقافي في هذا العرض",
+    "poiUpdatingBlocks": "جارٍ تحديث {count} من كتل الأماكن الثقافية…",
+    "citySearchNeedsKey": "بحث المدن عبر MapTiler يتطلب مفتاح API",
+    "placeFallback": "مكان",
+    "providerLabel": "المزوّد",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "تم العثور على {count} جلسة",
+    "sessionCount_other": "تم العثور على {count} جلسات",
+    "topicSearchExtra": "",
+    "themeDark": "التبديل إلى الوضع الداكن",
+    "themeLight": "التبديل إلى الوضع الفاتح"
+  },
+  "ja": {
+    "docTitle": "AGORÀ — 学習マップ",
+    "menu": "メニュー",
+    "language": "言語",
+    "mapPageTitle": "学習マップ",
+    "mapPageSubtitle": "一緒に勉強したり会ったりできる人を見つける",
+    "sidebarTitle": "近くのセッション",
+    "loadingSessions": "読み込み中…",
+    "searchSessionsLabel": "セッションを検索",
+    "searchInputPlaceholder": "トピック、名前…",
+    "typeLabel": "タイプ",
+    "typeAllText": "すべて",
+    "typePersonaText": "人",
+    "typeLuogoText": "場所",
+    "poiToggleLabel": "📍 MapTiler の文化施設（博物館、図書館、大学…）",
+    "topicAreaLabel": "分野",
+    "cityInputPlaceholder": "🌍 都市・地区を検索…",
+    "citySearchTitle": "都市へ移動",
+    "locBannerText": "📍 近くのセッションを表示しますか？",
+    "locBtn": "許可",
+    "locateBtnTitle": "地図上で現在地を中央にする",
+    "poiStatusLoading": "文化施設を読み込み中…",
+    "fabBtnTitle": "セッションを追加",
+    "modalTitle": "新しいセッション",
+    "modalSub": "どこで何を勉強したいか、または会う場所を投稿してください",
+    "fNameLabel": "あなたの名前 / ニックネーム",
+    "fNamePlaceholder": "例: Marco, Study_Philosophy…",
+    "fTypeLabel": "セッションの種類",
+    "fTypePersona": "人 — 移動できます",
+    "fTypeLuogo": "固定の場所 — 図書館、カフェ、大学…",
+    "fPlaceLabel": "場所の名前",
+    "fPlacePlaceholder": "例: 大学図書館、Central Café…",
+    "fTopicLabel": "トピック / 説明",
+    "fTopicPlaceholder": "例: 木曜の試験のために微積分を勉強、または哲学の雑談など…",
+    "fTagsLabel": "トピックタグ",
+    "fDurationLabel": "利用可能時間",
+    "modalCancel": "キャンセル",
+    "modalSubmit": "公開 →",
+    "confirmDefaultTitle": "確認",
+    "confirmDefaultMsg": "よろしいですか？",
+    "confirmDefaultOk": "確認",
+    "confirmDefaultCancel": "キャンセル",
+    "snapTitle": "文化施設に最適な表示（ズーム15）",
+    "personType": "人",
+    "placeType": "場所",
+    "contactBtn": "連絡する →",
+    "deleteSessionBtn": "セッションを削除",
+    "deleteSessionPopupBtn": "セッションを削除 ✕",
+    "yours": "（あなたの）",
+    "emptyList": "セッションが見つかりません。<br>最初に追加してみましょう！ ✨",
+    "deleteSessionTitle": "セッションを削除しますか？",
+    "deleteSessionMsg": "このセッションは地図と一覧から削除されます。",
+    "delete": "削除",
+    "loginRequired": "⚠️ ログインが必要です。",
+    "sessionDeleted": "✅ セッションを削除しました。",
+    "unknownError": "不明なエラー",
+    "connectionError": "⚠️ 接続エラー。",
+    "geoDetecting": "📍 位置を検出中…",
+    "geoDetected": "✅ 位置を検出しました！",
+    "geoFallbackCenter": "⚠️ 位置を取得できません — 地図の中心を使用します。",
+    "nameAndTopicRequired": "⚠️ 少なくとも名前とトピックを入力してください。",
+    "loginToShare": "⚠️ セッションを共有するにはログインしてください。",
+    "publishing": "公開中…",
+    "geolocationUnsupported": "⚠️ このブラウザは位置情報に対応していません。",
+    "youAreHere": "📍 現在地",
+    "geolocationDenied": "⚠️ 位置を検出できません。ブラウザの権限を確認してください。",
+    "poiKindMuseum": "博物館",
+    "poiKindLibrary": "図書館",
+    "poiKindUniversity": "大学",
+    "poiKindGallery": "ギャラリー",
+    "poiKindTheatre": "劇場",
+    "poiKindArchive": "アーカイブ",
+    "poiKindGeneric": "文化施設",
+    "poiMissingKey": "文化施設を有効にするには MapTiler API キーを入力してください",
+    "poiMissingKeyInline": "MapTiler 準備完了：ファイルに API キーを入力してください",
+    "poiZoomMore": "文化施設を見るには {zoom}+ までズームしてください",
+    "poiVisibleCount": "表示範囲内に {count} 件の文化施設",
+    "poiLoading": "MapTiler の文化施設を読み込み中…",
+    "poiNoneHere": "この表示範囲には文化施設が見つかりませんでした",
+    "poiUpdatingBlocks": "{count} 件の文化施設ブロックを更新中…",
+    "citySearchNeedsKey": "MapTiler の都市検索には API キーが必要です",
+    "placeFallback": "場所",
+    "providerLabel": "プロバイダー",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "{count} 件のセッションが見つかりました",
+    "sessionCount_other": "{count} 件のセッションが見つかりました",
+    "topicSearchExtra": "",
+    "themeDark": "ダークモードに切り替え",
+    "themeLight": "ライトモードに切り替え"
+  },
+  "ko": {
+    "docTitle": "AGORÀ — 학습 지도",
+    "menu": "메뉴",
+    "language": "언어",
+    "mapPageTitle": "학습 지도",
+    "mapPageSubtitle": "함께 공부하고 만날 사람을 찾아보세요",
+    "sidebarTitle": "내 주변 세션",
+    "loadingSessions": "불러오는 중…",
+    "searchSessionsLabel": "세션 검색",
+    "searchInputPlaceholder": "주제, 이름…",
+    "typeLabel": "유형",
+    "typeAllText": "전체",
+    "typePersonaText": "사람",
+    "typeLuogoText": "장소",
+    "poiToggleLabel": "📍 MapTiler 문화 장소(박물관, 도서관, 대학교…)",
+    "topicAreaLabel": "주제 분야",
+    "cityInputPlaceholder": "🌍 도시, 구역 검색…",
+    "citySearchTitle": "도시로 이동",
+    "locBannerText": "📍 내 주변 세션을 보시겠어요?",
+    "locBtn": "허용",
+    "locateBtnTitle": "지도의 내 위치로 이동",
+    "poiStatusLoading": "문화 장소를 불러오는 중…",
+    "fabBtnTitle": "세션 추가",
+    "modalTitle": "새 세션",
+    "modalSub": "어디서 무엇을 공부하고 싶은지 또는 만날 장소를 게시하세요",
+    "fNameLabel": "이름 / 닉네임",
+    "fNamePlaceholder": "예: Marco, Study_Philosophy…",
+    "fTypeLabel": "세션 유형",
+    "fTypePersona": "사람 — 이동 가능",
+    "fTypeLuogo": "고정 장소 — 도서관, 카페, 대학교…",
+    "fPlaceLabel": "장소 이름",
+    "fPlacePlaceholder": "예: 대학 도서관, Central Café…",
+    "fTopicLabel": "주제 / 설명",
+    "fTopicPlaceholder": "예: 목요일 시험을 위한 미적분 공부, 또는 철학 대화…",
+    "fTagsLabel": "주제 태그",
+    "fDurationLabel": "가능 시간",
+    "modalCancel": "취소",
+    "modalSubmit": "게시 →",
+    "confirmDefaultTitle": "확인",
+    "confirmDefaultMsg": "확실합니까?",
+    "confirmDefaultOk": "확인",
+    "confirmDefaultCancel": "취소",
+    "snapTitle": "문화 장소에 최적화된 보기(줌 15)",
+    "personType": "사람",
+    "placeType": "장소",
+    "contactBtn": "연락 →",
+    "deleteSessionBtn": "세션 삭제",
+    "deleteSessionPopupBtn": "세션 삭제 ✕",
+    "yours": "(내 것)",
+    "emptyList": "세션을 찾지 못했습니다.<br>첫 번째로 추가해보세요! ✨",
+    "deleteSessionTitle": "세션을 삭제할까요?",
+    "deleteSessionMsg": "세션이 지도와 목록에서 제거됩니다.",
+    "delete": "삭제",
+    "loginRequired": "⚠️ 로그인해야 합니다.",
+    "sessionDeleted": "✅ 세션이 삭제되었습니다.",
+    "unknownError": "알 수 없는 오류",
+    "connectionError": "⚠️ 연결 오류.",
+    "geoDetecting": "📍 위치를 확인하는 중…",
+    "geoDetected": "✅ 위치가 확인되었습니다!",
+    "geoFallbackCenter": "⚠️ 위치를 사용할 수 없습니다 — 지도 중심을 사용합니다.",
+    "nameAndTopicRequired": "⚠️ 이름과 주제를 최소한 입력하세요.",
+    "loginToShare": "⚠️ 세션을 공유하려면 로그인하세요.",
+    "publishing": "게시 중…",
+    "geolocationUnsupported": "⚠️ 브라우저가 위치 정보를 지원하지 않습니다.",
+    "youAreHere": "📍 현재 위치",
+    "geolocationDenied": "⚠️ 위치를 확인할 수 없습니다. 브라우저 권한을 확인하세요.",
+    "poiKindMuseum": "박물관",
+    "poiKindLibrary": "도서관",
+    "poiKindUniversity": "대학교",
+    "poiKindGallery": "갤러리",
+    "poiKindTheatre": "극장",
+    "poiKindArchive": "아카이브",
+    "poiKindGeneric": "문화 장소",
+    "poiMissingKey": "문화 장소를 활성화하려면 MapTiler API 키를 입력하세요",
+    "poiMissingKeyInline": "MapTiler 준비 완료: 파일에 API 키를 입력하세요",
+    "poiZoomMore": "문화 장소를 보려면 {zoom}+까지 확대하세요",
+    "poiVisibleCount": "현재 화면에 문화 장소 {count}개",
+    "poiLoading": "MapTiler 문화 장소를 불러오는 중…",
+    "poiNoneHere": "이 화면에서는 문화 장소를 찾지 못했습니다",
+    "poiUpdatingBlocks": "문화 장소 블록 {count}개를 업데이트하는 중…",
+    "citySearchNeedsKey": "MapTiler 도시 검색에는 API 키가 필요합니다",
+    "placeFallback": "장소",
+    "providerLabel": "제공자",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "세션 {count}개 찾음",
+    "sessionCount_other": "세션 {count}개 찾음",
+    "topicSearchExtra": "",
+    "themeDark": "다크 모드로 전환",
+    "themeLight": "라이트 모드로 전환"
+  },
+  "hi": {
+    "docTitle": "AGORÀ — स्टडी मैप",
+    "menu": "मेनू",
+    "language": "भाषा",
+    "mapPageTitle": "स्टडी मैप",
+    "mapPageSubtitle": "पढ़ने और मिलने के लिए लोगों को खोजें",
+    "sidebarTitle": "आपके पास की सत्रें",
+    "loadingSessions": "लोड हो रहा है…",
+    "searchSessionsLabel": "सत्र खोजें",
+    "searchInputPlaceholder": "विषय, नाम…",
+    "typeLabel": "प्रकार",
+    "typeAllText": "सभी",
+    "typePersonaText": "व्यक्ति",
+    "typeLuogoText": "स्थान",
+    "poiToggleLabel": "📍 MapTiler सांस्कृतिक स्थान (संग्रहालय, पुस्तकालय, विश्वविद्यालय…)",
+    "topicAreaLabel": "विषय क्षेत्र",
+    "cityInputPlaceholder": "🌍 शहर, इलाका खोजें…",
+    "citySearchTitle": "शहर पर जाएँ",
+    "locBannerText": "📍 क्या आप अपने पास की सत्रें देखना चाहते हैं?",
+    "locBtn": "अनुमति दें",
+    "locateBtnTitle": "मुझे नक्शे पर केंद्र में लाएँ",
+    "poiStatusLoading": "सांस्कृतिक स्थान लोड हो रहे हैं…",
+    "fabBtnTitle": "सत्र जोड़ें",
+    "modalTitle": "नई सत्र",
+    "modalSub": "आप कहाँ और क्या पढ़ना चाहते हैं — या मिलने की जगह — पोस्ट करें",
+    "fNameLabel": "आपका नाम / निकनेम",
+    "fNamePlaceholder": "उदा. Marco, Study_Philosophy…",
+    "fTypeLabel": "सत्र प्रकार",
+    "fTypePersona": "व्यक्ति — मैं घूम सकता हूँ",
+    "fTypeLuogo": "स्थिर स्थान — पुस्तकालय, कैफ़े, विश्वविद्यालय…",
+    "fPlaceLabel": "स्थान का नाम",
+    "fPlacePlaceholder": "उदा. विश्वविद्यालय पुस्तकालय, Central Café…",
+    "fTopicLabel": "विषय / विवरण",
+    "fTopicPlaceholder": "उदा. गुरुवार की परीक्षा के लिए कैलकुलस पढ़ना, या बस दर्शन पर बातचीत…",
+    "fTagsLabel": "विषय टैग",
+    "fDurationLabel": "उपलब्ध अवधि",
+    "modalCancel": "रद्द करें",
+    "modalSubmit": "प्रकाशित करें →",
+    "confirmDefaultTitle": "पुष्टि करें",
+    "confirmDefaultMsg": "क्या आप निश्चित हैं?",
+    "confirmDefaultOk": "पुष्टि करें",
+    "confirmDefaultCancel": "रद्द करें",
+    "snapTitle": "सांस्कृतिक स्थानों के लिए सर्वोत्तम दृश्य (ज़ूम 15)",
+    "personType": "व्यक्ति",
+    "placeType": "स्थान",
+    "contactBtn": "संपर्क करें →",
+    "deleteSessionBtn": "सत्र हटाएँ",
+    "deleteSessionPopupBtn": "सत्र हटाएँ ✕",
+    "yours": "(आपकी)",
+    "emptyList": "कोई सत्र नहीं मिला।<br>पहले व्यक्ति बनें जो एक जोड़ता है! ✨",
+    "deleteSessionTitle": "सत्र हटाएँ?",
+    "deleteSessionMsg": "सत्र नक्शे और सूची से हटा दिया जाएगा।",
+    "delete": "हटाएँ",
+    "loginRequired": "⚠️ आपको लॉग इन करना होगा।",
+    "sessionDeleted": "✅ सत्र हटा दिया गया।",
+    "unknownError": "अज्ञात त्रुटि",
+    "connectionError": "⚠️ कनेक्शन त्रुटि।",
+    "geoDetecting": "📍 स्थान का पता लगाया जा रहा है…",
+    "geoDetected": "✅ स्थान मिल गया!",
+    "geoFallbackCenter": "⚠️ स्थान उपलब्ध नहीं — नक्शे का केंद्र उपयोग होगा।",
+    "nameAndTopicRequired": "⚠️ कम से कम अपना नाम और विषय दर्ज करें।",
+    "loginToShare": "⚠️ सत्र साझा करने के लिए लॉग इन करें।",
+    "publishing": "प्रकाशित किया जा रहा है…",
+    "geolocationUnsupported": "⚠️ ब्राउज़र में जियोलोकेशन समर्थित नहीं है।",
+    "youAreHere": "📍 आप यहाँ हैं",
+    "geolocationDenied": "⚠️ स्थान का पता नहीं चल सका। ब्राउज़र अनुमतियाँ जाँचें।",
+    "poiKindMuseum": "संग्रहालय",
+    "poiKindLibrary": "पुस्तकालय",
+    "poiKindUniversity": "विश्वविद्यालय",
+    "poiKindGallery": "गैलरी",
+    "poiKindTheatre": "थिएटर",
+    "poiKindArchive": "अभिलेखागार",
+    "poiKindGeneric": "सांस्कृतिक स्थान",
+    "poiMissingKey": "सांस्कृतिक स्थान सक्षम करने के लिए अपनी MapTiler API key दर्ज करें",
+    "poiMissingKeyInline": "MapTiler तैयार है: फ़ाइल में API key दर्ज करें",
+    "poiZoomMore": "सांस्कृतिक स्थान देखने के लिए {zoom}+ तक ज़ूम करें",
+    "poiVisibleCount": "दृश्य में {count} सांस्कृतिक स्थान",
+    "poiLoading": "MapTiler सांस्कृतिक स्थान लोड हो रहे हैं…",
+    "poiNoneHere": "इस दृश्य में कोई सांस्कृतिक स्थान नहीं मिला",
+    "poiUpdatingBlocks": "{count} सांस्कृतिक-स्थान ब्लॉकों को अपडेट किया जा रहा है…",
+    "citySearchNeedsKey": "MapTiler शहर खोज के लिए API key चाहिए",
+    "placeFallback": "स्थान",
+    "providerLabel": "प्रदाता",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "{count} सत्र मिला",
+    "sessionCount_other": "{count} सत्र मिले",
+    "topicSearchExtra": "",
+    "themeDark": "डार्क मोड पर जाएँ",
+    "themeLight": "लाइट मोड पर जाएँ"
+  },
+  "tr": {
+    "docTitle": "AGORÀ — Çalışma Haritası",
+    "menu": "Menü",
+    "language": "Dil",
+    "mapPageTitle": "Çalışma Haritası",
+    "mapPageSubtitle": "birlikte çalışıp buluşabileceğin kişileri bul",
+    "sidebarTitle": "Yakınındaki oturumlar",
+    "loadingSessions": "Yükleniyor…",
+    "searchSessionsLabel": "Oturum ara",
+    "searchInputPlaceholder": "konu, isim…",
+    "typeLabel": "Tür",
+    "typeAllText": "Tümü",
+    "typePersonaText": "Kişi",
+    "typeLuogoText": "Yer",
+    "poiToggleLabel": "📍 MapTiler kültürel yerleri (müzeler, kütüphaneler, üniversiteler…)",
+    "topicAreaLabel": "Konu alanı",
+    "cityInputPlaceholder": "🌍 Şehir, semt ara…",
+    "citySearchTitle": "Şehre git",
+    "locBannerText": "📍 Yakınındaki oturumları görmek ister misin?",
+    "locBtn": "İzin ver",
+    "locateBtnTitle": "Beni haritada ortala",
+    "poiStatusLoading": "Kültürel yerler yükleniyor…",
+    "fabBtnTitle": "Oturum ekle",
+    "modalTitle": "Yeni Oturum",
+    "modalSub": "Nerede ve ne çalışmak istediğini — ya da buluşma yerini — paylaş",
+    "fNameLabel": "Adın / takma adın",
+    "fNamePlaceholder": "Örn. Marco, Study_Philosophy…",
+    "fTypeLabel": "Oturum türü",
+    "fTypePersona": "Kişi — hareket ederim",
+    "fTypeLuogo": "Sabit yer — kütüphane, kafe, üniversite…",
+    "fPlaceLabel": "Yer adı",
+    "fPlacePlaceholder": "Örn. Üniversite Kütüphanesi, Central Café…",
+    "fTopicLabel": "Konu / açıklama",
+    "fTopicPlaceholder": "Örn. Perşembe sınavı için kalkülüs çalışıyorum ya da sadece felsefe sohbetleri…",
+    "fTagsLabel": "Konu etiketleri",
+    "fDurationLabel": "Şu süre için uygun",
+    "modalCancel": "İptal",
+    "modalSubmit": "Yayınla →",
+    "confirmDefaultTitle": "Onayla",
+    "confirmDefaultMsg": "Emin misin?",
+    "confirmDefaultOk": "Onayla",
+    "confirmDefaultCancel": "İptal",
+    "snapTitle": "Kültürel yerler için ideal görünüm (yakınlaştırma 15)",
+    "personType": "Kişi",
+    "placeType": "Yer",
+    "contactBtn": "İletişim →",
+    "deleteSessionBtn": "Oturumu sil",
+    "deleteSessionPopupBtn": "Oturumu sil ✕",
+    "yours": "(senin)",
+    "emptyList": "Oturum bulunamadı.<br>İlk ekleyen sen ol! ✨",
+    "deleteSessionTitle": "Oturum silinsin mi?",
+    "deleteSessionMsg": "Oturum haritadan ve listeden kaldırılacak.",
+    "delete": "Sil",
+    "loginRequired": "⚠️ Giriş yapmalısın.",
+    "sessionDeleted": "✅ Oturum silindi.",
+    "unknownError": "Bilinmeyen hata",
+    "connectionError": "⚠️ Bağlantı hatası.",
+    "geoDetecting": "📍 Konum algılanıyor…",
+    "geoDetected": "✅ Konum algılandı!",
+    "geoFallbackCenter": "⚠️ Konum kullanılamıyor — harita merkezi kullanılacak.",
+    "nameAndTopicRequired": "⚠️ En azından adını ve konuyu gir.",
+    "loginToShare": "⚠️ Oturum paylaşmak için giriş yap.",
+    "publishing": "Yayınlanıyor…",
+    "geolocationUnsupported": "⚠️ Tarayıcı konum özelliğini desteklemiyor.",
+    "youAreHere": "📍 Buradasın",
+    "geolocationDenied": "⚠️ Konum algılanamadı. Tarayıcı izinlerini kontrol et.",
+    "poiKindMuseum": "Müze",
+    "poiKindLibrary": "Kütüphane",
+    "poiKindUniversity": "Üniversite",
+    "poiKindGallery": "Galeri",
+    "poiKindTheatre": "Tiyatro",
+    "poiKindArchive": "Arşiv",
+    "poiKindGeneric": "Kültürel yer",
+    "poiMissingKey": "Kültürel yerleri etkinleştirmek için MapTiler API anahtarını gir",
+    "poiMissingKeyInline": "MapTiler hazır: API anahtarını dosyaya gir",
+    "poiZoomMore": "Kültürel yerleri görmek için {zoom}+ yakınlaştır",
+    "poiVisibleCount": "Görünümde {count} kültürel yer",
+    "poiLoading": "MapTiler kültürel yerleri yükleniyor…",
+    "poiNoneHere": "Bu görünümde kültürel yer bulunamadı",
+    "poiUpdatingBlocks": "{count} kültürel yer bloğu güncelleniyor…",
+    "citySearchNeedsKey": "MapTiler şehir araması API anahtarı gerektirir",
+    "placeFallback": "Yer",
+    "providerLabel": "Sağlayıcı",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "{count} oturum bulundu",
+    "sessionCount_other": "{count} oturum bulundu",
+    "topicSearchExtra": "",
+    "themeDark": "Karanlık moda geç",
+    "themeLight": "Aydınlık moda geç"
+  },
+  "nl": {
+    "docTitle": "AGORÀ — Studiekaart",
+    "menu": "Menu",
+    "language": "Taal",
+    "mapPageTitle": "Studiekaart",
+    "mapPageSubtitle": "vind mensen om mee te studeren en af te spreken",
+    "sidebarTitle": "Sessies bij jou in de buurt",
+    "loadingSessions": "Laden…",
+    "searchSessionsLabel": "Sessies zoeken",
+    "searchInputPlaceholder": "onderwerp, naam…",
+    "typeLabel": "Type",
+    "typeAllText": "Alles",
+    "typePersonaText": "Persoon",
+    "typeLuogoText": "Plaats",
+    "poiToggleLabel": "📍 Culturele plekken van MapTiler (musea, bibliotheken, universiteiten…)",
+    "topicAreaLabel": "Themagebied",
+    "cityInputPlaceholder": "🌍 Zoek stad, wijk…",
+    "citySearchTitle": "Ga naar stad",
+    "locBannerText": "📍 Wil je sessies bij jou in de buurt zien?",
+    "locBtn": "Toestaan",
+    "locateBtnTitle": "Centreer mij op de kaart",
+    "poiStatusLoading": "Culturele plekken laden…",
+    "fabBtnTitle": "Sessie toevoegen",
+    "modalTitle": "Nieuwe sessie",
+    "modalSub": "Plaats waar en wat je wilt studeren — of een plek om af te spreken",
+    "fNameLabel": "Je naam / bijnaam",
+    "fNamePlaceholder": "Bijv. Marco, Study_Philosophy…",
+    "fTypeLabel": "Sessietype",
+    "fTypePersona": "Persoon — ik verplaats me",
+    "fTypeLuogo": "Vaste plek — bibliotheek, café, universiteit…",
+    "fPlaceLabel": "Naam van de plek",
+    "fPlacePlaceholder": "Bijv. Universiteitsbibliotheek, Central Café…",
+    "fTopicLabel": "Onderwerp / beschrijving",
+    "fTopicPlaceholder": "Bijv. Calculus studeren voor het examen van donderdag, of gewoon filosofische gesprekken…",
+    "fTagsLabel": "Thematische tags",
+    "fDurationLabel": "Beschikbaar voor",
+    "modalCancel": "Annuleren",
+    "modalSubmit": "Publiceren →",
+    "confirmDefaultTitle": "Bevestigen",
+    "confirmDefaultMsg": "Weet je het zeker?",
+    "confirmDefaultOk": "Bevestigen",
+    "confirmDefaultCancel": "Annuleren",
+    "snapTitle": "Optimale weergave voor culturele plekken (zoom 15)",
+    "personType": "Persoon",
+    "placeType": "Plaats",
+    "contactBtn": "Contact →",
+    "deleteSessionBtn": "Sessie verwijderen",
+    "deleteSessionPopupBtn": "Sessie verwijderen ✕",
+    "yours": "(van jou)",
+    "emptyList": "Geen sessies gevonden.<br>Wees de eerste die er een toevoegt! ✨",
+    "deleteSessionTitle": "Sessie verwijderen?",
+    "deleteSessionMsg": "De sessie wordt van de kaart en uit de lijst verwijderd.",
+    "delete": "Verwijderen",
+    "loginRequired": "⚠️ Je moet inloggen.",
+    "sessionDeleted": "✅ Sessie verwijderd.",
+    "unknownError": "Onbekende fout",
+    "connectionError": "⚠️ Verbindingsfout.",
+    "geoDetecting": "📍 Positie bepalen…",
+    "geoDetected": "✅ Positie gedetecteerd!",
+    "geoFallbackCenter": "⚠️ Positie niet beschikbaar — het midden van de kaart wordt gebruikt.",
+    "nameAndTopicRequired": "⚠️ Vul ten minste je naam en het onderwerp in.",
+    "loginToShare": "⚠️ Log in om een sessie te delen.",
+    "publishing": "Publiceren…",
+    "geolocationUnsupported": "⚠️ Geolocatie wordt niet ondersteund door de browser.",
+    "youAreHere": "📍 Je bent hier",
+    "geolocationDenied": "⚠️ Positie kan niet worden bepaald. Controleer de browserrechten.",
+    "poiKindMuseum": "Museum",
+    "poiKindLibrary": "Bibliotheek",
+    "poiKindUniversity": "Universiteit",
+    "poiKindGallery": "Galerij",
+    "poiKindTheatre": "Theater",
+    "poiKindArchive": "Archief",
+    "poiKindGeneric": "Culturele plek",
+    "poiMissingKey": "Voer je MapTiler API-sleutel in om culturele plekken te activeren",
+    "poiMissingKeyInline": "MapTiler klaar: voer je API-sleutel in het bestand in",
+    "poiZoomMore": "Zoom in tot {zoom}+ om culturele plekken te zien",
+    "poiVisibleCount": "{count} culturele plekken in beeld",
+    "poiLoading": "MapTiler-culturele plekken laden…",
+    "poiNoneHere": "Geen culturele plek gevonden in deze weergave",
+    "poiUpdatingBlocks": "{count} blokken met culturele plekken worden bijgewerkt…",
+    "citySearchNeedsKey": "MapTiler stadszoeker vereist de API-sleutel",
+    "placeFallback": "Plaats",
+    "providerLabel": "Provider",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "{count} sessie gevonden",
+    "sessionCount_other": "{count} sessies gevonden",
+    "topicSearchExtra": "",
+    "themeDark": "Schakel naar donkere modus",
+    "themeLight": "Schakel naar lichte modus"
+  },
+  "pl": {
+    "docTitle": "AGORÀ — Mapa nauki",
+    "menu": "Menu",
+    "language": "Język",
+    "mapPageTitle": "Mapa nauki",
+    "mapPageSubtitle": "znajdź osoby do nauki i spotkań",
+    "sidebarTitle": "Sesje w pobliżu",
+    "loadingSessions": "Ładowanie…",
+    "searchSessionsLabel": "Szukaj sesji",
+    "searchInputPlaceholder": "temat, imię…",
+    "typeLabel": "Typ",
+    "typeAllText": "Wszystko",
+    "typePersonaText": "Osoba",
+    "typeLuogoText": "Miejsce",
+    "poiToggleLabel": "📍 Miejsca kultury MapTiler (muzea, biblioteki, uniwersytety…)",
+    "topicAreaLabel": "Obszar tematyczny",
+    "cityInputPlaceholder": "🌍 Szukaj miasta, dzielnicy…",
+    "citySearchTitle": "Przejdź do miasta",
+    "locBannerText": "📍 Chcesz zobaczyć sesje w pobliżu?",
+    "locBtn": "Zezwól",
+    "locateBtnTitle": "Wyśrodkuj mnie na mapie",
+    "poiStatusLoading": "Ładowanie miejsc kultury…",
+    "fabBtnTitle": "Dodaj sesję",
+    "modalTitle": "Nowa sesja",
+    "modalSub": "Opublikuj, gdzie i czego chcesz się uczyć — albo miejsce spotkania",
+    "fNameLabel": "Twoje imię / pseudonim",
+    "fNamePlaceholder": "Np. Marco, Study_Philosophy…",
+    "fTypeLabel": "Typ sesji",
+    "fTypePersona": "Osoba — przemieszczam się",
+    "fTypeLuogo": "Stałe miejsce — biblioteka, kawiarnia, uniwersytet…",
+    "fPlaceLabel": "Nazwa miejsca",
+    "fPlacePlaceholder": "Np. Biblioteka Uniwersytecka, Central Café…",
+    "fTopicLabel": "Temat / opis",
+    "fTopicPlaceholder": "Np. Nauka analizy na czwartkowy egzamin albo po prostu rozmowy o filozofii…",
+    "fTagsLabel": "Tagi tematyczne",
+    "fDurationLabel": "Dostępny przez",
+    "modalCancel": "Anuluj",
+    "modalSubmit": "Opublikuj →",
+    "confirmDefaultTitle": "Potwierdź",
+    "confirmDefaultMsg": "Czy na pewno?",
+    "confirmDefaultOk": "Potwierdź",
+    "confirmDefaultCancel": "Anuluj",
+    "snapTitle": "Optymalny widok dla miejsc kultury (zoom 15)",
+    "personType": "Osoba",
+    "placeType": "Miejsce",
+    "contactBtn": "Kontakt →",
+    "deleteSessionBtn": "Usuń sesję",
+    "deleteSessionPopupBtn": "Usuń sesję ✕",
+    "yours": "(twoja)",
+    "emptyList": "Nie znaleziono sesji.<br>Dodaj pierwszą! ✨",
+    "deleteSessionTitle": "Usunąć sesję?",
+    "deleteSessionMsg": "Sesja zostanie usunięta z mapy i listy.",
+    "delete": "Usuń",
+    "loginRequired": "⚠️ Musisz się zalogować.",
+    "sessionDeleted": "✅ Sesja usunięta.",
+    "unknownError": "Nieznany błąd",
+    "connectionError": "⚠️ Błąd połączenia.",
+    "geoDetecting": "📍 Wykrywanie pozycji…",
+    "geoDetected": "✅ Pozycja wykryta!",
+    "geoFallbackCenter": "⚠️ Pozycja niedostępna — zostanie użyty środek mapy.",
+    "nameAndTopicRequired": "⚠️ Wpisz przynajmniej imię i temat.",
+    "loginToShare": "⚠️ Zaloguj się, aby udostępnić sesję.",
+    "publishing": "Publikowanie…",
+    "geolocationUnsupported": "⚠️ Geolokalizacja nie jest obsługiwana przez przeglądarkę.",
+    "youAreHere": "📍 Jesteś tutaj",
+    "geolocationDenied": "⚠️ Nie można wykryć pozycji. Sprawdź uprawnienia przeglądarki.",
+    "poiKindMuseum": "Muzeum",
+    "poiKindLibrary": "Biblioteka",
+    "poiKindUniversity": "Uniwersytet",
+    "poiKindGallery": "Galeria",
+    "poiKindTheatre": "Teatr",
+    "poiKindArchive": "Archiwum",
+    "poiKindGeneric": "Miejsce kultury",
+    "poiMissingKey": "Wprowadź klucz API MapTiler, aby włączyć miejsca kultury",
+    "poiMissingKeyInline": "MapTiler gotowy: wpisz klucz API w pliku",
+    "poiZoomMore": "Przybliż do {zoom}+ aby zobaczyć miejsca kultury",
+    "poiVisibleCount": "{count} miejsc kultury w widoku",
+    "poiLoading": "Ładowanie miejsc kultury MapTiler…",
+    "poiNoneHere": "W tym widoku nie znaleziono miejsc kultury",
+    "poiUpdatingBlocks": "Aktualizowanie {count} bloków miejsc kultury…",
+    "citySearchNeedsKey": "Wyszukiwanie miast w MapTiler wymaga klucza API",
+    "placeFallback": "Miejsce",
+    "providerLabel": "Dostawca",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "Znaleziono {count} sesję",
+    "sessionCount_other": "Znaleziono {count} sesji",
+    "topicSearchExtra": "",
+    "themeDark": "Przełącz na tryb ciemny",
+    "themeLight": "Przełącz na tryb jasny"
+  },
+  "uk": {
+    "docTitle": "AGORÀ — Карта навчання",
+    "menu": "Меню",
+    "language": "Мова",
+    "mapPageTitle": "Карта навчання",
+    "mapPageSubtitle": "знайдіть людей для навчання та зустрічей",
+    "sidebarTitle": "Сесії поруч із вами",
+    "loadingSessions": "Завантаження…",
+    "searchSessionsLabel": "Пошук сесій",
+    "searchInputPlaceholder": "тема, ім’я…",
+    "typeLabel": "Тип",
+    "typeAllText": "Усі",
+    "typePersonaText": "Людина",
+    "typeLuogoText": "Місце",
+    "poiToggleLabel": "📍 Культурні місця MapTiler (музеї, бібліотеки, університети…)",
+    "topicAreaLabel": "Тематична сфера",
+    "cityInputPlaceholder": "🌍 Пошук міста, району…",
+    "citySearchTitle": "Перейти до міста",
+    "locBannerText": "📍 Хочете побачити сесії поруч із вами?",
+    "locBtn": "Дозволити",
+    "locateBtnTitle": "Центрувати мене на карті",
+    "poiStatusLoading": "Завантаження культурних місць…",
+    "fabBtnTitle": "Додати сесію",
+    "modalTitle": "Нова сесія",
+    "modalSub": "Опублікуйте, де і що хочете вивчати — або місце для зустрічі",
+    "fNameLabel": "Ваше ім’я / нікнейм",
+    "fNamePlaceholder": "Напр. Marco, Study_Philosophy…",
+    "fTypeLabel": "Тип сесії",
+    "fTypePersona": "Людина — я переміщуюся",
+    "fTypeLuogo": "Фіксоване місце — бібліотека, кафе, університет…",
+    "fPlaceLabel": "Назва місця",
+    "fPlacePlaceholder": "Напр. Університетська бібліотека, Central Café…",
+    "fTopicLabel": "Тема / опис",
+    "fTopicPlaceholder": "Напр. Вивчаю аналіз до іспиту в четвер або просто філософські розмови…",
+    "fTagsLabel": "Тематичні теги",
+    "fDurationLabel": "Доступний на",
+    "modalCancel": "Скасувати",
+    "modalSubmit": "Опублікувати →",
+    "confirmDefaultTitle": "Підтвердити",
+    "confirmDefaultMsg": "Ви впевнені?",
+    "confirmDefaultOk": "Підтвердити",
+    "confirmDefaultCancel": "Скасувати",
+    "snapTitle": "Оптимальний вигляд для культурних місць (масштаб 15)",
+    "personType": "Людина",
+    "placeType": "Місце",
+    "contactBtn": "Зв’язатися →",
+    "deleteSessionBtn": "Видалити сесію",
+    "deleteSessionPopupBtn": "Видалити сесію ✕",
+    "yours": "(ваша)",
+    "emptyList": "Сесій не знайдено.<br>Станьте першим, хто додасть одну! ✨",
+    "deleteSessionTitle": "Видалити сесію?",
+    "deleteSessionMsg": "Сесію буде видалено з карти та списку.",
+    "delete": "Видалити",
+    "loginRequired": "⚠️ Вам потрібно увійти.",
+    "sessionDeleted": "✅ Сесію видалено.",
+    "unknownError": "Невідома помилка",
+    "connectionError": "⚠️ Помилка з’єднання.",
+    "geoDetecting": "📍 Визначення позиції…",
+    "geoDetected": "✅ Позицію визначено!",
+    "geoFallbackCenter": "⚠️ Позиція недоступна — буде використано центр карти.",
+    "nameAndTopicRequired": "⚠️ Введіть принаймні ім’я і тему.",
+    "loginToShare": "⚠️ Увійдіть, щоб поділитися сесією.",
+    "publishing": "Публікація…",
+    "geolocationUnsupported": "⚠️ Геолокація не підтримується браузером.",
+    "youAreHere": "📍 Ви тут",
+    "geolocationDenied": "⚠️ Не вдалося визначити позицію. Перевірте дозволи браузера.",
+    "poiKindMuseum": "Музей",
+    "poiKindLibrary": "Бібліотека",
+    "poiKindUniversity": "Університет",
+    "poiKindGallery": "Галерея",
+    "poiKindTheatre": "Театр",
+    "poiKindArchive": "Архів",
+    "poiKindGeneric": "Культурне місце",
+    "poiMissingKey": "Введіть ключ API MapTiler, щоб увімкнути культурні місця",
+    "poiMissingKeyInline": "MapTiler готовий: введіть ключ API у файлі",
+    "poiZoomMore": "Збільште масштаб до {zoom}+ щоб побачити культурні місця",
+    "poiVisibleCount": "{count} культурних місць у полі зору",
+    "poiLoading": "Завантаження культурних місць MapTiler…",
+    "poiNoneHere": "У цьому вигляді культурних місць не знайдено",
+    "poiUpdatingBlocks": "Оновлення {count} блоків культурних місць…",
+    "citySearchNeedsKey": "Пошук міст MapTiler потребує ключа API",
+    "placeFallback": "Місце",
+    "providerLabel": "Постачальник",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "Знайдено {count} сесію",
+    "sessionCount_other": "Знайдено {count} сесій",
+    "topicSearchExtra": "",
+    "themeDark": "Перейти на темну тему",
+    "themeLight": "Перейти на світлу тему"
+  },
+  "el": {
+    "docTitle": "AGORÀ — Χάρτης Μελέτης",
+    "menu": "Μενού",
+    "language": "Γλώσσα",
+    "mapPageTitle": "Χάρτης Μελέτης",
+    "mapPageSubtitle": "βρες άτομα για να διαβάσετε και να συναντηθείτε",
+    "sidebarTitle": "Συνεδρίες κοντά σου",
+    "loadingSessions": "Φόρτωση…",
+    "searchSessionsLabel": "Αναζήτηση συνεδριών",
+    "searchInputPlaceholder": "θέμα, όνομα…",
+    "typeLabel": "Τύπος",
+    "typeAllText": "Όλα",
+    "typePersonaText": "Άτομο",
+    "typeLuogoText": "Μέρος",
+    "poiToggleLabel": "📍 Πολιτιστικοί χώροι MapTiler (μουσεία, βιβλιοθήκες, πανεπιστήμια…)",
+    "topicAreaLabel": "Θεματική περιοχή",
+    "cityInputPlaceholder": "🌍 Αναζήτηση πόλης, συνοικίας…",
+    "citySearchTitle": "Μετάβαση στην πόλη",
+    "locBannerText": "📍 Θέλεις να δεις συνεδρίες κοντά σου;",
+    "locBtn": "Να επιτραπεί",
+    "locateBtnTitle": "Κέντραρέ με στον χάρτη",
+    "poiStatusLoading": "Φόρτωση πολιτιστικών χώρων…",
+    "fabBtnTitle": "Προσθήκη συνεδρίας",
+    "modalTitle": "Νέα Συνεδρία",
+    "modalSub": "Δημοσίευσε πού και τι θέλεις να μελετήσεις — ή έναν χώρο συνάντησης",
+    "fNameLabel": "Το όνομά σου / ψευδώνυμο",
+    "fNamePlaceholder": "Π.χ. Marco, Study_Philosophy…",
+    "fTypeLabel": "Τύπος συνεδρίας",
+    "fTypePersona": "Άτομο — μετακινούμαι",
+    "fTypeLuogo": "Σταθερό μέρος — βιβλιοθήκη, καφέ, πανεπιστήμιο…",
+    "fPlaceLabel": "Όνομα χώρου",
+    "fPlacePlaceholder": "Π.χ. Πανεπιστημιακή Βιβλιοθήκη, Central Café…",
+    "fTopicLabel": "Θέμα / περιγραφή",
+    "fTopicPlaceholder": "Π.χ. Μελέτη ανάλυσης για την εξέταση της Πέμπτης ή απλώς φιλοσοφικές συζητήσεις…",
+    "fTagsLabel": "Θεματικές ετικέτες",
+    "fDurationLabel": "Διαθέσιμος για",
+    "modalCancel": "Ακύρωση",
+    "modalSubmit": "Δημοσίευση →",
+    "confirmDefaultTitle": "Επιβεβαίωση",
+    "confirmDefaultMsg": "Είσαι σίγουρος;",
+    "confirmDefaultOk": "Επιβεβαίωση",
+    "confirmDefaultCancel": "Ακύρωση",
+    "snapTitle": "Βέλτιστη προβολή για πολιτιστικούς χώρους (ζουμ 15)",
+    "personType": "Άτομο",
+    "placeType": "Μέρος",
+    "contactBtn": "Επικοινωνία →",
+    "deleteSessionBtn": "Διαγραφή συνεδρίας",
+    "deleteSessionPopupBtn": "Διαγραφή συνεδρίας ✕",
+    "yours": "(δική σου)",
+    "emptyList": "Δεν βρέθηκαν συνεδρίες.<br>Γίνε ο πρώτος που θα προσθέσει μία! ✨",
+    "deleteSessionTitle": "Διαγραφή συνεδρίας;",
+    "deleteSessionMsg": "Η συνεδρία θα αφαιρεθεί από τον χάρτη και τη λίστα.",
+    "delete": "Διαγραφή",
+    "loginRequired": "⚠️ Πρέπει να συνδεθείς.",
+    "sessionDeleted": "✅ Η συνεδρία διαγράφηκε.",
+    "unknownError": "Άγνωστο σφάλμα",
+    "connectionError": "⚠️ Σφάλμα σύνδεσης.",
+    "geoDetecting": "📍 Εντοπισμός θέσης…",
+    "geoDetected": "✅ Η θέση εντοπίστηκε!",
+    "geoFallbackCenter": "⚠️ Η θέση δεν είναι διαθέσιμη — θα χρησιμοποιηθεί το κέντρο του χάρτη.",
+    "nameAndTopicRequired": "⚠️ Συμπλήρωσε τουλάχιστον το όνομα και το θέμα σου.",
+    "loginToShare": "⚠️ Συνδέσου για να μοιραστείς μια συνεδρία.",
+    "publishing": "Δημοσίευση…",
+    "geolocationUnsupported": "⚠️ Η γεωεντοπισμός δεν υποστηρίζεται από τον browser.",
+    "youAreHere": "📍 Είσαι εδώ",
+    "geolocationDenied": "⚠️ Αδυναμία εντοπισμού θέσης. Έλεγξε τα δικαιώματα του browser.",
+    "poiKindMuseum": "Μουσείο",
+    "poiKindLibrary": "Βιβλιοθήκη",
+    "poiKindUniversity": "Πανεπιστήμιο",
+    "poiKindGallery": "Γκαλερί",
+    "poiKindTheatre": "Θέατρο",
+    "poiKindArchive": "Αρχείο",
+    "poiKindGeneric": "Πολιτιστικός χώρος",
+    "poiMissingKey": "Εισήγαγε το API key του MapTiler για να ενεργοποιήσεις τους πολιτιστικούς χώρους",
+    "poiMissingKeyInline": "Το MapTiler είναι έτοιμο: εισήγαγε το API key στο αρχείο",
+    "poiZoomMore": "Κάνε ζουμ στο {zoom}+ για να δεις πολιτιστικούς χώρους",
+    "poiVisibleCount": "{count} πολιτιστικοί χώροι στο οπτικό πεδίο",
+    "poiLoading": "Φόρτωση πολιτιστικών χώρων MapTiler…",
+    "poiNoneHere": "Δεν βρέθηκε πολιτιστικός χώρος σε αυτή την προβολή",
+    "poiUpdatingBlocks": "Ενημέρωση {count} μπλοκ πολιτιστικών χώρων…",
+    "citySearchNeedsKey": "Η αναζήτηση πόλης με MapTiler απαιτεί API key",
+    "placeFallback": "Μέρος",
+    "providerLabel": "Πάροχος",
+    "mapTilerSearch": "MapTiler Search",
+    "sessionCount_one": "Βρέθηκε {count} συνεδρία",
+    "sessionCount_other": "Βρέθηκαν {count} συνεδρίες",
+    "topicSearchExtra": "",
+    "themeDark": "Μετάβαση σε σκοτεινή λειτουργία",
+    "themeLight": "Μετάβαση σε φωτεινή λειτουργία"
+  }
+};
 const TOPICS=[
   "Matematica","Fisica","Informatica","Filosofia","Economia",
   "Letteratura","Storia","Diritto","Medicina","Biologia",
   "Chimica","Musica","Arte","Lingue","Politica","Psicologia","Ingegneria"
 ];
+const TOPIC_LABELS = {
+  "Matematica": {
+    "en": "Mathematics",
+    "es": "Matemáticas",
+    "fr": "Mathématiques",
+    "it": "Matematica",
+    "de": "Mathematik",
+    "pt": "Matemática",
+    "ru": "Математика",
+    "zh": "数学",
+    "ar": "الرياضيات",
+    "ja": "数学",
+    "ko": "수학",
+    "hi": "गणित",
+    "tr": "Matematik",
+    "nl": "Wiskunde",
+    "pl": "Matematyka",
+    "uk": "Математика",
+    "el": "Μαθηματικά"
+  },
+  "Fisica": {
+    "en": "Physics",
+    "es": "Física",
+    "fr": "Physique",
+    "it": "Fisica",
+    "de": "Physik",
+    "pt": "Física",
+    "ru": "Физика",
+    "zh": "物理",
+    "ar": "الفيزياء",
+    "ja": "物理学",
+    "ko": "물리학",
+    "hi": "भौतिकी",
+    "tr": "Fizik",
+    "nl": "Natuurkunde",
+    "pl": "Fizyka",
+    "uk": "Фізика",
+    "el": "Φυσική"
+  },
+  "Informatica": {
+    "en": "Computer Science",
+    "es": "Informática",
+    "fr": "Informatique",
+    "it": "Informatica",
+    "de": "Informatik",
+    "pt": "Informática",
+    "ru": "Информатика",
+    "zh": "计算机科学",
+    "ar": "علوم الحاسوب",
+    "ja": "情報科学",
+    "ko": "컴퓨터 과학",
+    "hi": "कंप्यूटर विज्ञान",
+    "tr": "Bilgisayar Bilimi",
+    "nl": "Informatica",
+    "pl": "Informatyka",
+    "uk": "Інформатика",
+    "el": "Πληροφορική"
+  },
+  "Filosofia": {
+    "en": "Philosophy",
+    "es": "Filosofía",
+    "fr": "Philosophie",
+    "it": "Filosofia",
+    "de": "Philosophie",
+    "pt": "Filosofia",
+    "ru": "Философия",
+    "zh": "哲学",
+    "ar": "الفلسفة",
+    "ja": "哲学",
+    "ko": "철학",
+    "hi": "दर्शनशास्त्र",
+    "tr": "Felsefe",
+    "nl": "Filosofie",
+    "pl": "Filozofia",
+    "uk": "Філософія",
+    "el": "Φιλοσοφία"
+  },
+  "Economia": {
+    "en": "Economics",
+    "es": "Economía",
+    "fr": "Économie",
+    "it": "Economia",
+    "de": "Wirtschaft",
+    "pt": "Economia",
+    "ru": "Экономика",
+    "zh": "经济学",
+    "ar": "الاقتصاد",
+    "ja": "経済学",
+    "ko": "경제학",
+    "hi": "अर्थशास्त्र",
+    "tr": "Ekonomi",
+    "nl": "Economie",
+    "pl": "Ekonomia",
+    "uk": "Економіка",
+    "el": "Οικονομικά"
+  },
+  "Letteratura": {
+    "en": "Literature",
+    "es": "Literatura",
+    "fr": "Littérature",
+    "it": "Letteratura",
+    "de": "Literatur",
+    "pt": "Literatura",
+    "ru": "Литература",
+    "zh": "文学",
+    "ar": "الأدب",
+    "ja": "文学",
+    "ko": "문학",
+    "hi": "साहित्य",
+    "tr": "Edebiyat",
+    "nl": "Literatuur",
+    "pl": "Literatura",
+    "uk": "Література",
+    "el": "Λογοτεχνία"
+  },
+  "Storia": {
+    "en": "History",
+    "es": "Historia",
+    "fr": "Histoire",
+    "it": "Storia",
+    "de": "Geschichte",
+    "pt": "História",
+    "ru": "История",
+    "zh": "历史",
+    "ar": "التاريخ",
+    "ja": "歴史",
+    "ko": "역사",
+    "hi": "इतिहास",
+    "tr": "Tarih",
+    "nl": "Geschiedenis",
+    "pl": "Historia",
+    "uk": "Історія",
+    "el": "Ιστορία"
+  },
+  "Diritto": {
+    "en": "Law",
+    "es": "Derecho",
+    "fr": "Droit",
+    "it": "Diritto",
+    "de": "Recht",
+    "pt": "Direito",
+    "ru": "Право",
+    "zh": "法学",
+    "ar": "القانون",
+    "ja": "法学",
+    "ko": "법학",
+    "hi": "कानून",
+    "tr": "Hukuk",
+    "nl": "Recht",
+    "pl": "Prawo",
+    "uk": "Право",
+    "el": "Δίκαιο"
+  },
+  "Medicina": {
+    "en": "Medicine",
+    "es": "Medicina",
+    "fr": "Médecine",
+    "it": "Medicina",
+    "de": "Medizin",
+    "pt": "Medicina",
+    "ru": "Медицина",
+    "zh": "医学",
+    "ar": "الطب",
+    "ja": "医学",
+    "ko": "의학",
+    "hi": "चिकित्सा",
+    "tr": "Tıp",
+    "nl": "Geneeskunde",
+    "pl": "Medycyna",
+    "uk": "Медицина",
+    "el": "Ιατρική"
+  },
+  "Biologia": {
+    "en": "Biology",
+    "es": "Biología",
+    "fr": "Biologie",
+    "it": "Biologia",
+    "de": "Biologie",
+    "pt": "Biologia",
+    "ru": "Биология",
+    "zh": "生物学",
+    "ar": "علم الأحياء",
+    "ja": "生物学",
+    "ko": "생물학",
+    "hi": "जीवविज्ञान",
+    "tr": "Biyoloji",
+    "nl": "Biologie",
+    "pl": "Biologia",
+    "uk": "Біологія",
+    "el": "Βιολογία"
+  },
+  "Chimica": {
+    "en": "Chemistry",
+    "es": "Química",
+    "fr": "Chimie",
+    "it": "Chimica",
+    "de": "Chemie",
+    "pt": "Química",
+    "ru": "Химия",
+    "zh": "化学",
+    "ar": "الكيمياء",
+    "ja": "化学",
+    "ko": "화학",
+    "hi": "रसायन विज्ञान",
+    "tr": "Kimya",
+    "nl": "Scheikunde",
+    "pl": "Chemia",
+    "uk": "Хімія",
+    "el": "Χημεία"
+  },
+  "Musica": {
+    "en": "Music",
+    "es": "Música",
+    "fr": "Musique",
+    "it": "Musica",
+    "de": "Musik",
+    "pt": "Música",
+    "ru": "Музыка",
+    "zh": "音乐",
+    "ar": "الموسيقى",
+    "ja": "音楽",
+    "ko": "음악",
+    "hi": "संगीत",
+    "tr": "Müzik",
+    "nl": "Muziek",
+    "pl": "Muzyka",
+    "uk": "Музика",
+    "el": "Μουσική"
+  },
+  "Arte": {
+    "en": "Art",
+    "es": "Arte",
+    "fr": "Art",
+    "it": "Arte",
+    "de": "Kunst",
+    "pt": "Arte",
+    "ru": "Искусство",
+    "zh": "艺术",
+    "ar": "الفن",
+    "ja": "アート",
+    "ko": "예술",
+    "hi": "कला",
+    "tr": "Sanat",
+    "nl": "Kunst",
+    "pl": "Sztuka",
+    "uk": "Мистецтво",
+    "el": "Τέχνη"
+  },
+  "Lingue": {
+    "en": "Languages",
+    "es": "Idiomas",
+    "fr": "Langues",
+    "it": "Lingue",
+    "de": "Sprachen",
+    "pt": "Línguas",
+    "ru": "Языки",
+    "zh": "语言",
+    "ar": "اللغات",
+    "ja": "言語",
+    "ko": "언어",
+    "hi": "भाषाएँ",
+    "tr": "Diller",
+    "nl": "Talen",
+    "pl": "Języki",
+    "uk": "Мови",
+    "el": "Γλώσσες"
+  },
+  "Politica": {
+    "en": "Politics",
+    "es": "Política",
+    "fr": "Politique",
+    "it": "Politica",
+    "de": "Politik",
+    "pt": "Política",
+    "ru": "Политика",
+    "zh": "政治",
+    "ar": "السياسة",
+    "ja": "政治",
+    "ko": "정치",
+    "hi": "राजनीति",
+    "tr": "Siyaset",
+    "nl": "Politiek",
+    "pl": "Polityka",
+    "uk": "Політика",
+    "el": "Πολιτική"
+  },
+  "Psicologia": {
+    "en": "Psychology",
+    "es": "Psicología",
+    "fr": "Psychologie",
+    "it": "Psicologia",
+    "de": "Psychologie",
+    "pt": "Psicologia",
+    "ru": "Психология",
+    "zh": "心理学",
+    "ar": "علم النفس",
+    "ja": "心理学",
+    "ko": "심리학",
+    "hi": "मनोविज्ञान",
+    "tr": "Psikoloji",
+    "nl": "Psychologie",
+    "pl": "Psychologia",
+    "uk": "Психологія",
+    "el": "Ψυχολογία"
+  },
+  "Ingegneria": {
+    "en": "Engineering",
+    "es": "Ingeniería",
+    "fr": "Ingénierie",
+    "it": "Ingegneria",
+    "de": "Ingenieurwesen",
+    "pt": "Engenharia",
+    "ru": "Инженерия",
+    "zh": "工程学",
+    "ar": "الهندسة",
+    "ja": "工学",
+    "ko": "공학",
+    "hi": "अभियांत्रिकी",
+    "tr": "Mühendislik",
+    "nl": "Techniek",
+    "pl": "Inżynieria",
+    "uk": "Інженерія",
+    "el": "Μηχανική"
+  }
+};
+const DURATION_LABELS = {
+  "30 min": {
+    "en": "30 minutes",
+    "es": "30 minutos",
+    "fr": "30 minutes",
+    "it": "30 minuti",
+    "de": "30 Minuten",
+    "pt": "30 minutos",
+    "ru": "30 минут",
+    "zh": "30 分钟",
+    "ar": "30 دقيقة",
+    "ja": "30分",
+    "ko": "30분",
+    "hi": "30 मिनट",
+    "tr": "30 dakika",
+    "nl": "30 minuten",
+    "pl": "30 minut",
+    "uk": "30 хвилин",
+    "el": "30 λεπτά"
+  },
+  "1 ora": {
+    "en": "1 hour",
+    "es": "1 hora",
+    "fr": "1 heure",
+    "it": "1 ora",
+    "de": "1 Stunde",
+    "pt": "1 hora",
+    "ru": "1 час",
+    "zh": "1 小时",
+    "ar": "ساعة واحدة",
+    "ja": "1時間",
+    "ko": "1시간",
+    "hi": "1 घंटा",
+    "tr": "1 saat",
+    "nl": "1 uur",
+    "pl": "1 godzina",
+    "uk": "1 година",
+    "el": "1 ώρα"
+  },
+  "2 ore": {
+    "en": "2 hours",
+    "es": "2 horas",
+    "fr": "2 heures",
+    "it": "2 ore",
+    "de": "2 Stunden",
+    "pt": "2 horas",
+    "ru": "2 часа",
+    "zh": "2 小时",
+    "ar": "ساعتان",
+    "ja": "2時間",
+    "ko": "2시간",
+    "hi": "2 घंटे",
+    "tr": "2 saat",
+    "nl": "2 uur",
+    "pl": "2 godziny",
+    "uk": "2 години",
+    "el": "2 ώρες"
+  },
+  "tutto il giorno": {
+    "en": "All day",
+    "es": "Todo el día",
+    "fr": "Toute la journée",
+    "it": "Tutto il giorno",
+    "de": "Den ganzen Tag",
+    "pt": "O dia todo",
+    "ru": "Весь день",
+    "zh": "全天",
+    "ar": "طوال اليوم",
+    "ja": "終日",
+    "ko": "하루 종일",
+    "hi": "पूरा दिन",
+    "tr": "Tüm gün",
+    "nl": "De hele dag",
+    "pl": "Cały dzień",
+    "uk": "Увесь день",
+    "el": "Όλη μέρα"
+  },
+  "questa settimana": {
+    "en": "This week",
+    "es": "Esta semana",
+    "fr": "Cette semaine",
+    "it": "Questa settimana",
+    "de": "Diese Woche",
+    "pt": "Esta semana",
+    "ru": "На этой неделе",
+    "zh": "本周",
+    "ar": "هذا الأسبوع",
+    "ja": "今週",
+    "ko": "이번 주",
+    "hi": "इस सप्ताह",
+    "tr": "Bu hafta",
+    "nl": "Deze week",
+    "pl": "W tym tygodniu",
+    "uk": "Цього тижня",
+    "el": "Αυτή την εβδομάδα"
+  }
+};
 const TOPIC_COLORS={
   "Matematica":"#4a90d9","Fisica":"#7b68ee","Informatica":"#20b2aa",
   "Filosofia":"#c9932a","Economia":"#3a8a3a","Letteratura":"#cd853f",
@@ -752,12 +2823,86 @@ const TOPIC_COLORS={
   "Arte":"#ff69b4","Lingue":"#1e90ff","Politica":"#b22222",
   "Psicologia":"#da70d6","Ingegneria":"#ff8c00"
 };
+function getStoredLanguage() {
+  const params = new URLSearchParams(window.location.search);
+  const paramLang = params.get("lang");
+  if (paramLang && I18N[paramLang]) return paramLang;
+  for (const key of ["agora_lang", "selected_lang", "lang", "language", "site_lang"]) {
+    const value = localStorage.getItem(key);
+    if (value && I18N[value]) return value;
+  }
+  const nav = (navigator.language || navigator.userLanguage || "en").toLowerCase().split("-")[0];
+  return I18N[nav] ? nav : "en";
+}
+let currentLang = getStoredLanguage();
+function persistLanguage(lang) {
+  currentLang = I18N[lang] ? lang : "en";
+  ["agora_lang", "selected_lang", "lang", "language", "site_lang"].forEach(key => {
+    try { localStorage.setItem(key, currentLang); } catch (e) {}
+  });
+}
+function setDirAndLang(lang) {
+  document.documentElement.setAttribute("lang", lang);
+  document.documentElement.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+}
+function tr(key, vars = {}) {
+  const locale = I18N[currentLang] || I18N.en;
+  let value = locale[key] ?? I18N.en[key] ?? key;
+  for (const [k, v] of Object.entries(vars)) value = value.replaceAll(`{${k}}`, String(v));
+  return value;
+}
+function getTopicLabel(topic) {
+  return TOPIC_LABELS[topic]?.[currentLang] || TOPIC_LABELS[topic]?.en || topic;
+}
+function getDurationLabel(value) {
+  return DURATION_LABELS[value]?.[currentLang] || DURATION_LABELS[value]?.en || value;
+}
+function getMapTilerLang() {
+  return currentLang === "en" ? "en" : `${currentLang},en`;
+}
+function sessionCountText(count) {
+  return tr(count === 1 ? "sessionCount_one" : "sessionCount_other", { count });
+}
+function localizedThemeTooltip() {
+  return document.documentElement.getAttribute("data-theme") === "dark" ? tr("themeLight") : tr("themeDark");
+}
+function renderLanguageOptions() {
+  const langPickerDropdown = document.getElementById("langPickerDropdown");
+  const currentLangFlag = document.getElementById("currentLangFlag");
+  const currentLangCode = document.getElementById("currentLangCode");
+  langPickerDropdown.innerHTML = "";
+  for (const item of SUPPORTED_LANGUAGES) {
+    const option = document.createElement("div");
+    option.className = "lang-option" + (item.code === currentLang ? " active" : "");
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", item.code === currentLang ? "true" : "false");
+    option.innerHTML = `<img src="https://flagcdn.com/w20/${item.flag}.png" class="lang-flag" alt=""> ${item.label}`;
+    option.addEventListener("click", () => {
+      persistLanguage(item.code);
+      applyTranslations();
+      closeLangMenu();
+    });
+    langPickerDropdown.appendChild(option);
+  }
+  const current = SUPPORTED_LANGUAGES.find(x => x.code === currentLang) || SUPPORTED_LANGUAGES[0];
+  currentLangFlag.src = `https://flagcdn.com/w20/${current.flag}.png`;
+  currentLangFlag.alt = current.label;
+  currentLangCode.textContent = current.code.toUpperCase();
+}
+function openLangMenu() {
+  document.getElementById("langPicker").classList.add("open");
+  document.getElementById("langToggleBtn").setAttribute("aria-expanded", "true");
+}
+function closeLangMenu() {
+  document.getElementById("langPicker").classList.remove("open");
+  document.getElementById("langToggleBtn").setAttribute("aria-expanded", "false");
+}
 
 // ── API ────────────────────────────────────────────────────────────
 const API_BASE="https://agora-api.convergegame.workers.dev";
 const TOKEN_KEY="agora_token";
 // ── Elegant confirm & toast ──────────────────────────────────────
-function agoraConfirm({icon="🗑️",title="Conferma",msg="Sei sicuro?",ok="Conferma",cancel="Annulla",danger=false}={}){
+function agoraConfirm({icon="🗑️",title=tr("confirmDefaultTitle"),msg=tr("confirmDefaultMsg"),ok=tr("confirmDefaultOk"),cancel=tr("confirmDefaultCancel"),danger=false}={}){
   return new Promise(resolve=>{
     const overlay=document.getElementById("confirmOverlay");
     document.getElementById("confirmIcon").textContent=icon;
@@ -806,7 +2951,7 @@ function isDarkTheme(){
 }
 
 async function loadSessions(){
-  document.getElementById("sessionCount").textContent="Caricamento…";
+  document.getElementById("sessionCount").textContent=tr("loadingSessions");
   try{
     const res=await fetch(`${API_BASE}/api/map/sessions`);
     const data=await res.json();
@@ -818,7 +2963,6 @@ async function loadSessions(){
 const MAPTILER_API_KEY = "KuC2zUGQXEzkkNwLmisz";
 const MAPTILER_LIGHT_MAP_ID = "base-v4";
 const MAPTILER_DARK_MAP_ID = "019ce286-3c19-71eb-b8db-9df3d72898bd";
-const MAPTILER_LANG = "it,en";
 const MAPTILER_KEY_PLACEHOLDER = "__unused__";
 function hasMapTilerKey(){
   return !!MAPTILER_API_KEY && MAPTILER_API_KEY !== MAPTILER_KEY_PLACEHOLDER;
@@ -862,7 +3006,7 @@ const snapCtrl = L.Control.extend({
   options: { position: "bottomleft" },
   onAdd() {
     const btn = L.DomUtil.create("button", "lod3-snap-btn");
-    btn.title  = "Vista ottimale per luoghi culturali (zoom 15)";
+    btn.title  = tr("snapTitle");
     btn.innerHTML = `<svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
       <circle cx="10" cy="10" r="7"/>
       <circle cx="10" cy="10" r="2.5" fill="currentColor" stroke="none"/>
@@ -907,6 +3051,9 @@ window.onAgoraThemeApplied = function () {
   updateTiles();
   if (typeof refresh === "function") refresh();
   if (typeof rerenderPOIMarkersForTheme === "function") rerenderPOIMarkersForTheme();
+  if (typeof _syncVisiblePoiMarkers === "function" && typeof _expandedBounds === "function") {
+    _syncVisiblePoiMarkers(_expandedBounds(map.getBounds(), 0.02), { silent: false });
+  }
 };
 
 // ── CUSTOM MARKER ICONS ────────────────────────────────────────────
@@ -943,35 +3090,35 @@ function renderMarkers(list){
 
 function buildPopup(s){
   return `<div class="popup-inner">
-    <div class="popup-type">${s.type==="persona"?"👤 Persona":"📍 Luogo"}</div>
+    <div class="popup-type">${s.type==="persona"?"👤 " + tr("personType"):"📍 " + tr("placeType")}</div>
     <div class="popup-name">${s.name}</div>
     ${s.place?`<div class="popup-topic" style="font-size:.7rem;font-style:italic;">${s.place}</div>`:""}
     <div class="popup-topic">${s.topic}</div>
-    <div class="popup-tags">${s.tags.map(t=>`<span class="popup-tag">${t}</span>`).join("")}</div>
-    <div class="popup-meta">⏱ ${s.duration} &nbsp;·&nbsp; ${s.time}</div>
-    <button class="popup-btn" onclick="contactSession(${s.id})">Contatta →</button>
+    <div class="popup-tags">${s.tags.map(t=>`<span class="popup-tag">${getTopicLabel(t)}</span>`).join("")}</div>
+    <div class="popup-meta">⏱ ${getDurationLabel(s.duration)} &nbsp;·&nbsp; ${s.time}</div>
+    <button class="popup-btn" onclick="contactSession(${s.id})">${tr("contactBtn")}</button>
   </div>`;
 }
 
 // ── RENDER SIDEBAR LIST ────────────────────────────────────────────
 function renderList(list){
   const el=document.getElementById("sessionList");
-  document.getElementById("sessionCount").textContent=`${list.length} session${list.length===1?"e":"i"} trovate`;
-  if(!list.length){el.innerHTML=`<div class="empty-list">Nessuna sessione trovata.<br>Sii il primo ad aggiungerla! ✨</div>`;return;}
+  document.getElementById("sessionCount").textContent=sessionCountText(list.length);
+  if(!list.length){el.innerHTML=`<div class="empty-list">${tr("emptyList")}</div>`;return;}
   el.innerHTML=list.map(s=>{
     const isMine = currentUserId && s.user_id === currentUserId;
     return `
     <div class="session-card" id="card-${s.id}" onclick="focusSession('${s.id}')">
       <div class="sc-top">
-        <div class="sc-name">${s.name}${isMine?' <span style="font-size:.55rem;color:var(--gold);font-style:italic;">(tua)</span>':''}</div>
-        <div class="sc-type ${s.type}">${s.type==="persona"?"Persona":"Luogo"}</div>
+        <div class="sc-name">${s.name}${isMine?` <span style="font-size:.55rem;color:var(--gold);font-style:italic;">${tr("yours")}</span>`:''}</div>
+        <div class="sc-type ${s.type}">${s.type==="persona"?tr("personType"):tr("placeType")}</div>
       </div>
       <div class="sc-topic">${s.topic.length>80?s.topic.slice(0,80)+"…":s.topic}</div>
       <div class="sc-meta">
-        ${s.tags.map(t=>`<span class="sc-tag">${t}</span>`).join("")}
-        <span class="sc-tag">⏱ ${s.duration}</span>
+        ${s.tags.map(t=>`<span class="sc-tag">${getTopicLabel(t)}</span>`).join("")}
+        <span class="sc-tag">⏱ ${getDurationLabel(s.duration)}</span>
       </div>
-      ${isMine?`<button onclick="event.stopPropagation();deleteSession('${s.id}')" style="margin-top:8px;width:100%;padding:6px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--brand);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;">Elimina sessione</button>`:''}
+      ${isMine?`<button onclick="event.stopPropagation();deleteSession('${s.id}')" style="margin-top:8px;width:100%;padding:6px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--brand);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;">${tr("deleteSessionBtn")}</button>`:''}
     </div>`;
   }).join("");
 }
@@ -991,21 +3138,21 @@ function focusSession(id){
 
 window.contactSession=function(id){
   const s=sessions.find(x=>x.id===id);if(!s)return;
-  window.location.href=`index.html?studyContact=${encodeURIComponent(s.name)}`;
+  window.location.href=`index.html?lang=${encodeURIComponent(currentLang)}&studyContact=${encodeURIComponent(s.name)}`;
 };
 
 window.deleteSession=async function(id){
   const confirmed=await agoraConfirm({
     icon:"🗑️",
-    title:"Eliminare sessione?",
-    msg:"La sessione verrà rimossa dalla mappa e dalla lista.",
-    ok:"Elimina",
-    cancel:"Annulla",
+    title:tr("deleteSessionTitle"),
+    msg:tr("deleteSessionMsg"),
+    ok:tr("delete"),
+    cancel:tr("modalCancel"),
     danger:true
   });
   if(!confirmed) return;
   const token=localStorage.getItem(TOKEN_KEY);
-  if(!token){agoraToast("⚠️ Devi effettuare il login.");return;}
+  if(!token){agoraToast(tr("loginRequired"));return;}
   try{
     const res=await fetch(`${API_BASE}/api/map/sessions/${id}`,{
       method:"DELETE",
@@ -1013,13 +3160,13 @@ window.deleteSession=async function(id){
     });
     const data=await res.json();
     if(data.ok){
-      agoraToast("✅ Sessione eliminata.");
+      agoraToast(tr("sessionDeleted"));
       await loadSessions();
     }else{
-      agoraToast("⚠️ "+(data.error||"Errore sconosciuto"));
+      agoraToast("⚠️ "+(data.error||tr("unknownError")));
     }
   }catch(e){
-    agoraToast("⚠️ Errore di connessione.");
+    agoraToast(tr("connectionError"));
   }
 };
 // ── FILTER ─────────────────────────────────────────────────────────
@@ -1029,7 +3176,7 @@ function getFiltered(){
     if(activeTopics.size>0&&!s.tags.some(t=>activeTopics.has(t)))return false;
     if(searchQ){
       const q=searchQ.toLowerCase();
-      if(!s.name.toLowerCase().includes(q)&&!s.topic.toLowerCase().includes(q)&&!s.tags.some(t=>t.toLowerCase().includes(q)))return false;
+      if(!s.name.toLowerCase().includes(q)&&!s.topic.toLowerCase().includes(q)&&!s.tags.some(t=>t.toLowerCase().includes(q) || getTopicLabel(t).toLowerCase().includes(q)))return false;
     }
     return true;
   });
@@ -1044,9 +3191,12 @@ function refresh(){
 // ── TOPIC FILTER PILLS ─────────────────────────────────────────────
 function buildTopicFilters(){
   const el=document.getElementById("topicFilters");
+  el.innerHTML="";
   TOPICS.forEach(t=>{
     const d=document.createElement("div");
-    d.className="tag";d.textContent=t;
+    d.className="tag";
+    d.textContent=getTopicLabel(t);
+    d.classList.toggle("active",activeTopics.has(t));
     d.addEventListener("click",()=>{
       if(activeTopics.has(t))activeTopics.delete(t);
       else activeTopics.add(t);
@@ -1077,9 +3227,12 @@ document.getElementById("searchInput").addEventListener("input",e=>{
 let selectedTags=new Set();
 function buildTagPicker(){
   const el=document.getElementById("tagPicker");
+  el.innerHTML="";
   TOPICS.forEach(t=>{
     const d=document.createElement("div");
-    d.className="tag";d.textContent=t;
+    d.className="tag";
+    d.textContent=getTopicLabel(t);
+    d.classList.toggle("active",selectedTags.has(t));
     d.addEventListener("click",()=>{
       if(selectedTags.has(t))selectedTags.delete(t);
       else selectedTags.add(t);
@@ -1108,11 +3261,11 @@ document.getElementById("fabBtn").addEventListener("click",()=>{
   pendingLat=userLat;pendingLng=userLng;
   if(navigator.geolocation){
     const gs=document.getElementById("fGeoStatus");
-    gs.style.display="block";gs.textContent="📍 Rilevamento posizione…";
+    gs.style.display="block";gs.textContent=tr("geoDetecting");
     navigator.geolocation.getCurrentPosition(pos=>{
       pendingLat=pos.coords.latitude;pendingLng=pos.coords.longitude;
-      gs.textContent="✅ Posizione rilevata!";
-    },()=>{gs.textContent="⚠️ Posizione non disponibile — useremo il centro mappa.";pendingLat=map.getCenter().lat;pendingLng=map.getCenter().lng;});
+      gs.textContent=tr("geoDetected");
+    },()=>{gs.textContent=tr("geoFallbackCenter");pendingLat=map.getCenter().lat;pendingLng=map.getCenter().lng;});
   }
 });
 
@@ -1133,15 +3286,15 @@ document.getElementById("modalSubmit").addEventListener("click",async()=>{
   const type=document.getElementById("fType").value;
   const place=document.getElementById("fPlace").value.trim();
   const duration=document.getElementById("fDuration").value;
-  if(!name||!topic){agoraToast("⚠️ Inserisci almeno il nome e l'argomento.");return;}
+  if(!name||!topic){agoraToast(tr("nameAndTopicRequired"));return;}
 
   const token=localStorage.getItem(TOKEN_KEY);
   if(!token){
-    agoraToast("⚠️ Effettua il login per condividere una sessione.");
+    agoraToast(tr("loginToShare"));
     return;
   }
   const btn=document.getElementById("modalSubmit");
-  btn.textContent="Pubblicazione…";btn.disabled=true;
+  btn.textContent=tr("publishing");btn.disabled=true;
 
   try{
     const res=await fetch(`${API_BASE}/api/map/sessions`,{
@@ -1155,17 +3308,17 @@ document.getElementById("modalSubmit").addEventListener("click",async()=>{
       await loadSessions();
       setTimeout(()=>focusSession(''+data.id),300);
     }else{
-      agoraToast("⚠️ "+(data.error||"Errore sconosciuto"));
+      agoraToast("⚠️ "+(data.error||tr("unknownError")));
     }
   }catch(e){
-    agoraToast("⚠️ Errore di connessione.");
+    agoraToast(tr("connectionError"));
   }finally{
-    btn.textContent="Pubblica →";btn.disabled=false;
+    btn.textContent=tr("modalSubmit");btn.disabled=false;
   }
 });
 // ── GEOLOCATION ────────────────────────────────────────────────────
 function locateUser(){
-  if(!navigator.geolocation){agoraToast("⚠️ Geolocalizzazione non supportata dal browser.");return;}
+  if(!navigator.geolocation){agoraToast(tr("geolocationUnsupported"));return;}
   navigator.geolocation.getCurrentPosition(pos=>{
     userLat=pos.coords.latitude;
     userLng=pos.coords.longitude;
@@ -1174,8 +3327,8 @@ function locateUser(){
     if(userMarker)map.removeLayer(userMarker);
     userMarker=L.circleMarker([userLat,userLng],{
       radius:10,fillColor:"#571929",color:"white",weight:2,fillOpacity:.9
-    }).addTo(map).bindPopup("📍 Sei qui");
-  },()=>agoraToast("⚠️ Impossibile rilevare la posizione. Controlla i permessi del browser."));
+    }).addTo(map).bindPopup(tr("youAreHere"));
+  },()=>agoraToast(tr("geolocationDenied")));
 }
 
 document.getElementById("locBtn").addEventListener("click",locateUser);
@@ -1198,12 +3351,12 @@ const POI_CACHE_TTL_MS = 20 * 60 * 1000;
 const POI_REQUEST_TIMEOUT_MS = 9000;
 const POI_VIEW_PAD = 0.10;
 const POI_CATEGORY_QUERIES = [
-  { key: "museum", q: "museum", emoji: "🏛️", label: "Museo" },
-  { key: "library", q: "library", emoji: "📚", label: "Biblioteca" },
-  { key: "university", q: "university", emoji: "🎓", label: "Università" },
-  { key: "gallery", q: "art gallery", emoji: "🖼️", label: "Galleria" },
-  { key: "theatre", q: "theatre", emoji: "🎭", label: "Teatro" },
-  { key: "archive", q: "archive", emoji: "🗂️", label: "Archivio" },
+  { key: "museum", q: "museum", emoji: "🏛️" },
+  { key: "library", q: "library", emoji: "📚" },
+  { key: "university", q: "university", emoji: "🎓" },
+  { key: "gallery", q: "art gallery", emoji: "🖼️" },
+  { key: "theatre", q: "theatre", emoji: "🎭" },
+  { key: "archive", q: "archive", emoji: "🗂️" },
 ];
 
 let poiVisible = true;
@@ -1321,26 +3474,26 @@ function _makeCellTasks(bounds, zoom) {
 }
 
 function _poiKindLabel(item) {
-  if (item.label) return item.label;
+  const key = String(item.queryKey || "").toLowerCase();
   const cats = (item.categories || []).map(v => String(v).toLowerCase());
-  if (cats.includes("museum")) return "Museo";
-  if (cats.includes("library")) return "Biblioteca";
-  if (cats.includes("university")) return "Università";
-  if (cats.includes("gallery")) return "Galleria";
-  if (cats.includes("theatre")) return "Teatro";
-  if (cats.includes("archive")) return "Archivio";
-  return "Luogo culturale";
+  if (key === "museum" || cats.includes("museum")) return tr("poiKindMuseum");
+  if (key === "library" || cats.includes("library")) return tr("poiKindLibrary");
+  if (key === "university" || cats.includes("university")) return tr("poiKindUniversity");
+  if (key === "gallery" || cats.includes("gallery")) return tr("poiKindGallery");
+  if (key === "theatre" || cats.includes("theatre")) return tr("poiKindTheatre");
+  if (key === "archive" || cats.includes("archive")) return tr("poiKindArchive");
+  return tr("poiKindGeneric");
 }
 
 function _poiEmoji(item) {
   if (item.emoji) return item.emoji;
-  const label = _poiKindLabel(item);
-  if (label === "Museo") return "🏛️";
-  if (label === "Biblioteca") return "📚";
-  if (label === "Università") return "🎓";
-  if (label === "Galleria") return "🖼️";
-  if (label === "Teatro") return "🎭";
-  if (label === "Archivio") return "🗂️";
+  const key = String(item.queryKey || "").toLowerCase();
+  if (key === "museum") return "🏛️";
+  if (key === "library") return "📚";
+  if (key === "university") return "🎓";
+  if (key === "gallery") return "🖼️";
+  if (key === "theatre") return "🎭";
+  if (key === "archive") return "🗂️";
   return "📍";
 }
 
@@ -1367,7 +3520,6 @@ function _normalizeMapTilerPOIs(features, queryDef) {
       categories,
       raw: feature,
       queryKey: queryDef.key,
-      label: queryDef.label,
       emoji: queryDef.emoji,
     });
   }
@@ -1386,7 +3538,7 @@ function _poiVisibleItems(bounds) {
   poiStore.forEach(item => {
     if (bounds.contains([item.lat, item.lon])) out.push(item);
   });
-  out.sort((a, b) => a.name.localeCompare(b.name, "it"));
+  out.sort((a, b) => a.name.localeCompare(b.name, currentLang));
   return out;
 }
 
@@ -1404,15 +3556,15 @@ function _poiIcon(item) {
 function buildPopup(s){
   const isMine = currentUserId && s.user_id === currentUserId;
   return `<div class="popup-inner">
-    <div class="popup-type">${s.type==="persona"?"👤 Persona":"📍 Luogo"}</div>
+    <div class="popup-type">${s.type==="persona"?"👤 " + tr("personType"):"📍 " + tr("placeType")}</div>
     <div class="popup-name">${s.name}</div>
     ${s.place?`<div class="popup-topic" style="font-size:.7rem;font-style:italic;">${s.place}</div>`:""}
     <div class="popup-topic">${s.topic}</div>
-    <div class="popup-tags">${s.tags.map(t=>`<span class="popup-tag">${t}</span>`).join("")}</div>
-    <div class="popup-meta">⏱ ${s.duration} &nbsp;·&nbsp; ${s.time}</div>
+    <div class="popup-tags">${s.tags.map(t=>`<span class="popup-tag">${getTopicLabel(t)}</span>`).join("")}</div>
+    <div class="popup-meta">⏱ ${getDurationLabel(s.duration)} &nbsp;·&nbsp; ${s.time}</div>
     ${isMine
-      ? `<button class="popup-btn" style="background:#8b2239;margin-bottom:6px;" onclick="deleteSession('${s.id}')">Elimina sessione ✕</button>`
-      : `<button class="popup-btn" onclick="contactSession('${s.id}')">Contatta →</button>`
+      ? `<button class="popup-btn" style="background:#8b2239;margin-bottom:6px;" onclick="deleteSession('${s.id}')">${tr("deleteSessionPopupBtn")}</button>`
+      : `<button class="popup-btn" onclick="contactSession('${s.id}')">${tr("contactBtn")}</button>`
     }
   </div>`;
 }
@@ -1422,7 +3574,7 @@ function _poiPopup(item) {
     <div class="popup-type" style="font-weight:600;color:${isDarkTheme() ? '#7dd8e8' : '#571929'}">${_poiKindLabel(item)}</div>
     <div class="popup-name">${item.name}</div>
     <div class="popup-topic" style="font-size:.72rem">${item.placeName}</div>
-    <div class="popup-meta">Provider: MapTiler Search</div>
+    <div class="popup-meta">${tr("providerLabel")}: ${tr("mapTilerSearch")}</div>
   </div>`;
 }
 
@@ -1451,11 +3603,11 @@ function _syncVisiblePoiMarkers(bounds, opts = {}) {
 
   if (opts.silent) return;
   if (!poiVisible) return setPOIStatus("", "", 0);
-  if (!_hasPoiProvider()) return setPOIStatus("error", "Inserisci la tua API key MapTiler per abilitare i luoghi culturali", 2600);
-  if (map.getZoom() < POI_MIN_ZOOM) return setPOIStatus("ready", `Aumenta lo zoom a ${POI_MIN_ZOOM}+ per i luoghi culturali`, 1800);
-  if (visible.length) return setPOIStatus("ready", `${visible.length} luoghi culturali in vista`, 1500);
-  if (_poiQueueRunning || poiQueue.length) return setPOIStatus("loading", "Carico luoghi culturali MapTiler…");
-  return setPOIStatus("ready", "Nessun luogo culturale trovato in questa vista", 1500);
+  if (!_hasPoiProvider()) return setPOIStatus("error", tr("poiMissingKey"), 2600);
+  if (map.getZoom() < POI_MIN_ZOOM) return setPOIStatus("ready", tr("poiZoomMore", { zoom: POI_MIN_ZOOM }), 1800);
+  if (visible.length) return setPOIStatus("ready", tr("poiVisibleCount", { count: visible.length }), 1500);
+  if (_poiQueueRunning || poiQueue.length) return setPOIStatus("loading", tr("poiLoading"));
+  return setPOIStatus("ready", tr("poiNoneHere"), 1500);
 }
 
 function _clearPoiVisuals() {
@@ -1481,7 +3633,7 @@ async function _fetchMapTilerPoi(task, signal) {
   url.searchParams.set("limit", String(limit));
   url.searchParams.set("autocomplete", "false");
   url.searchParams.set("fuzzyMatch", "false");
-  url.searchParams.set("language", MAPTILER_LANG);
+  url.searchParams.set("language", getMapTilerLang());
   url.searchParams.set("key", MAPTILER_API_KEY);
 
   const timeoutCtrl = new AbortController();
@@ -1537,7 +3689,7 @@ function _planPoiFetch(force = false) {
   if (!poiVisible) return setPOIStatus("", "", 0);
   if (!_hasPoiProvider()) {
     _clearPoiVisuals();
-    return setPOIStatus("error", "MapTiler pronto: inserisci la tua API key nel file", 2800);
+    return setPOIStatus("error", tr("poiMissingKeyInline"), 2800);
   }
 
   const zoom = map.getZoom();
@@ -1546,7 +3698,7 @@ function _planPoiFetch(force = false) {
     poiQueuedKeys.clear();
     if (_poiAbortCtrl) _poiAbortCtrl.abort();
     _clearPoiVisuals();
-    return setPOIStatus("ready", `Aumenta lo zoom a ${POI_MIN_ZOOM}+ per i luoghi culturali`, 1800);
+    return setPOIStatus("ready", tr("poiZoomMore", { zoom: POI_MIN_ZOOM }), 1800);
   }
 
   const bounds = map.getBounds();
@@ -1561,8 +3713,8 @@ function _planPoiFetch(force = false) {
     queuedNow += 1;
   }
 
-  if (!queuedNow && !poiStore.size) setPOIStatus("loading", "Carico luoghi culturali MapTiler…");
-  else if (queuedNow) setPOIStatus("loading", `Aggiorno ${queuedNow} blocchi di luoghi culturali…`);
+  if (!queuedNow && !poiStore.size) setPOIStatus("loading", tr("poiLoading"));
+  else if (queuedNow) setPOIStatus("loading", tr("poiUpdatingBlocks", { count: queuedNow }));
 
   _drainPoiQueue(_poiActiveViewToken);
 }
@@ -1651,14 +3803,14 @@ map.whenReady(() => {
     }
     if (!hasMapTilerKey()) {
       hideSuggs();
-      setPOIStatus("error", "Per la ricerca città con MapTiler serve la API key", 2400);
+      setPOIStatus("error", tr("citySearchNeedsKey"), 2400);
       return;
     }
     if (_activeCtrl) _activeCtrl.abort();
     _activeCtrl = new AbortController();
     try {
       const url = new URL(`https://api.maptiler.com/geocoding/${encodeURIComponent(q)}.json`);
-      url.searchParams.set("language", MAPTILER_LANG);
+      url.searchParams.set("language", getMapTilerLang());
       url.searchParams.set("limit", "5");
       url.searchParams.set("autocomplete", "true");
       url.searchParams.set("key", MAPTILER_API_KEY);
@@ -1674,7 +3826,7 @@ map.whenReady(() => {
         return;
       }
       suggs.innerHTML = features.map((feature, i) => {
-        const label = feature.place_name || feature.text || "Luogo";
+        const label = feature.place_name || feature.text || tr("placeFallback");
         return `<div class="city-sugg-item" data-i="${i}">${label}</div>`;
       }).join("");
       suggs.classList.add("open");
@@ -1718,6 +3870,98 @@ map.whenReady(() => {
   map.on("movestart", hideSuggs);
 })();
 
+
+function localizeStatic() {
+  document.title = tr("docTitle");
+  document.getElementById("sidebarToggle").title = tr("menu");
+  document.getElementById("langToggleBtn").title = tr("language");
+  document.getElementById("mapPageTitle").textContent = tr("mapPageTitle");
+  document.getElementById("mapPageSubtitle").textContent = tr("mapPageSubtitle");
+  document.getElementById("sidebarTitle").textContent = tr("sidebarTitle");
+  document.getElementById("searchSessionsLabel").textContent = tr("searchSessionsLabel");
+  document.getElementById("searchInput").placeholder = tr("searchInputPlaceholder");
+  document.getElementById("typeLabel").textContent = tr("typeLabel");
+  document.getElementById("typeAllText").textContent = tr("typeAllText");
+  document.getElementById("typePersonaText").textContent = tr("typePersonaText");
+  document.getElementById("typeLuogoText").textContent = tr("typeLuogoText");
+  document.getElementById("poiToggleLabel").textContent = tr("poiToggleLabel");
+  document.getElementById("topicAreaLabel").textContent = tr("topicAreaLabel");
+  document.getElementById("cityInput").placeholder = tr("cityInputPlaceholder");
+  document.getElementById("citySearchBtn").title = tr("citySearchTitle");
+  document.getElementById("locBannerText").textContent = tr("locBannerText");
+  document.getElementById("locBtn").textContent = tr("locBtn");
+  document.getElementById("locateBtn").title = tr("locateBtnTitle");
+  if (!document.getElementById("poiStatus").classList.contains("hidden")) {
+    const txt = document.getElementById("poiStatusText").textContent;
+    const isLoadingLabel = !txt || Object.values(I18N).some(loc => loc.poiStatusLoading === txt);
+    if (isLoadingLabel) document.getElementById("poiStatusText").textContent = tr("poiStatusLoading");
+  } else {
+    document.getElementById("poiStatusText").textContent = tr("poiStatusLoading");
+  }
+  document.getElementById("fabBtn").title = tr("fabBtnTitle");
+  document.getElementById("modalTitle").textContent = tr("modalTitle");
+  document.getElementById("modalSub").textContent = tr("modalSub");
+  document.getElementById("fNameLabel").textContent = tr("fNameLabel");
+  document.getElementById("fName").placeholder = tr("fNamePlaceholder");
+  document.getElementById("fTypeLabel").textContent = tr("fTypeLabel");
+  const selectedType = document.getElementById("fType").value;
+  document.getElementById("fType").innerHTML = `<option value="persona">${tr("fTypePersona")}</option><option value="luogo">${tr("fTypeLuogo")}</option>`;
+  if (selectedType) document.getElementById("fType").value = selectedType;
+  document.getElementById("fPlaceLabel").textContent = tr("fPlaceLabel");
+  document.getElementById("fPlace").placeholder = tr("fPlacePlaceholder");
+  document.getElementById("fTopicLabel").textContent = tr("fTopicLabel");
+  document.getElementById("fTopic").placeholder = tr("fTopicPlaceholder");
+  document.getElementById("fTagsLabel").textContent = tr("fTagsLabel");
+  document.getElementById("fDurationLabel").textContent = tr("fDurationLabel");
+  const selectedDuration = document.getElementById("fDuration").value;
+  document.getElementById("fDuration").innerHTML = `
+    <option value="30 min">${getDurationLabel("30 min")}</option>
+    <option value="1 ora">${getDurationLabel("1 ora")}</option>
+    <option value="2 ore">${getDurationLabel("2 ore")}</option>
+    <option value="tutto il giorno">${getDurationLabel("tutto il giorno")}</option>
+    <option value="questa settimana">${getDurationLabel("questa settimana")}</option>`;
+  if (selectedDuration) document.getElementById("fDuration").value = selectedDuration;
+  document.getElementById("modalCancel").textContent = tr("modalCancel");
+  const modalSubmit = document.getElementById("modalSubmit");
+  if (!modalSubmit.disabled) modalSubmit.textContent = tr("modalSubmit");
+  document.getElementById("confirmTitle").textContent = tr("deleteSessionTitle");
+  document.getElementById("confirmMsg").textContent = tr("deleteSessionMsg");
+  document.getElementById("confirmCancel").textContent = tr("modalCancel");
+  document.getElementById("confirmOk").textContent = tr("delete");
+  const backHomeLink = document.getElementById("backHomeLink");
+  backHomeLink.href = `index.html?lang=${encodeURIComponent(currentLang)}`;
+  document.getElementById("themeBtn").title = localizedThemeTooltip();
+  const snapBtn = document.querySelector(".lod3-snap-btn");
+  if (snapBtn) snapBtn.title = tr("snapTitle");
+  if (userMarker) userMarker.bindPopup(tr("youAreHere"));
+}
+function applyTranslations() {
+  setDirAndLang(currentLang);
+  renderLanguageOptions();
+  localizeStatic();
+  buildTopicFilters();
+  buildTagPicker();
+  refresh();
+  if (typeof rerenderPOIMarkersForTheme === "function") rerenderPOIMarkersForTheme();
+  if (typeof _syncVisiblePoiMarkers === "function" && typeof _expandedBounds === "function") {
+    _syncVisiblePoiMarkers(_expandedBounds(map.getBounds(), 0.02), { silent: false });
+  }
+}
+
+document.getElementById("langToggleBtn").addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (document.getElementById("langPicker").classList.contains("open")) closeLangMenu(); else openLangMenu();
+});
+document.addEventListener("click", (e) => {
+  const picker = document.getElementById("langPicker");
+  if (picker && !picker.contains(e.target)) closeLangMenu();
+});
+const themeObserver = new MutationObserver(() => {
+  document.getElementById("themeBtn").title = localizedThemeTooltip();
+});
+themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+persistLanguage(currentLang);
+
 // ── Sidebar toggle (mobile) ───────────────────────────────────────
 const sidebar  = document.getElementById("sidebar");
 const backdrop = document.getElementById("sidebarBackdrop");
@@ -1731,8 +3975,7 @@ document.getElementById("sidebarToggle").addEventListener("click", () => {
 backdrop.addEventListener("click", closeSidebar);
 
 // ── INIT ─────────────────────────────────────────────────────────
-buildTopicFilters();
-buildTagPicker();
+applyTranslations();
 loadSessions();
 </script>
 </body>
