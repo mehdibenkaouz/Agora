@@ -8,6 +8,7 @@
   <link id="site-favicon" rel="icon" type="image/png" sizes="64x64" href="/icon-light-64.png?v=1">
   <link rel="apple-touch-icon" href="item/Logoagora.png">
   <script src="/shared-theme.js" defer></script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 
   <style>
     :root {
@@ -3533,8 +3534,9 @@
               <span>Email</span>
               <input id="emailInput" type="email" placeholder="you@email.com" autocomplete="email" required />
             </label>
-            <button class="primary-btn" type="submit" style="width:100%;">Send verification code</button>
-            <div class="form-note" id="otpNote">We'll send a 6-digit code to your email.</div>
+              <div class="cf-turnstile" data-sitekey="TUO_SITEKEY_QUI" data-theme="auto" data-size="flexible" id="turnstileWidget" style="margin-top:8px;"></div>
+              <button class="primary-btn" type="submit" style="width:100%;">Send verification code</button>
+              <div class="form-note" id="otpNote">We'll send a 6-digit code to your email.</div>
           </div>
 
           <div id="otpStep2" style="display:none;">
@@ -7367,7 +7369,7 @@ Try again after ${until.toLocaleTimeString()}.`);
       window.location.href = API_BASE + "/api/auth/google/start?returnTo=" + encodeURIComponent(returnTo);
     });
 
-// Email OTP login — Step 1: invia codice
+    // Email OTP login — Step 1: invia codice
     let otpPendingEmail = "";
     emailLoginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -7380,10 +7382,18 @@ Try again after ${until.toLocaleTimeString()}.`);
       btn.textContent = "Sending…";
       note.textContent = "";
 
+      const turnstileRes = document.querySelector('#turnstileWidget [name="cf-turnstile-response"]')?.value
+                     || (typeof turnstile !== "undefined" ? turnstile.getResponse('#turnstileWidget') : "");
+      if (!turnstileRes) {
+        note.textContent = "Please complete the verification check.";
+        btn.disabled = false;
+        btn.textContent = "Send verification code";
+        return;
+      }
       try {
         await api("/api/login", {
           method: "POST",
-          body: JSON.stringify({ email })
+          body: JSON.stringify({ email, turnstile_token: turnstileRes })
         });
         otpPendingEmail = email;
         emailLoginForm.setAttribute("novalidate", "");
@@ -7402,6 +7412,7 @@ Try again after ${until.toLocaleTimeString()}.`);
       } finally {
         btn.disabled = false;
         btn.textContent = "Send verification code";
+        if (typeof turnstile !== "undefined") turnstile.reset('#turnstileWidget');
       }
     });
 

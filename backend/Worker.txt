@@ -14,6 +14,17 @@ export default {
       if (url.pathname === "/api/health") {
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
+      if (url.pathname === "/api/ai-agree" && request.method === "GET") {
+        try {
+          const result = await env.AI.run("@cf/meta/llama-3.2-11b-vision-instruct", {
+            prompt: "agree"
+          });
+          return json({ ok: true, response: result?.response || result || "" }, 200, ALLOWED_ORIGIN);
+        } catch(e) {
+          return json({ ok: false, error: String(e?.message || e) }, 500, ALLOWED_ORIGIN);
+        }
+      }
+
 
 // ── LOGIN: STEP 1 — Invia OTP via email ─────────────────────────
       if (url.pathname === "/api/login" && request.method === "POST") {
@@ -565,7 +576,7 @@ export default {
               c.id, c.content, c.created_at,
               u.id as author_id,
               u.email as author_email,
-              (SELECT COUNT(*) FROM comments r WHERE r.parent_comment_id = c.id) as reply_count,
+              (SELECT COUNT(*) FROM comments r WHERE r.parent_comment_id = c.id AND r.deleted_at IS NULL) as reply_count,
               COALESCE(
                 NULLIF(TRIM(u.display_name), ''),
                 CASE
@@ -585,7 +596,7 @@ export default {
                 OR (b.block_type = 1 AND b.blocker_id = c.user_id AND b.blocked_id = ?2)
             ))
             AND (?3 IS NULL OR c.created_at > ?3)
-            AND c.deleted_at IS NULL
+            AND (c.deleted_at IS NULL OR EXISTS (SELECT 1 FROM comments r WHERE r.parent_comment_id = c.id AND r.deleted_at IS NULL))
           ORDER BY c.created_at ASC`
         ).bind(postId, feedUidC, since, parentId).all();
 
@@ -705,12 +716,26 @@ export default {
         const postId    = decodeURIComponent(commentDeleteMatch[1] || "").trim();
         const commentId = decodeURIComponent(commentDeleteMatch[2] || "").trim();
 
-        const del = await env.dbagora.prepare(
-          "DELETE FROM comments WHERE id = ?1 AND post_id = ?2 AND user_id = ?3"
-        ).bind(commentId, postId, session.user_id).run();
+        // Controlla se il commento ha risposte
+        const hasReplies = await env.dbagora.prepare(
+          "SELECT COUNT(*) as c FROM comments WHERE parent_comment_id = ?1"
+        ).bind(commentId).first();
 
-        if ((del?.meta?.changes ?? 0) === 0)
-          return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
+        if ((hasReplies?.c || 0) > 0) {
+          // Soft-delete: mantieni la riga per i figli, cancella il contenuto
+          const upd = await env.dbagora.prepare(
+            "UPDATE comments SET content = '[deleted]', deleted_at = ?1 WHERE id = ?2 AND post_id = ?3 AND user_id = ?4"
+          ).bind(new Date().toISOString(), commentId, postId, session.user_id).run();
+          if ((upd?.meta?.changes ?? 0) === 0)
+            return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
+        } else {
+          // Nessun figlio: hard-delete
+          const del = await env.dbagora.prepare(
+            "DELETE FROM comments WHERE id = ?1 AND post_id = ?2 AND user_id = ?3"
+          ).bind(commentId, postId, session.user_id).run();
+          if ((del?.meta?.changes ?? 0) === 0)
+            return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
+        }
 
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
@@ -1016,7 +1041,7 @@ export default {
         await env.AGORA_MEDIA.delete(key);
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
-      // ── NSFW CHECK (Workers AI) ─────────────────────────────────
+// ── NSFW CHECK (ResNet-50 + Llama Vision a 2 livelli) ──────────
       if (url.pathname === "/api/media/nsfw-check" && request.method === "POST") {
         const auth = request.headers.get("Authorization") || "";
         const token = parseBearer(auth);
@@ -1038,18 +1063,66 @@ export default {
 
         try {
           const buf = await file.arrayBuffer();
-          const result = await env.AI.run("@cf/microsoft/resnet-50", {
-            image: [...new Uint8Array(buf)]
-          });
-          // Cerca label NSFW-correlate nei risultati
+          const imageBytes = [...new Uint8Array(buf)];
+
+          // ── TIER 1: ResNet-50 (costa ~1 neuron, veloce) ──
+          const resnetResult = await env.AI.run("@cf/microsoft/resnet-50", { image: imageBytes });
           const nsfwLabels = ['bikini', 'brassiere', 'miniskirt', 'maillot', 'swimming_trunks'];
-          const topLabel = result?.[0]?.label || "";
-          const topScore = result?.[0]?.score || 0;
-          const isNsfw = nsfwLabels.some(l => topLabel.toLowerCase().includes(l)) && topScore > 0.5;
-          return json({ ok: true, nsfw: isNsfw, label: topLabel, confidence: topScore }, 200, ALLOWED_ORIGIN);
+          const topLabel = resnetResult?.[0]?.label || "";
+          const topScore = resnetResult?.[0]?.score || 0;
+          const resnetNsfw = nsfwLabels.some(l => topLabel.toLowerCase().includes(l)) && topScore > 0.5;
+
+          if (resnetNsfw) {
+            // ResNet è sicuro → blocca subito, risparmia la chiamata Llama
+            return json({ ok: true, nsfw: true, label: topLabel, confidence: topScore, tier: "resnet" }, 200, ALLOWED_ORIGIN);
+          }
+
+// ── TIER 2: Llama 3.2 Vision (descrizione + keyword match) ──
+          const bytes = new Uint8Array(buf);
+          let binary = "";
+          for (let i = 0; i < bytes.length; i++) {
+            binary += String.fromCharCode(bytes[i]);
+          }
+          const base64 = btoa(binary);
+
+          const llamaResult = await env.AI.run("@cf/meta/llama-3.2-11b-vision-instruct", {
+            messages: [
+              {
+                role: "user",
+                content: [
+                  {
+                    type: "image_url",
+                    image_url: { url: `data:${mime};base64,${base64}` }
+                  },
+                  {
+                    type: "text",
+                    text: "Describe what you see in this image in detail. Focus on: are there any people? What are they wearing or not wearing? Is any body part exposed? Is there any bodily fluid visible? Is there anything sexual or violent? Be specific and clinical."
+                  }
+                ]
+              }
+            ],
+            max_tokens: 150
+          });
+
+          const desc = (llamaResult?.response || "").toLowerCase();
+          const nsfwKeywords = [
+            'nude', 'naked', 'penis', 'genital', 'breast', 'nipple',
+            'semen', 'ejacul', 'cum ', 'sperm', 'bodily fluid',
+            'sexual', 'intercourse', 'coitus', 'oral sex', 'blowjob',
+            'erect', 'exposed', 'unclothed', 'undress',
+            'gore', 'blood', 'dismember', 'mutilat',
+            'pornograph', 'explicit', 'nsfw',
+            'vulva', 'vagina', 'anus', 'buttock',
+            'groin', 'phallic', 'genitalia', 'child abuse', 'minor', 'underage',
+            'child exploit', 'child porn', 'pedophil'
+          ];
+          const llamaNsfw = nsfwKeywords.some(kw => desc.includes(kw));
+
+          return json({ ok: true, nsfw: llamaNsfw, label: desc.substring(0, 200), confidence: llamaNsfw ? 0.95 : 0.05, tier: "llama" }, 200, ALLOWED_ORIGIN);
+
         } catch(e) {
-          // Se Workers AI fallisce, non bloccare l'utente
-          return json({ ok: true, nsfw: false, label: "error", confidence: 0 }, 200, ALLOWED_ORIGIN);
+          // Se AI fallisce, non bloccare l'utente
+          return json({ ok: true, nsfw: false, label: "error", confidence: 0, detail: String(e?.message || "") }, 200, ALLOWED_ORIGIN);
         }
       }
 
@@ -1791,17 +1864,7 @@ export default {
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
-      // DELETE /api/admin/posts/:id — admin elimina post
-      const adminPostDeleteMatch = url.pathname.match(/^\/api\/admin\/posts\/([^/]+)$/);
-      if (adminPostDeleteMatch && request.method === "DELETE") {
-        const adm = await requireAdmin(request);
-        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
 
-        const postId = adminPostDeleteMatch[1];
-        await env.dbagora.prepare("DELETE FROM comments WHERE post_id = ?1").bind(postId).run();
-        await env.dbagora.prepare("DELETE FROM posts WHERE id = ?1").bind(postId).run();
-        return json({ ok: true }, 200, ALLOWED_ORIGIN);
-      }
 
       // ── BUG REPORTS ──────────────────────────────────────────────────
 
@@ -1977,11 +2040,7 @@ export default {
         const adm = await requireAdmin(request);
         if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
         const postId = adminPostDelete[1];
-        await env.dbagora.prepare("DELETE FROM post_reports WHERE post_id = ?1").bind(postId).run();
         await env.dbagora.prepare("DELETE FROM comments WHERE post_id = ?1").bind(postId).run();
-        await env.dbagora.prepare("DELETE FROM post_logic_votes WHERE post_id = ?1").bind(postId).run();
-        await env.dbagora.prepare("DELETE FROM post_segments WHERE post_id = ?1").bind(postId).run();
-        await env.dbagora.prepare("DELETE FROM saved_posts WHERE post_id = ?1").bind(postId).run();
         await env.dbagora.prepare("DELETE FROM posts WHERE id = ?1").bind(postId).run();
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
