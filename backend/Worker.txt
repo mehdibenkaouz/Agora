@@ -25,14 +25,37 @@ export default {
         }
       }
 
-
-// ── LOGIN: STEP 1 — Invia OTP via email ─────────────────────────
+      
+      // ── LOGIN: STEP 1 — Invia OTP via email ─────────────────────────
       if (url.pathname === "/api/login" && request.method === "POST") {
-        const body = await request.json().catch(() => ({}));
-        const emailRaw = String(body.email || "").trim().toLowerCase();
-        if (!emailRaw || !emailRaw.includes("@")) {
-          return json({ ok: false, error: "invalid_email" }, 400, ALLOWED_ORIGIN);
-        }
+          const body = await request.json().catch(() => ({}));
+          const emailRaw = String(body.email || "").trim().toLowerCase();
+          if (!emailRaw || !emailRaw.includes("@")) {
+            return json({ ok: false, error: "invalid_email" }, 400, ALLOWED_ORIGIN);
+          }
+
+          // ── Turnstile verification ──
+          const tsToken = String(body.turnstile_token || "").trim();
+          if (!tsToken) {
+            return json({ ok: false, error: "turnstile_required" }, 400, ALLOWED_ORIGIN);
+          }
+          try {
+            const tsRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+              method: "POST",
+              headers: { "Content-Type": "application/x-www-form-urlencoded" },
+              body: new URLSearchParams({
+                secret: env.TURNSTILE_SECRET_KEY,
+                response: tsToken,
+                remoteip: request.headers.get("CF-Connecting-IP") || ""
+              })
+            });
+            const tsData = await tsRes.json();
+            if (!tsData.success) {
+              return json({ ok: false, error: "turnstile_failed" }, 403, ALLOWED_ORIGIN);
+            }
+          } catch (e) {
+            return json({ ok: false, error: "turnstile_error", detail: String(e?.message || e) }, 500, ALLOWED_ORIGIN);
+          }
 
         // Rate limit: max 3 OTP per email ogni 15 minuti
         const fifteenAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
