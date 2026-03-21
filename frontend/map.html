@@ -674,6 +674,16 @@ const TOPIC_COLORS={
 const API_BASE="https://agora-api.convergegame.workers.dev";
 const TOKEN_KEY="agora_token";
 let sessions=[];
+let currentUserId=null;
+(async function initUser(){
+  const token=localStorage.getItem(TOKEN_KEY);
+  if(!token) return;
+  try{
+    const res=await fetch(`${API_BASE}/api/me`,{headers:{"Authorization":"Bearer "+token}});
+    const data=await res.json();
+    if(data.ok&&data.user) currentUserId=data.user.id;
+  }catch(e){}
+})();
 function isDarkTheme(){
   const saved = localStorage.getItem("agora_theme");
   if (saved === "dark") return true;
@@ -805,10 +815,11 @@ function renderMarkers(list){
   Object.values(markers).forEach(m=>map.removeLayer(m));
   markers={};
   list.forEach(s=>{
+    if(s.type==="persona") return; // persona: visibile solo in sidebar, non sulla mappa
     const m=L.marker([s.lat,s.lng],{icon:makeIcon(s.type,s.tags)})
       .addTo(map)
       .bindPopup(buildPopup(s),{maxWidth:240});
-    m.on("click",()=>highlightCard(s.id));
+    m.on("click",()=>highlightCard(''+s.id));
     markers[s.id]=m;
   });
 }
@@ -830,10 +841,12 @@ function renderList(list){
   const el=document.getElementById("sessionList");
   document.getElementById("sessionCount").textContent=`${list.length} session${list.length===1?"e":"i"} trovate`;
   if(!list.length){el.innerHTML=`<div class="empty-list">Nessuna sessione trovata.<br>Sii il primo ad aggiungerla! ✨</div>`;return;}
-  el.innerHTML=list.map(s=>`
-    <div class="session-card" id="card-${s.id}" onclick="focusSession(${s.id})">
+  el.innerHTML=list.map(s=>{
+    const isMine = currentUserId && s.user_id === currentUserId;
+    return `
+    <div class="session-card" id="card-${s.id}" onclick="focusSession('${s.id}')">
       <div class="sc-top">
-        <div class="sc-name">${s.name}</div>
+        <div class="sc-name">${s.name}${isMine?' <span style="font-size:.55rem;color:var(--gold);font-style:italic;">(tua)</span>':''}</div>
         <div class="sc-type ${s.type}">${s.type==="persona"?"Persona":"Luogo"}</div>
       </div>
       <div class="sc-topic">${s.topic.length>80?s.topic.slice(0,80)+"…":s.topic}</div>
@@ -841,8 +854,9 @@ function renderList(list){
         ${s.tags.map(t=>`<span class="sc-tag">${t}</span>`).join("")}
         <span class="sc-tag">⏱ ${s.duration}</span>
       </div>
-    </div>
-  `).join("");
+      ${isMine?`<button onclick="event.stopPropagation();deleteSession('${s.id}')" style="margin-top:8px;width:100%;padding:6px;border-radius:8px;border:1px solid var(--line);background:transparent;color:var(--brand);font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;">Elimina sessione</button>`:''}
+    </div>`;
+  }).join("");
 }
 
 function highlightCard(id){
@@ -861,6 +875,26 @@ function focusSession(id){
 window.contactSession=function(id){
   const s=sessions.find(x=>x.id===id);if(!s)return;
   window.location.href=`index.html?studyContact=${encodeURIComponent(s.name)}`;
+};
+
+window.deleteSession=async function(id){
+  if(!confirm("Vuoi eliminare questa sessione?")) return;
+  const token=localStorage.getItem(TOKEN_KEY);
+  if(!token){alert("Devi effettuare il login.");return;}
+  try{
+    const res=await fetch(`${API_BASE}/api/map/sessions/${id}`,{
+      method:"DELETE",
+      headers:{"Authorization":"Bearer "+token}
+    });
+    const data=await res.json();
+    if(data.ok){
+      await loadSessions();
+    }else{
+      alert("Impossibile eliminare: "+(data.error||"errore sconosciuto"));
+    }
+  }catch(e){
+    alert("Errore di connessione.");
+  }
 };
 // ── FILTER ─────────────────────────────────────────────────────────
 function getFiltered(){
@@ -976,6 +1010,10 @@ document.getElementById("modalSubmit").addEventListener("click",async()=>{
   if(!name||!topic){alert("Inserisci almeno il nome e l'argomento.");return;}
 
   const token=localStorage.getItem(TOKEN_KEY);
+  if(!token){
+    alert("Devi effettuare il login per condividere una sessione.\nTorna alla home e accedi con la tua email.");
+    return;
+  }
   const btn=document.getElementById("modalSubmit");
   btn.textContent="Pubblicazione…";btn.disabled=true;
 
@@ -989,7 +1027,7 @@ document.getElementById("modalSubmit").addEventListener("click",async()=>{
     if(data.ok){
       document.getElementById("modalOverlay").classList.remove("open");
       await loadSessions();
-      setTimeout(()=>focusSession(data.id),300);
+      setTimeout(()=>focusSession(''+data.id),300);
     }else{
       alert("Errore: "+( data.error||"sconosciuto"));
     }
@@ -1238,12 +1276,19 @@ function _poiIcon(item) {
   return L.divIcon({ html: svg, className: "", iconSize: [32, 40], iconAnchor: [16, 40], popupAnchor: [0, -42] });
 }
 
-function _poiPopup(item) {
+function buildPopup(s){
+  const isMine = currentUserId && s.user_id === currentUserId;
   return `<div class="popup-inner">
-    <div class="popup-type" style="font-weight:600;color:${isDarkTheme() ? '#7dd8e8' : '#571929'}">${_poiKindLabel(item)}</div>
-    <div class="popup-name">${item.name}</div>
-    <div class="popup-topic" style="font-size:.72rem">${item.placeName}</div>
-    <div class="popup-meta">Provider: MapTiler Search</div>
+    <div class="popup-type">${s.type==="persona"?"👤 Persona":"📍 Luogo"}</div>
+    <div class="popup-name">${s.name}</div>
+    ${s.place?`<div class="popup-topic" style="font-size:.7rem;font-style:italic;">${s.place}</div>`:""}
+    <div class="popup-topic">${s.topic}</div>
+    <div class="popup-tags">${s.tags.map(t=>`<span class="popup-tag">${t}</span>`).join("")}</div>
+    <div class="popup-meta">⏱ ${s.duration} &nbsp;·&nbsp; ${s.time}</div>
+    ${isMine
+      ? `<button class="popup-btn" style="background:#8b2239;margin-bottom:6px;" onclick="deleteSession('${s.id}')">Elimina sessione ✕</button>`
+      : `<button class="popup-btn" onclick="contactSession('${s.id}')">Contatta →</button>`
+    }
   </div>`;
 }
 
