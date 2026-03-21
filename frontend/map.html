@@ -845,8 +845,11 @@ if(navigator.geolocation){
     userLat=pos.coords.latitude;
     userLng=pos.coords.longitude;
     map.setView([userLat,userLng],15,{animate:false});
-    if(poiVisible) _schedulePOIFetch(true, 200);
-  },()=>{/* fallback: resta su Bologna */},{enableHighAccuracy:true,timeout:8000,maximumAge:60000});
+    if(poiVisible) _schedulePOIFetch(true, 100);
+  },()=>{
+    // Geolocalizzazione fallita: lancia POI sulla posizione di default
+    if(poiVisible) _schedulePOIFetch(true, 100);
+  },{enableHighAccuracy:true,timeout:8000,maximumAge:60000});
 }
 window._map=map;
 
@@ -1596,8 +1599,7 @@ map.on("moveend", () => {
 });
 
 map.whenReady(() => {
-  if (!poiVisible) return;
-  _schedulePOIFetch(true, 120);
+  // POI fetch gestito dal callback geolocalizzazione
 });
 
 // ══════════════════════════════════════════════════════════════════
