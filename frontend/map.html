@@ -1160,7 +1160,6 @@ document.getElementById("modalSubmit").addEventListener("click",async()=>{
     btn.textContent="Pubblica →";btn.disabled=false;
   }
 });
-
 // ── GEOLOCATION ────────────────────────────────────────────────────
 function locateUser(){
   if(!navigator.geolocation){agoraToast("⚠️ Geolocalizzazione non supportata dal browser.");return;}
@@ -1412,6 +1411,15 @@ function buildPopup(s){
       ? `<button class="popup-btn" style="background:#8b2239;margin-bottom:6px;" onclick="deleteSession('${s.id}')">Elimina sessione ✕</button>`
       : `<button class="popup-btn" onclick="contactSession('${s.id}')">Contatta →</button>`
     }
+  </div>`;
+}
+
+function _poiPopup(item) {
+  return `<div class="popup-inner">
+    <div class="popup-type" style="font-weight:600;color:${isDarkTheme() ? '#7dd8e8' : '#571929'}">${_poiKindLabel(item)}</div>
+    <div class="popup-name">${item.name}</div>
+    <div class="popup-topic" style="font-size:.72rem">${item.placeName}</div>
+    <div class="popup-meta">Provider: MapTiler Search</div>
   </div>`;
 }
 
