@@ -844,10 +844,10 @@ if(navigator.geolocation){
   navigator.geolocation.getCurrentPosition(pos=>{
     userLat=pos.coords.latitude;
     userLng=pos.coords.longitude;
-    map.setView([userLat,userLng],15,{animate:true});
+    map.setView([userLat,userLng],15,{animate:false});
+    if(poiVisible) _schedulePOIFetch(true, 200);
   },()=>{/* fallback: resta su Bologna */},{enableHighAccuracy:true,timeout:8000,maximumAge:60000});
 }
-
 window._map=map;
 
 L.control.zoom({position:"bottomleft"}).addTo(map);
