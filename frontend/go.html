@@ -634,6 +634,7 @@ window._goRedraw=drawBoard;
 
 // ── Online matchmaking ───────────────────────────────────────────
 let onlineMode=false, onlineSessionId="", onlineVersion=0, mySeat="";
+const API_BASE = "https://agora-api.convergegame.workers.dev";
 let lobbyTimer=null, sessionTimer=null;
 function getAuthToken(){
   return localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("agora_token") || "";
@@ -672,10 +673,18 @@ async function apiJson(url, options={}){
   if(!token){
     return { res: null, data: { ok:false, error:"missing_token" } };
   }
-  const res = await fetch(url, {
+
+  const finalUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
+
+  const res = await fetch(finalUrl, {
     ...options,
-    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, ...(options.headers || {}) }
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+      ...(options.headers || {})
+    }
   });
+
   const data = await res.json().catch(() => ({}));
   return { res, data };
 }
