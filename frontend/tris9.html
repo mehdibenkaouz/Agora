@@ -261,6 +261,29 @@ html,body{
 }
 .rules p{font-size:.88rem;line-height:1.7;color:var(--muted);margin-bottom:8px;}
 .rules p:last-child{margin-bottom:0;}
+
+/* ONLINE LOBBY */
+.lobby-overlay{
+  position:fixed;inset:0;display:none;align-items:center;justify-content:center;
+  background:rgba(0,0,0,0.58);backdrop-filter:blur(8px);z-index:200;
+  padding:20px;
+}
+.lobby-overlay.open{display:flex;}
+.lobby-card{
+  width:min(420px,100%);background:var(--panel);border:1px solid var(--line);
+  border-radius:24px;padding:26px 24px;box-shadow:var(--shadow);
+  display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;
+}
+.lobby-title{font-family:'Cinzel',serif;font-size:1rem;letter-spacing:.10em;text-transform:uppercase;color:var(--brand);}
+.lobby-status{font-family:'Cinzel',serif;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase;color:var(--text);}
+.lobby-note{font-size:.92rem;line-height:1.6;color:var(--muted);min-height:1.6em;}
+.lobby-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+.lobby-spinner{
+  width:42px;height:42px;border-radius:50%;border:3px solid rgba(255,255,255,0.18);
+  border-top-color:var(--brand);animation:lobbySpin 1s linear infinite;
+}
+@keyframes lobbySpin{to{transform:rotate(360deg);}}
+
 </style>
 </head>
 <body>
@@ -276,6 +299,19 @@ html,body{
 </header>
 
 <main class="page">
+
+
+  <div class="lobby-overlay" id="lobbyOverlay" aria-hidden="true">
+    <div class="lobby-card">
+      <div class="lobby-title">2 Players Lobby</div>
+      <div class="lobby-spinner"></div>
+      <div class="lobby-status" id="lobbyStatus">Searching for another player…</div>
+      <div class="lobby-note" id="lobbyNote">No players online.</div>
+      <div class="lobby-actions">
+        <button class="btn" id="cancelLobbyBtn" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <div class="mode-bar">
     <button class="mode-btn active" id="modeVsAI">vs AI</button>
@@ -377,6 +413,7 @@ function checkWinner(arr){
 // ── Move ───────────────────────────────────────────────────────────
 function playMove(bi,ci){
   if(megaWon||aiThinking)return;
+  if(onlineMode && !isMyTurnOnline()) return;
   if(miniWon[bi]!==EMPTY)return;
   if(nextBoard!==-1&&nextBoard!==bi)return;
   if(cells[bi][ci]!==EMPTY)return;
@@ -397,7 +434,10 @@ function playMove(bi,ci){
   turn=turn===X?O:X;
   renderAll(bi,ci);
 
-  if(vsAI&&turn===O){
+  if(onlineMode){
+    setStatus(getOnlineTurnStatus());
+    pushOnlineState();
+  }else if(vsAI&&turn===O){
     aiThinking=true;
     setStatus("AI is thinking…");
     setTimeout(doAI,380);
@@ -540,31 +580,145 @@ function endGame(w){
   else setStatus("It's a draw!");
   document.getElementById("scoreX").textContent=scoreX||0;
   document.getElementById("scoreO").textContent=scoreO||0;
+  if(onlineMode) pushOnlineState();
+}
+
+
+// ── Online matchmaking ───────────────────────────────────────────
+const GAME_KEY = "tris9";
+let onlineMode=false, onlineSessionId="", onlineVersion=0, mySeat="";
+let lobbyTimer=null, sessionTimer=null;
+function getAuthToken(){
+  return localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("agora_token") || "";
+}
+function serializeGameState(){
+  return { cells, miniWon, megaWon, turn, nextBoard, scoreX, scoreO };
+}
+
+function applySerializedState(state){
+  if(!state) return;
+  cells = (state.cells || []).map(b => b.slice());
+  miniWon = (state.miniWon || []).slice();
+  megaWon = state.megaWon ?? EMPTY;
+  turn = state.turn ?? X;
+  nextBoard = state.nextBoard ?? -1;
+  scoreX = state.scoreX || 0;
+  scoreO = state.scoreO || 0;
+  aiThinking = false;
+  renderAll();
+  updateScoreboard();
+  setStatus(megaWon ? getFinishedStatusText() : getOnlineTurnStatus());
+}
+
+function getFinishedStatusText(){
+  if(megaWon === X) return "✕ wins the game!";
+  if(megaWon === O) return "○ wins the game!";
+  if(megaWon === DRAW) return "It's a draw!";
+  return getOnlineTurnStatus();
+}
+
+function isMyTurnOnline(){
+  return !onlineMode || (mySeat === "player1" ? turn === X : turn === O);
+}
+
+function getOnlineTurnStatus(){
+  const sym = turn===X ? "✕" : "○";
+  return isMyTurnOnline() ? `Your turn — ${sym}` : `Opponent's turn — ${sym}`;
+}
+
+function updateSideLabels(){
+  if(onlineMode){
+    document.getElementById("labelX").textContent = mySeat === "player1" ? "X · You" : "X · Opponent";
+    document.getElementById("labelO").textContent = mySeat === "player2" ? "O · You" : "O · Opponent";
+    return;
+  }
+  document.getElementById("labelX").textContent = vsAI ? "You" : "Player X";
+  document.getElementById("labelO").textContent = vsAI ? "AI" : "Player O";
+}
+
+function showLobby(waiting=true){
+  document.getElementById("lobbyOverlay").classList.add("open");
+  document.getElementById("lobbyStatus").textContent = waiting ? "Searching for another player…" : "Match found";
+  document.getElementById("lobbyNote").textContent = waiting ? "No players online." : "Starting the session…";
+}
+function hideLobby(){ document.getElementById("lobbyOverlay").classList.remove("open"); }
+async function apiJson(url, options={}){
+  const token = getAuthToken();
+  if(!token){
+    return { res: null, data: { ok:false, error:"missing_token" } };
+  }
+  const res = await fetch(url, {
+    ...options,
+    headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}`, ...(options.headers || {}) }
+  });
+  const data = await res.json().catch(() => ({}));
+  return { res, data };
+}
+async function leaveLobby(){
+  clearInterval(lobbyTimer); lobbyTimer=null;
+  await apiJson("/api/games/matchmaking/leave", {
+    method: "POST",
+    body: JSON.stringify({ game_key: GAME_KEY })
+  }).catch(()=>{});
+  hideLobby();
+}
+function stopOnlineSession(){ clearInterval(sessionTimer); sessionTimer=null; onlineMode=false; onlineSessionId=""; onlineVersion=0; mySeat=""; }
+async function startOnlineLobby(){
+  stopOnlineSession();
+  clearInterval(lobbyTimer);
+  vsAI=false; scoreX=0; scoreO=0;
+  document.getElementById("modeVs2P").classList.add("active");
+  document.getElementById("modeVsAI").classList.remove("active");
+  document.getElementById("aiBar").style.display="none";
+  initGame();
+  showLobby(true);
+  await matchmakingTick();
+  lobbyTimer=setInterval(matchmakingTick,2500);
+}
+async function matchmakingTick(){
+  const { data } = await apiJson("/api/games/matchmaking/join", { method:"POST", body: JSON.stringify({ game_key: GAME_KEY, initial_state: serializeGameState() }) });
+  if(data?.error === "missing_token"){
+    document.getElementById("lobbyStatus").textContent = "Login required";
+    document.getElementById("lobbyNote").textContent = "Please log in before entering the 2 Players lobby.";
+    return;
+  }
+  if(!data?.ok) return;
+  if(data.status === "matched" && data.session){
+    clearInterval(lobbyTimer); lobbyTimer=null;
+    onlineMode=true; onlineSessionId=data.session.id; onlineVersion=data.session.version||1; mySeat=data.role;
+    updateSideLabels(); hideLobby(); applySerializedState(data.session.state || serializeGameState());
+    clearInterval(sessionTimer); sessionTimer=setInterval(syncOnlineState,1500);
+  } else showLobby(true);
+}
+async function syncOnlineState(){
+  if(!onlineMode || !onlineSessionId) return;
+  const { data } = await apiJson(`/api/games/session/${encodeURIComponent(onlineSessionId)}`);
+  if(!data?.ok || !data.session) return;
+  if((data.session.version||0)!==onlineVersion){ onlineVersion=data.session.version||0; applySerializedState(data.session.state); }
+}
+async function pushOnlineState(){
+  if(!onlineMode || !onlineSessionId) return;
+  const { data } = await apiJson(`/api/games/session/${encodeURIComponent(onlineSessionId)}/move`, { method:"POST", body: JSON.stringify({ version: onlineVersion, state: serializeGameState() }) });
+  if(data?.ok) onlineVersion=data.version; else if(data?.error === "version_conflict"){ onlineVersion=data.version||onlineVersion; if(data.state) applySerializedState(data.state); }
 }
 
 // ── Controls ───────────────────────────────────────────────────────
-document.getElementById("restartBtn").addEventListener("click",initGame);
+document.getElementById("restartBtn").addEventListener("click",()=>{ if(onlineMode){ startOnlineLobby(); return; } initGame(); });
 
 vsAI=true;scoreX=0;scoreO=0;
 
-document.getElementById("modeVsAI").addEventListener("click",function(){
+document.getElementById("modeVsAI").addEventListener("click",async function(){
+  await leaveLobby();
+  stopOnlineSession();
   vsAI=true;scoreX=0;scoreO=0;
   this.classList.add("active");
   document.getElementById("modeVs2P").classList.remove("active");
   document.getElementById("aiBar").style.display="flex";
-  document.getElementById("labelX").textContent="You";
-  document.getElementById("labelO").textContent="AI";
+  updateSideLabels();
   initGame();
 });
-document.getElementById("modeVs2P").addEventListener("click",function(){
-  vsAI=false;scoreX=0;scoreO=0;
-  this.classList.add("active");
-  document.getElementById("modeVsAI").classList.remove("active");
-  document.getElementById("aiBar").style.display="none";
-  document.getElementById("labelX").textContent="Player X";
-  document.getElementById("labelO").textContent="Player O";
-  initGame();
-});
+document.getElementById("modeVs2P").addEventListener("click",function(){ startOnlineLobby(); });
+document.getElementById("cancelLobbyBtn").addEventListener("click",async ()=>{ await leaveLobby(); document.getElementById("modeVsAI").click(); });
 
 initGame();
 </script>
