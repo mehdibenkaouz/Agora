@@ -365,7 +365,6 @@
       flex-wrap:wrap;
       gap:10px;
     }
-
     .mini-link{
       display:inline-flex;
       align-items:center;
@@ -458,10 +457,8 @@
       <div class="shell-head">
         <div class="shell-head-title">Privacy Policy</div>
         <div class="shell-head-sub">
-          Effective date: 2026-03-18<br>
-          Version: 2026-03-18-v1<br>
-          This policy is a platform privacy draft and should be completed with the final legal identity,
-          technical stack, jurisdictions, and real operational practices of the live service.
+          Effective date: 2026-03-22<br>
+          Version: 2026-03-22-v2
         </div>
       </div>
 
@@ -474,14 +471,17 @@
           <a href="#public-content">4. Public content and visibility</a>
           <a href="#purposes">5. Why data may be processed</a>
           <a href="#legal-bases">6. Legal bases</a>
-          <a href="#retention">7. Retention periods</a>
-          <a href="#sharing">8. Sharing and disclosure</a>
-          <a href="#international">9. International transfers</a>
-          <a href="#security">10. Security and safeguards</a>
-          <a href="#rights">11. User rights</a>
-          <a href="#children">12. Children and minimum age</a>
-          <a href="#changes">13. Policy updates</a>
-          <a href="#contact">14. Contact for privacy matters</a>
+          <a href="#cookies-storage">7. Cookies and local storage</a>
+          <a href="#ai-processing">8. Automated content moderation</a>
+          <a href="#sub-processors">9. Sub-processors and third-party services</a>
+          <a href="#retention">10. Retention periods</a>
+          <a href="#sharing">11. Sharing and disclosure</a>
+          <a href="#international">12. International transfers</a>
+          <a href="#security">13. Security and safeguards</a>
+          <a href="#rights">14. User rights</a>
+          <a href="#children">15. Children and minimum age</a>
+          <a href="#changes">16. Policy updates</a>
+          <a href="#contact">17. Contact for privacy matters</a>
         </div>
       </div>
 
@@ -489,17 +489,16 @@
         <section class="section" id="controller">
           <h2>1. Service operator / controller</h2>
           <p>
-            The controller or service operator of AGORÀ is:
+            The data controller of AGORÀ is:
           </p>
           <p>
-            <strong>[Insert legal name / full name / company name]</strong><br>
-            <strong>[Insert registered address or business address]</strong><br>
-            <strong>[Insert country of establishment]</strong><br>
-            <strong>[Insert legal contact email]</strong>
+            <strong>Mehdi Benkaouz</strong><br>
+            Bologna, Italy<br>
+            Contact: <strong>privacy@agorapolis.org</strong>
           </p>
           <p>
-            If AGORÀ later appoints a data protection contact, representative, or other designated legal contact,
-            this page may be updated accordingly.
+            AGORÀ is an independent project operated as a personal initiative. It is not currently operated
+            by a registered company. If the organizational structure changes, this section will be updated accordingly.
           </p>
         </section>
 
@@ -520,17 +519,18 @@
           <h2>3. Data we may collect</h2>
           <p>Depending on how AGORÀ is used, the platform may process categories of data such as:</p>
           <ul>
-            <li><strong>Account and identity data</strong> — such as username, display name, login identifier, email address, profile data, and authentication-related records;</li>
-            <li><strong>User-generated content</strong> — such as posts, comments, replies, profile text, saved items, uploaded media, reports, moderation appeals, or other content submitted by users;</li>
-            <li><strong>Technical and device data</strong> — such as IP address, browser type, operating system, device identifiers, session information, timestamps, request logs, and security events;</li>
-            <li><strong>Usage data</strong> — such as pages visited, features used, interactions, account actions, navigation events, saved preferences, and platform activity patterns;</li>
-            <li><strong>Support and communication data</strong> — such as messages sent to support, legal notices, abuse reports, or correspondence with AGORÀ;</li>
-            <li><strong>Moderation and trust &amp; safety data</strong> — such as reports, enforcement records, restriction history, anti-abuse signals, and investigation notes reasonably necessary to protect the platform and users;</li>
-            <li><strong>Local storage and browser-side data</strong> — such as theme preferences, acceptance records, session continuity markers, or other device-side data described in the Cookies &amp; Storage Notice.</li>
+            <li><strong>Account and identity data</strong> — email address, display name, profile picture URL, and authentication-related records. If you sign in via Google OAuth, AGORÀ receives your email address, name, and profile picture from Google. AGORÀ does not receive or store your Google password.</li>
+            <li><strong>User-generated content</strong> — posts, comments, replies, profile text, saved items, uploaded images and videos, bug reports, moderation appeals, map session data, game session states, or other content submitted by users.</li>
+            <li><strong>Technical and device data</strong> — IP address, browser type, operating system, session tokens, timestamps, request logs, and security events. Cloudflare, which serves as our infrastructure provider, may also collect connection metadata as part of its standard service.</li>
+            <li><strong>Usage data</strong> — pages visited, features used, interactions, account actions, navigation events, saved preferences, and platform activity patterns.</li>
+            <li><strong>Authentication data</strong> — one-time password (OTP) codes sent to your email for login verification, session cookies, and login timestamps. OTP codes are stored temporarily and deleted after use or expiration.</li>
+            <li><strong>Support and communication data</strong> — messages sent to support, legal notices, abuse reports, or correspondence with AGORÀ.</li>
+            <li><strong>Moderation and trust &amp; safety data</strong> — reports, enforcement records, restriction history, spam detection signals (including action timestamps and periodicity analysis), and investigation notes reasonably necessary to protect the platform and users.</li>
+            <li><strong>Local storage and browser-side data</strong> — theme preferences, terms acceptance records, login state indicators, and other device-side data described in the Cookies &amp; Storage Notice.</li>
           </ul>
 
           <div class="callout">
-            AGORÀ should collect and retain only the data reasonably necessary to operate, secure, improve,
+            AGORÀ collects and retains only the data reasonably necessary to operate, secure, improve,
             and legally maintain the service.
           </div>
         </section>
@@ -580,13 +580,80 @@
             <li><strong>Protection of vital interests or public-interest grounds</strong> — only where applicable and legally justified.</li>
           </ul>
           <p>
-            AGORÀ should identify the correct basis for each processing activity in actual operation and should not
+            AGORÀ identifies the correct legal basis for each processing activity and does not
             rely on consent where another legal basis is the proper one.
           </p>
         </section>
 
+        <section class="section" id="cookies-storage">
+          <h2>7. Cookies and local storage</h2>
+          <p>
+            AGORÀ uses the following cookies and browser storage mechanisms:
+          </p>
+          <ul>
+            <li><strong>agora_session</strong> (cookie) — a strictly necessary HttpOnly, Secure session cookie used to authenticate logged-in users. This cookie is set at login and cleared at logout. It cannot be read by JavaScript and is transmitted only over HTTPS. No consent is required for this cookie under the GDPR and the ePrivacy Directive, as it is essential for the service to function.</li>
+            <li><strong>agora_logged_in</strong> (localStorage) — a flag that indicates whether the user is currently logged in, used to adjust the user interface. It does not contain any personal data or session credentials.</li>
+            <li><strong>agora_terms_accepted_v3</strong> (localStorage) — records that the user has accepted the current version of the Terms of Service.</li>
+            <li><strong>agora_theme</strong> (localStorage) — stores the user's light/dark theme preference.</li>
+          </ul>
+          <p>
+            AGORÀ does not use advertising cookies, tracking cookies, analytics cookies, or any third-party marketing cookies.
+            For more details, see the <a href="cookies.html" style="color:var(--brand);text-decoration:underline;">Cookies &amp; Storage Notice</a>.
+          </p>
+        </section>
+
+        <section class="section" id="ai-processing">
+          <h2>8. Automated content moderation</h2>
+          <p>
+            AGORÀ uses automated systems to moderate user-uploaded images and video frames before they are published.
+            This processing is performed to detect and prevent the publication of sexually explicit, pornographic,
+            or graphically violent content.
+          </p>
+          <p>
+            The moderation system works in two tiers:
+          </p>
+          <ul>
+            <li><strong>Tier 1 — Image classification</strong>: uploaded images are analyzed by a ResNet-50 image classification model (run on Cloudflare Workers AI) to detect certain categories of visual content.</li>
+            <li><strong>Tier 2 — Vision language model</strong>: if the first tier does not flag the image, a Meta Llama 3.2 Vision model (also run on Cloudflare Workers AI) is asked to determine whether the image is sexually explicit, pornographic, or graphically violent. The model responds with a yes/no determination.</li>
+          </ul>
+          <p>
+            Image data is processed transiently for moderation purposes and is not stored separately by the AI models.
+            The AI systems do not build profiles of users and do not use uploaded content for training.
+          </p>
+          <p>
+            Additionally, AGORÀ employs automated spam detection that analyzes the timing patterns of user actions
+            (such as posting frequency and interval regularity) to identify bot-like behavior. This system may
+            temporarily restrict accounts that exhibit automated patterns. No content analysis is performed by
+            the spam detection system — only action timestamps are evaluated.
+          </p>
+          <p>
+            Under Article 22 of the GDPR, users have the right not to be subject to decisions based solely on
+            automated processing that produce legal or similarly significant effects. If you believe an automated
+            moderation decision was made in error, you may contact us at <strong>privacy@agorapolis.org</strong>
+            to request a manual review.
+          </p>
+        </section>
+
+        <section class="section" id="sub-processors">
+          <h2>9. Sub-processors and third-party services</h2>
+          <p>
+            AGORÀ relies on the following third-party service providers to operate the platform. Each provider
+            processes data only as necessary to deliver its specific function:
+          </p>
+          <ul>
+            <li><strong>Cloudflare, Inc.</strong> (United States) — web hosting (Cloudflare Pages), serverless compute (Cloudflare Workers), database (Cloudflare D1), object storage for media (Cloudflare R2), AI inference (Cloudflare Workers AI), DDoS protection, CDN, DNS, and bot verification (Cloudflare Turnstile). Cloudflare acts as a data processor. Cloudflare participates in the EU-U.S. Data Privacy Framework.</li>
+            <li><strong>Google LLC</strong> (United States) — authentication via Google OAuth 2.0 (Google Sign-In). When you log in with Google, AGORÀ receives your email, name, and profile picture. Google's own privacy policy governs Google's handling of your data. Google participates in the EU-U.S. Data Privacy Framework.</li>
+            <li><strong>Resend, Inc.</strong> (United States) — transactional email delivery for one-time password (OTP) login codes. Resend processes only the recipient email address and the email content for delivery purposes.</li>
+            <li><strong>MapTiler AG</strong> (Switzerland) — map tiles and geocoding for the AGORÀ Study Map feature. MapTiler may receive IP addresses and location queries when the map is used.</li>
+            <li><strong>Google Fonts</strong> (Google LLC, United States) — web font delivery. Loading fonts from Google's servers may transmit the user's IP address to Google.</li>
+          </ul>
+          <p>
+            AGORÀ does not sell, rent, or share personal data with third parties for advertising or marketing purposes.
+          </p>
+        </section>
+
         <section class="section" id="retention">
-          <h2>7. Retention periods</h2>
+          <h2>10. Retention periods</h2>
           <p>
             AGORÀ may retain personal data only for as long as reasonably necessary for the purposes for which it
             was collected, including operation of the service, account continuity, moderation, fraud prevention,
@@ -602,7 +669,7 @@
         </section>
 
         <section class="section" id="sharing">
-          <h2>8. Sharing and disclosure</h2>
+          <h2>11. Sharing and disclosure</h2>
           <p>AGORÀ may disclose data only where reasonably necessary, such as:</p>
           <ul>
             <li>to infrastructure, hosting, authentication, security, analytics, or support providers acting on AGORÀ’s behalf;</li>
@@ -613,33 +680,47 @@
             <li>to protect the rights, safety, property, or integrity of AGORÀ, its users, or third parties.</li>
           </ul>
           <p>
-            AGORÀ should not sell personal data in a manner inconsistent with its actual practices or its public disclosures.
+            AGORÀ does not sell personal data to third parties.
           </p>
         </section>
 
         <section class="section" id="international">
-          <h2>9. International transfers</h2>
+          <h2>12. International transfers</h2>
           <p>
-            Depending on hosting, delivery networks, third-party services, or support operations, data may be processed
-            in countries other than the user’s own country.
+            AGORÀ's infrastructure is primarily provided by Cloudflare, Google, and Resend, all of which are
+            headquartered in the United States. MapTiler is based in Switzerland. As a result, personal data
+            may be transferred to and processed in the United States and Switzerland.
           </p>
           <p>
-            Where applicable law requires safeguards for international data transfers, AGORÀ should use appropriate legal
-            mechanisms and organizational measures before transferring protected personal data across borders.
+            For transfers from the European Economic Area (EEA) to the United States, AGORÀ relies on the
+            EU-U.S. Data Privacy Framework, to which Cloudflare and Google are certified participants.
+            Switzerland is recognized by the European Commission as providing an adequate level of data protection.
+          </p>
+          <p>
+            Where applicable law requires additional safeguards for international data transfers, AGORÀ uses
+            appropriate legal mechanisms such as Standard Contractual Clauses (SCCs) or adequacy decisions
+            before transferring protected personal data across borders.
           </p>
         </section>
 
         <section class="section" id="security">
-          <h2>10. Security and safeguards</h2>
+          <h2>13. Security and safeguards</h2>
           <p>
-            AGORÀ should use reasonable technical and organizational measures designed to protect personal data against
-            unauthorized access, unlawful disclosure, misuse, destruction, or accidental loss.
+            AGORÀ uses technical and organizational measures designed to protect personal data against
+            unauthorized access, unlawful disclosure, misuse, destruction, or accidental loss. These include:
           </p>
-          <p>
-            These measures may include access controls, authentication controls, rate limits, logging, secure transport,
-            backup measures, anti-abuse systems, internal permissions, and other security practices appropriate to the
-            size and risk profile of the service.
-          </p>
+          <ul>
+            <li>session authentication via HttpOnly, Secure cookies with SameSite=Lax, preventing JavaScript access to session tokens;</li>
+            <li>HTTPS-only transport enforced via HSTS (HTTP Strict Transport Security);</li>
+            <li>Content Security Policy (CSP) headers restricting script and resource origins;</li>
+            <li>Cloudflare Turnstile bot verification on authentication endpoints;</li>
+            <li>rate limiting on login attempts (maximum 3 OTP requests per 15 minutes, maximum 5 verification attempts per code);</li>
+            <li>automated spam detection based on action timing patterns;</li>
+            <li>X-Frame-Options: DENY to prevent clickjacking;</li>
+            <li>Permissions-Policy headers restricting access to device APIs;</li>
+            <li>CORS controls restricting API access to authorized origins;</li>
+            <li>server-side input validation and parameterized database queries to prevent injection attacks.</li>
+          </ul>
           <p>
             No online system can guarantee absolute security. Users should also protect their accounts, devices, and
             credentials appropriately.
@@ -647,61 +728,61 @@
         </section>
 
         <section class="section" id="rights">
-          <h2>11. User rights</h2>
+          <h2>14. User rights</h2>
           <p>
-            Depending on applicable law, users may have rights such as:
+            Under the GDPR and applicable data protection law, users in the European Economic Area have the following rights:
           </p>
           <ul>
-            <li>the right to request access to personal data;</li>
-            <li>the right to request correction of inaccurate or incomplete data;</li>
-            <li>the right to request deletion of data in certain circumstances;</li>
-            <li>the right to request restriction of processing in certain circumstances;</li>
-            <li>the right to object to certain processing, especially where based on legitimate interests;</li>
-            <li>the right to data portability where the law provides it;</li>
-            <li>the right to withdraw consent where processing relies on consent;</li>
-            <li>the right to lodge a complaint with a competent supervisory authority where the law provides that right.</li>
+            <li><strong>Right of access</strong> (Art. 15 GDPR) — you may request a copy of the personal data AGORÀ holds about you.</li>
+            <li><strong>Right to rectification</strong> (Art. 16 GDPR) — you may request correction of inaccurate or incomplete data. You can also update your display name and profile picture directly in the platform settings.</li>
+            <li><strong>Right to erasure</strong> (Art. 17 GDPR) — you may request deletion of your personal data. AGORÀ provides a self-service account deletion feature that removes your account, posts, comments, media, and associated data.</li>
+            <li><strong>Right to restriction</strong> (Art. 18 GDPR) — you may request that AGORÀ restrict the processing of your data in certain circumstances.</li>
+            <li><strong>Right to object</strong> (Art. 21 GDPR) — you may object to processing based on legitimate interests.</li>
+            <li><strong>Right to data portability</strong> (Art. 20 GDPR) — you may request your data in a structured, commonly used, machine-readable format.</li>
+            <li><strong>Right to withdraw consent</strong> (Art. 7(3) GDPR) — where processing relies on consent, you may withdraw it at any time without affecting the lawfulness of prior processing.</li>
+            <li><strong>Right to lodge a complaint</strong> — you may file a complaint with your local data protection supervisory authority. In Italy, this is the <em>Garante per la protezione dei dati personali</em> (www.garanteprivacy.it).</li>
           </ul>
           <p>
-            AGORÀ may need to verify identity before acting on certain requests and may refuse or limit a request where
-            applicable law permits or requires such limitation.
+            To exercise any of these rights, contact <strong>privacy@agorapolis.org</strong>. AGORÀ may need to verify
+            your identity before acting on certain requests and will respond within 30 days as required by law.
           </p>
         </section>
-
         <section class="section" id="children">
-          <h2>12. Children and minimum age</h2>
+          <h2>15. Children and minimum age</h2>
           <p>
-            AGORÀ is not intended for users under the age of <strong>16</strong>. The platform’s own rules require users to be at least 16.
-            If AGORÀ becomes aware that it has collected personal data from a person below the permitted minimum age in violation
-            of its platform rules, AGORÀ may restrict or remove the account and take reasonable steps to delete or limit the related data,
-            subject to legal retention requirements.
+
+            AGORÀ is not intended for users under the age of <strong>16</strong>. The platform's own rules require users to be at least 16.
+            By creating an account, users confirm they meet this age requirement.
+            If AGORÀ becomes aware that it has collected personal data from a person below the permitted minimum age,
+            AGORÀ will restrict or remove the account and take reasonable steps to delete the related data.
           </p>
         </section>
-
         <section class="section" id="changes">
-          <h2>13. Policy updates</h2>
+          <h2>16. Policy updates</h2>
           <p>
+
             AGORÀ may update this Privacy Policy from time to time to reflect legal, operational, technical, or product changes.
-            The most recent version should be made available on this page, together with an updated effective date.
+            The most recent version will always be available on this page, together with the updated effective date.
           </p>
           <p>
-            Where required by law or appropriate for the importance of the change, AGORÀ may provide additional notice or request
-            renewed acknowledgment.
+            Where required by law or appropriate for the significance of the change, AGORÀ will provide additional notice
+            or request renewed acknowledgment.
           </p>
         </section>
-
         <section class="section" id="contact">
-          <h2>14. Contact for privacy matters</h2>
-          <p>
-            Privacy-related requests, notices, or questions may be sent to:
-          </p>
-          <p>
-            <strong>[Insert privacy email address]</strong>
-          </p>
-          <p>
-            If AGORÀ later publishes a specific legal or data protection contact form, that channel may be used instead or in addition.
-          </p>
 
+          <h2>17. Contact for privacy matters</h2>
+          <p>
+            For any privacy-related requests, questions, or to exercise your data protection rights, contact:
+          </p>
+          <p>
+            <strong>privacy@agorapolis.org</strong>
+          </p>
+          <p>
+            AGORÀ will respond to all privacy inquiries within 30 days of receipt.
+          </p>
           <div class="mini-links">
+
             <a class="mini-link" href="terms.html">Terms of Service</a>
             <a class="mini-link" href="cookies.html">Cookies &amp; Storage Notice</a>
             <a class="mini-link" href="contact.html">Contact &amp; Legal Info</a>
@@ -712,8 +793,7 @@
     </section>
 
     <div class="footer-mini">
-      AGORÀ • privacy, transparency, and data responsibility<br>
-      Replace all bracketed placeholders before publishing this page publicly.
+      AGORÀ · privacy, transparency, and data responsibility
     </div>
   </main>
 </body>

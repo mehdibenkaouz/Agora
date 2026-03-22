@@ -1209,7 +1209,7 @@ export default {
                   },
                   {
                     type: "text",
-                    text: "Describe what you see in this image in detail. Focus on: are there any people? What are they wearing or not wearing? Is any body part exposed? Is there any bodily fluid visible? Is there anything sexual or violent? Be specific and clinical."
+                    text: "Is this image sexually explicit, pornographic, or does it show graphic nudity or graphic violence? Answer ONLY 'YES' or 'NO' followed by a one-sentence reason."
                   }
                 ]
               }
@@ -1217,21 +1217,10 @@ export default {
             max_tokens: 150
           });
 
-          const desc = (llamaResult?.response || "").toLowerCase();
-          const nsfwKeywords = [
-            'nude', 'naked', 'penis', 'genital', 'breast', 'nipple',
-            'semen', 'ejacul', 'cum ', 'sperm', 'bodily fluid',
-            'sexual', 'intercourse', 'coitus', 'oral sex', 'blowjob',
-            'erect', 'exposed', 'unclothed', 'undress',
-            'gore', 'blood', 'dismember', 'mutilat',
-            'pornograph', 'explicit', 'nsfw',
-            'vulva', 'vagina', 'anus', 'buttock',
-            'groin', 'phallic', 'genitalia', 'child abuse', 'minor', 'underage',
-            'child exploit', 'child porn', 'pedophil'
-          ];
-          const llamaNsfw = nsfwKeywords.some(kw => desc.includes(kw));
+          const desc = (llamaResult?.response || "").trim().toLowerCase();
+          const llamaNsfw = desc.startsWith("yes");
 
-          return json({ ok: true, nsfw: llamaNsfw, label: desc.substring(0, 200), confidence: llamaNsfw ? 0.95 : 0.05, tier: "llama" }, 200, ALLOWED_ORIGIN);
+          return json({ ok: true, nsfw: llamaNsfw, label: desc.substring(0, 200), confidence: llamaNsfw ? 0.90 : 0.05, tier: "llama" }, 200, ALLOWED_ORIGIN);
 
         } catch(e) {
           // Se AI fallisce, non bloccare l'utente
@@ -2061,7 +2050,8 @@ export default {
       if (url.pathname === "/api/admin/auth" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
         const password = String(body.password || "");
-        const userToken = String(body.user_token || ""); // token sessione Google
+        let userToken = String(body.user_token || "");
+        if (!userToken) userToken = getRequestToken(request);
 
         const adminPassword = String(env.ADMIN_PASSWORD || "");
         const stateSecret = String(env.STATE_SECRET || "");
@@ -2292,6 +2282,18 @@ export default {
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
+      // GET /api/bugs — pubblico, solo bug confermati/in_progress/resolved
+      if (url.pathname === "/api/bugs" && request.method === "GET") {
+        const rows = await env.dbagora.prepare(
+          `SELECT b.id, b.title, b.description, b.status, b.created_at,
+            COALESCE(NULLIF(TRIM(u.display_name),''), substr(u.email,1,instr(u.email,'@')-1)) AS reporter_name
+          FROM bugs b LEFT JOIN users u ON u.id = b.user_id
+          WHERE b.status IN ('confirmed','in_progress','resolved')
+          ORDER BY b.created_at DESC LIMIT 50`
+        ).all();
+        return json({ ok: true, bugs: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+      
       // GET /api/admin/bugs
       if (url.pathname === "/api/admin/bugs" && request.method === "GET") {
         const adm = await requireAdmin(request);
