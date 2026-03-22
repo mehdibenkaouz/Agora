@@ -728,8 +728,8 @@
   </main>
 
   <script>
-    const API_BASE  = "https://agora-api.convergegame.workers.dev";
-    const TOKEN_KEY = "agora_token";
+    const API_BASE  = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
+    const TOKEN_KEY = "agora_logged_in";
     const THEME_KEY = "agora_theme";
     const ADMIN_EMAIL = "TUAMAILQUI@example.com"; /* ← sostituisci con la tua mail admin */
 
@@ -810,11 +810,11 @@
     // ── API ──────────────────────────────────────────────────
     async function api(path, opts = {}) {
       const headers = Object.assign({}, opts.headers || {});
-      const token = getToken();
-      if (token) headers["Authorization"] = "Bearer " + token;
       if (!(opts.body instanceof FormData) && !headers["Content-Type"])
         headers["Content-Type"] = "application/json";
-      const res  = await fetch(API_BASE + path, { ...opts, headers });
+      const fetchOpts = { ...opts, headers };
+      if (!API_BASE) fetchOpts.credentials = "include";
+      const res  = await fetch((API_BASE || "") + path, fetchOpts);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error || "http_" + res.status);
       return data;

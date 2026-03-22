@@ -700,10 +700,10 @@ function doAI(){
 // ── Online matchmaking ───────────────────────────────────────────
 const GAME_KEY = "chess";
 let onlineMode=false, onlineSessionId="", onlineVersion=0, mySeat="";
-const API_BASE = "https://agora-api.convergegame.workers.dev";
+const API_BASE = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
 let lobbyTimer=null, sessionTimer=null;
 function getAuthToken(){
-  return localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("agora_token") || "";
+  return localStorage.getItem("agora_logged_in") || "";
 }
 function serializeGameState(){ return { board, turn, castling, enPassant, history, gameOver, capturedW, capturedB, moveLogHtml: document.getElementById("moveLog").innerHTML }; }
 function applySerializedState(state){ if(!state) return; board=state.board; turn=state.turn||"w"; castling=state.castling||{wK:true,wQ:true,bK:true,bQ:true}; enPassant=state.enPassant||null; history=state.history||[]; gameOver=!!state.gameOver; capturedW=state.capturedW||[]; capturedB=state.capturedB||[]; selected=null; legalMoves=[]; aiThinking=false; document.getElementById("moveLog").innerHTML=state.moveLogHtml||""; renderBoard(); updateUI(); setStatus(gameOver ? document.getElementById("statusBar").textContent : getOnlineTurnStatus()); }
@@ -719,15 +719,16 @@ async function apiJson(url, options={}){
   }
 
   const finalUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
-
-  const res = await fetch(finalUrl, {
+  const fetchOpts = {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
       ...(options.headers || {})
     }
-  });
+  };
+  if (!API_BASE) fetchOpts.credentials = "include";
+
+  const res = await fetch(finalUrl, fetchOpts);
 
   const data = await res.json().catch(() => ({}));
   return { res, data };

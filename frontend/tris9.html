@@ -591,7 +591,7 @@ const GAME_KEY = "tris9";
 let onlineMode=false, onlineSessionId="", onlineVersion=0, mySeat="";
 let lobbyTimer=null, sessionTimer=null;
 function getAuthToken(){
-  return localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("agora_token") || "";
+  return localStorage.getItem("agora_logged_in") || "";
 }
 function serializeGameState(){
   return { cells, miniWon, megaWon, turn, nextBoard, scoreX, scoreO };
@@ -644,25 +644,20 @@ function showLobby(waiting=true){
   document.getElementById("lobbyNote").textContent = waiting ? "No players online." : "Starting the session…";
 }
 function hideLobby(){ document.getElementById("lobbyOverlay").classList.remove("open"); }
-const API_BASE = "https://agora-api.convergegame.workers.dev";
+const API_BASE = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
 
 async function apiJson(path, opts={}){
-  const token =
-    localStorage.getItem("token") ||
-    localStorage.getItem("authToken") ||
-    localStorage.getItem("agora_token") ||
-    "";
+  const token = getAuthToken();
 
   const headers = {
     "Content-Type": "application/json",
     ...(opts.headers || {})
   };
-  if (token) headers.Authorization = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...opts,
-    headers
-  });
+  const fetchOpts = { ...opts, headers };
+  if (!API_BASE) fetchOpts.credentials = "include";
+
+  const res = await fetch(`${API_BASE}${path}`, fetchOpts);
 
   let data = null;
   try { data = await res.json(); }

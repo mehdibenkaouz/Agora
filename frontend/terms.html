@@ -1134,15 +1134,14 @@
 
     localStorage.setItem(TERMS_ACCEPT_KEY, JSON.stringify(payload));
 
-    const token = localStorage.getItem("agora_token");
-    if (token) {
+    const apiBase = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
+    const isLogged = localStorage.getItem("agora_logged_in");
+    if (isLogged) {
       try {
-        await fetch("https://agora-api.convergegame.workers.dev/api/terms/accept", {
+        await fetch((apiBase || "") + "/api/terms/accept", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": "Bearer " + token
-          },
+          headers: { "Content-Type": "application/json" },
+          credentials: apiBase ? "omit" : "include",
           body: JSON.stringify({ version: TERMS_VERSION, lang: currentLang })
         });
       } catch (e) {

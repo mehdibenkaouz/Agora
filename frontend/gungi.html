@@ -726,10 +726,10 @@ function doAI(){
 // ── Online matchmaking ───────────────────────────────────────────
 const GAME_KEY = "gungi";
 let onlineMode=false, onlineSessionId="", onlineVersion=0, mySeat="";
-const API_BASE = "https://agora-api.convergegame.workers.dev";
+const API_BASE = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
 let lobbyTimer=null, sessionTimer=null;
 function getAuthToken(){
-  return localStorage.getItem("token") || localStorage.getItem("authToken") || localStorage.getItem("agora_token") || "";
+  return localStorage.getItem("agora_logged_in") || "";
 }
 function serializeGameState(){
   return {
@@ -787,15 +787,16 @@ async function apiJson(url, options={}){
   }
 
   const finalUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
-
-  const res = await fetch(finalUrl, {
+  const fetchOpts = {
     ...options,
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
       ...(options.headers || {})
     }
-  });
+  };
+  if (!API_BASE) fetchOpts.credentials = "include";
+
+  const res = await fetch(finalUrl, fetchOpts);
 
   const data = await res.json().catch(() => ({}));
   return { res, data };

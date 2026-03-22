@@ -2901,8 +2901,9 @@ function closeLangMenu() {
 }
 
 // ── API ────────────────────────────────────────────────────────────
-const API_BASE="https://agora-api.convergegame.workers.dev";
-const TOKEN_KEY="agora_token";
+const API_BASE=location.hostname==="agorapolis.org"||location.hostname==="www.agorapolis.org"?"":"https://agora-api.convergegame.workers.dev";
+const TOKEN_KEY="agora_logged_in";
+function _mapFetch(path,opts={}){const h=opts.headers||{};const o={...opts,headers:h};if(!API_BASE)o.credentials="include";return fetch((API_BASE||"")+path,o);}
 // ── Elegant confirm & toast ──────────────────────────────────────
 function agoraConfirm({icon="🗑️",title=tr("confirmDefaultTitle"),msg=tr("confirmDefaultMsg"),ok=tr("confirmDefaultOk"),cancel=tr("confirmDefaultCancel"),danger=false}={}){
   return new Promise(resolve=>{
@@ -2940,7 +2941,7 @@ let currentUserId=null;
   const token=localStorage.getItem(TOKEN_KEY);
   if(!token) return;
   try{
-    const res=await fetch(`${API_BASE}/api/me`,{headers:{"Authorization":"Bearer "+token}});
+    const res=await _mapFetch("/api/me");
     const data=await res.json();
     if(data.ok&&data.user) currentUserId=data.user.id;
   }catch(e){}
@@ -2955,7 +2956,7 @@ function isDarkTheme(){
 async function loadSessions(){
   document.getElementById("sessionCount").textContent=tr("loadingSessions");
   try{
-    const res=await fetch(`${API_BASE}/api/map/sessions`);
+    const res=await _mapFetch("/api/map/sessions");
     const data=await res.json();
     if(data.ok){sessions=data.sessions||[];}
     else{sessions=[];}
@@ -3156,9 +3157,8 @@ window.deleteSession=async function(id){
   const token=localStorage.getItem(TOKEN_KEY);
   if(!token){agoraToast(tr("loginRequired"));return;}
   try{
-    const res=await fetch(`${API_BASE}/api/map/sessions/${id}`,{
-      method:"DELETE",
-      headers:{"Authorization":"Bearer "+token}
+    const res=await _mapFetch(`/api/map/sessions/${id}`,{
+      method:"DELETE"
     });
     const data=await res.json();
     if(data.ok){
@@ -3299,11 +3299,11 @@ document.getElementById("modalSubmit").addEventListener("click",async()=>{
   btn.textContent=tr("publishing");btn.disabled=true;
 
   try{
-    const res=await fetch(`${API_BASE}/api/map/sessions`,{
-      method:"POST",
-      headers:{"Content-Type":"application/json",...(token?{"Authorization":"Bearer "+token}:{})},
-      body:JSON.stringify({name,type,place,topic,tags:[...selectedTags],duration,lat:pendingLat||userLat,lng:pendingLng||userLng})
-    });
+      const res=await _mapFetch("/api/map/sessions",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify(bodyObj)
+      });
     const data=await res.json();
     if(data.ok){
       document.getElementById("modalOverlay").classList.remove("open");
