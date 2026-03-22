@@ -2,13 +2,23 @@ export default {
   async fetch(request, env, ctx) {
     // VARIABILE SISTEMA DI MANUTENZIONE
     const MAINTENANCE_MODE = false;
-    const ADMIN_EMAIL = "risposte04@gmail.com";
+    const ADMIN_EMAIL = String(env.ADMIN_EMAIL || "").trim().toLowerCase();
+    
     // ------ FINE VARIABILE
     const origin = request.headers.get("Origin") || "";
     const ALLOWED = ["https://agorapolis.org", "https://www.agorapolis.org"];
     const ALLOWED_ORIGIN = origin.endsWith(".pages.dev") || ALLOWED.includes(origin) ? origin : ALLOWED[0];
     const url = new URL(request.url);
 
+    if (!ADMIN_EMAIL) {
+      return new Response("Server misconfigured", {
+        status: 500,
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          ...securityHeaders(ALLOWED_ORIGIN)
+        }
+      });
+    }
     // SISTEMA DI MANUTENZIONE
     if (MAINTENANCE_MODE) {
       return new Response(
@@ -26,9 +36,6 @@ export default {
       );
     }
 
-    if (MAINTENANCE_MODE && user.email !== ADMIN_EMAIL) {
-      return json({ ok:false, error:"maintenance" }, 503, ALLOWED_ORIGIN);
-    }
     // --- FINE SISTEMA DI MANUTENZIONE ---
     // --- CORS ---
     if (request.method === "OPTIONS") {
@@ -60,6 +67,13 @@ export default {
           const emailRaw = String(body.email || "").trim().toLowerCase();
           if (!emailRaw || !emailRaw.includes("@")) {
             return json({ ok: false, error: "invalid_email" }, 400, ALLOWED_ORIGIN);
+          }
+          const existingUser = await env.dbagora.prepare(
+            "SELECT COALESCE(banned, 0) AS banned FROM users WHERE email = ?1 LIMIT 1"
+          ).bind(emailRaw).first();
+
+          if (Number(existingUser?.banned || 0) !== 0) {
+            return json({ ok: false, error: "banned" }, 403, ALLOWED_ORIGIN);
           }
 
           // ── Turnstile verification ──
@@ -179,10 +193,23 @@ export default {
         await env.dbagora.prepare("UPDATE otp_codes SET used = 1 WHERE id = ?1").bind(otp.id).run();
 
         // Crea o trova l'utente
+
         const now = new Date().toISOString();
         const existing = await env.dbagora.prepare(
-          "SELECT id FROM users WHERE email = ?1"
+          "SELECT id, COALESCE(banned, 0) AS banned FROM users WHERE email = ?1 LIMIT 1"
         ).bind(emailRaw).first();
+
+        if (Number(existing?.banned || 0) !== 0) {
+          await env.dbagora.prepare(
+            "DELETE FROM sessions WHERE user_id = ?1"
+          ).bind(String(existing.id)).run();
+
+          await env.dbagora.prepare(
+            "DELETE FROM admin_sessions WHERE user_id = ?1"
+          ).bind(String(existing.id)).run();
+
+          return json({ ok: false, error: "banned" }, 403, ALLOWED_ORIGIN);
+        }
 
         let finalUserId = existing?.id;
         if (!finalUserId) {
@@ -962,7 +989,7 @@ export default {
         auth.searchParams.set("state", state);
         auth.searchParams.set("prompt", "select_account");
         auth.searchParams.set("redirect_uri", env.GOOGLE_REDIRECT_URI);
-        return new Response(null, { status: 302, headers: { "Location": back.toString(), ...securityHeaders(ALLOWED_ORIGIN) } });
+        return new Response(null, { status: 302, headers: { "Location": auth.toString(), ...securityHeaders(ALLOWED_ORIGIN) } });
       }
 
       if (url.pathname === "/api/auth/google/callback" && request.method === "GET") {
@@ -1002,11 +1029,37 @@ export default {
         const sub = String(info.sub || "");
         const name = String(info.name || "");
         const picture = String(info.picture || "");
+        
         if (!email || !sub) return new Response("Missing user info", { status: 400, headers: {"Content-Type": "text/plain; charset=utf-8", ...securityHeaders(ALLOWED_ORIGIN)}});
-
+        
         const now = new Date().toISOString();
-        let user = await env.dbagora.prepare("SELECT id FROM users WHERE google_sub = ?1").bind(sub).first();
-        if (!user) user = await env.dbagora.prepare("SELECT id FROM users WHERE email = ?1").bind(email).first();
+        let user = await env.dbagora.prepare(
+          "SELECT id, COALESCE(banned, 0) AS banned FROM users WHERE google_sub = ?1 LIMIT 1"
+        ).bind(sub).first();
+
+        if (!user) {
+          user = await env.dbagora.prepare(
+            "SELECT id, COALESCE(banned, 0) AS banned FROM users WHERE email = ?1 LIMIT 1"
+          ).bind(email).first();
+        }
+
+        if (Number(user?.banned || 0) !== 0) {
+          await env.dbagora.prepare(
+            "DELETE FROM sessions WHERE user_id = ?1"
+          ).bind(String(user.id)).run();
+
+          await env.dbagora.prepare(
+            "DELETE FROM admin_sessions WHERE user_id = ?1"
+          ).bind(String(user.id)).run();
+
+          return new Response("Banned", {
+            status: 403,
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+              ...securityHeaders(ALLOWED_ORIGIN)
+            }
+          });
+        }
 
         let userId = user?.id;
         if (!userId) {
@@ -1034,22 +1087,42 @@ export default {
         return new Response(null, { status: 302, headers: { "Location": back.toString(), ...securityHeaders(ALLOWED_ORIGIN) } });
       }
 
-      if (url.pathname === "/api/debug/oauth" && request.method === "GET") {
-        const keys = Object.keys(env || {});
-        const cid = env.GOOGLE_CLIENT_ID || "";
-        const redir = env.GOOGLE_REDIRECT_URI || "";
-        return json({ ok: true, build_tag: "DEBUG_KEYS_V2", env_keys: keys, google_client_id_len: cid.length, client_id_present: !!cid, client_id_suffix_ok: cid.endsWith(".apps.googleusercontent.com"), redirect_uri: redir, frontend_origin: env.FRONTEND_ORIGIN || "" }, 200, ALLOWED_ORIGIN);
-      }
+
 
       // ── MEDIA ────────────────────────────────────────────────────────
       if (url.pathname.startsWith("/media/") && request.method === "GET") {
         const key = decodeURIComponent(url.pathname.slice("/media/".length));
-        if (!key) return new Response("Not found", { status: 404 });
+
+        if (!key) {
+          return new Response("Not found", {
+            status: 404,
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+              ...securityHeaders(ALLOWED_ORIGIN)
+            }
+          });
+        }
+
         const obj = await env.AGORA_MEDIA.get(key);
-        if (!obj) return new Response("Not found", { status: 404 });
+
+        if (!obj) {
+          return new Response("Not found", {
+            status: 404,
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+              ...securityHeaders(ALLOWED_ORIGIN)
+            }
+          });
+        }
+
         return new Response(obj.body, {
-          headers: { "Content-Type": obj.httpMetadata?.contentType || "application/octet-stream", "Cache-Control": "public, max-age=31536000, immutable" },
+          headers: {
+            "Content-Type": obj.httpMetadata?.contentType || "application/octet-stream",
+            "Cache-Control": "public, max-age=31536000, immutable",
+            ...securityHeaders(ALLOWED_ORIGIN)
+          }
         });
+        
       }
 
       if (url.pathname === "/api/media/upload" && request.method === "POST") {
@@ -2013,6 +2086,18 @@ export default {
         const password = String(body.password || "");
         const userToken = String(body.user_token || ""); // token sessione Google
 
+        const adminPassword = String(env.ADMIN_PASSWORD || "");
+        const stateSecret = String(env.STATE_SECRET || "");
+
+        if (!adminPassword || !stateSecret) {
+          return new Response("Server misconfigured", {
+            status: 500,
+            headers: {
+              "Content-Type": "text/plain; charset=utf-8",
+              ...securityHeaders(ALLOWED_ORIGIN)
+            }
+          });
+        }
         // Verifica che chi tenta sia l'utente admin
         const session = await env.dbagora.prepare(
           `SELECT s.user_id, u.email FROM sessions s JOIN users u ON u.id = s.user_id
@@ -2020,31 +2105,74 @@ export default {
         ).bind(userToken, new Date().toISOString()).first();
 
         if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
-        if (session.email !== env.ADMIN_EMAIL) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        const sessionEmail = String(session.email || "").trim().toLowerCase();
+        if (sessionEmail !== ADMIN_EMAIL) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
 
         // Confronto password con timing-safe HMAC
-        const expectedHash = await hmac(env.ADMIN_PASSWORD, env.STATE_SECRET);
-        const providedHash  = await hmac(password, env.STATE_SECRET);
+        const expectedHash = await hmac(adminPassword, stateSecret);
+        const providedHash = await hmac(password, stateSecret);
         if (expectedHash !== providedHash) return json({ ok: false, error: "wrong_password" }, 403, ALLOWED_ORIGIN);
 
         // Emetti token admin (valido 2 ore)
         const adminToken = crypto.randomUUID();
-        const expiresAt  = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+        const nowIso = new Date().toISOString();
+        const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+
         await env.dbagora.prepare(
-          "INSERT INTO admin_sessions (token, created_at, expires_at) VALUES (?1,?2,?3)"
-        ).bind(adminToken, new Date().toISOString(), expiresAt).run();
+          "DELETE FROM admin_sessions WHERE expires_at <= ?1"
+        ).bind(nowIso).run();
+
+        await env.dbagora.prepare(
+          "DELETE FROM admin_sessions WHERE user_id = ?1"
+        ).bind(String(session.user_id)).run();
+
+        await env.dbagora.prepare(
+          
+          "INSERT INTO admin_sessions (token, user_id, created_at, expires_at) VALUES (?1,?2,?3,?4)"
+        ).bind(adminToken, String(session.user_id), nowIso, expiresAt).run();
 
         return json({ ok: true, admin_token: adminToken, expires_at: expiresAt }, 200, ALLOWED_ORIGIN);
       }
 
+      // POST /api/admin/logout — invalida la sessione admin corrente
+      if (url.pathname === "/api/admin/logout" && request.method === "POST") {
+        const admin = await requireAdmin(request);
+        if (!admin) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        await env.dbagora.prepare(
+          "DELETE FROM admin_sessions WHERE token = ?1"
+        ).bind(String(admin.token)).run();
+
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
       // Helper: verifica admin token per le route seguenti
       async function requireAdmin(req) {
-        const a = req.headers.get("X-Admin-Token") || "";
-        if (!a) return null;
-        return await env.dbagora.prepare(
-          "SELECT token FROM admin_sessions WHERE token = ?1 AND expires_at > ?2"
-        ).bind(a, new Date().toISOString()).first();
-      }
+      const a = String(req.headers.get("X-Admin-Token") || "").trim();
+      if (!a) return null;
+
+      const row = await env.dbagora.prepare(`
+        SELECT
+          s.token,
+          s.user_id,
+          s.expires_at,
+          u.email,
+          COALESCE(u.banned, 0) AS banned
+        FROM admin_sessions s
+        JOIN users u ON u.id = s.user_id
+        WHERE s.token = ?1
+          AND s.expires_at > ?2
+        LIMIT 1
+      `).bind(a, new Date().toISOString()).first();
+
+      if (!row) return null;
+
+      const email = String(row.email || "").trim().toLowerCase();
+      if (email !== ADMIN_EMAIL) return null;
+      if (Number(row.banned || 0) !== 0) return null;
+
+      return row;
+    }
 
       // GET /api/admin/spam — lista spam flags
       if (url.pathname === "/api/admin/spam" && request.method === "GET") {
@@ -2136,9 +2264,15 @@ export default {
         if (!userId) return json({ ok: false, error: "missing_user_id" }, 400, ALLOWED_ORIGIN);
 
         await env.dbagora.prepare("UPDATE users SET banned = 1 WHERE id = ?1").bind(userId).run();
-        // Invalida tutte le sessioni dell'utente
+
+        // Invalida tutte le sessioni utente
         await env.dbagora.prepare("DELETE FROM sessions WHERE user_id = ?1").bind(userId).run();
+        
+        // Invalida anche eventuali sessioni admin
+        await env.dbagora.prepare("DELETE FROM admin_sessions WHERE user_id = ?1").bind(userId).run();
+
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
+
       }
 
       // DELETE /api/admin/ban — rimuovi ban
