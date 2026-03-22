@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500&family=Cinzel:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&display=swap" rel="stylesheet">
   <script src="/shared-theme.js" defer></script>
-  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+  <!-- Turnstile loaded lazily on login modal open -->
   
   
   <style>
@@ -2078,9 +2078,9 @@
 
       <!-- Utenti bloccati -->
       <div class="blocked-section" id="blockedSection" style="display:none;">
-        <div class="blocked-section-title">Utenti bloccati</div>
+        <div class="blocked-section-title">Blocked users</div>
         <div class="blocked-list" id="blockedList">
-          <div class="blocked-empty">Caricamento…</div>
+          <div class="blocked-empty">Loading…</div>
         </div>
 </div>
 
@@ -2329,11 +2329,19 @@ const emailLoginForm = document.getElementById("emailLoginForm");
 const emailInput = document.getElementById("emailInput");
 const passwordInput = document.getElementById("passwordInput");
 
+let _turnstileLoaded = false;
 function openModal(){
   authModal.classList.add("open");
   authModal.setAttribute("aria-hidden","false");
   closeMenu();
   setTimeout(()=> emailInput && emailInput.focus(), 0);
+  if (!_turnstileLoaded) {
+        _turnstileLoaded = true;
+        const s = document.createElement("script");
+        s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+        s.async = true;
+        document.head.appendChild(s);
+      }
 }
 
 function closeModal(){
@@ -2842,7 +2850,7 @@ async function loadBlockedUsers() {
 
     const blocks = data.blocks || [];
     if (blocks.length === 0) {
-      list.innerHTML = "<div class='blocked-empty'>Nessun utente bloccato.</div>";
+      list.innerHTML = "<div class='blocked-empty'>No users blocked</div>";
       return;
     }
 
@@ -2858,11 +2866,11 @@ async function loadBlockedUsers() {
              alt="${b.blocked_name}" />
         <div class="blocked-info">
           <div class="blocked-name">${b.blocked_name}</div>
-          <div class="blocked-meta">${b.blocked_email} · bloccato il ${date}</div>
+          <div class="blocked-meta">${b.blocked_email} · blocked on ${date}</div>
           ${b.reason ? `<div class="blocked-meta" style="margin-top:3px;font-style:italic;">"${b.reason.slice(0,80)}${b.reason.length>80?'…':''}"</div>` : ""}
         </div>
         <span class="blocked-type-badge">${typeLabel}</span>
-        <button class="unblock-btn" data-block-id="${b.block_id}">Sblocca</button>
+        <button class="unblock-btn" data-block-id="${b.block_id}">Unblock</button>
       `;
       row.querySelector(".unblock-btn").addEventListener("click", async (e) => {
         const btn = e.currentTarget;
@@ -2872,14 +2880,14 @@ async function loadBlockedUsers() {
           await api("/api/blocks", { method: "DELETE", body: JSON.stringify({ block_id: blockId }) });
           await loadBlockedUsers();
         } catch(err) {
-          btn.disabled = false; btn.textContent = "Sblocca";
-          alert("Errore: " + (err?.message || err));
+          btn.disabled = false; btn.textContent = "Unblock";
+          alert("Error: " + (err?.message || err));
         }
       });
       list.appendChild(row);
     });
   } catch(err) {
-    list.innerHTML = "<div class='blocked-empty'>Errore nel caricamento.</div>";
+    list.innerHTML = "<div class='blocked-empty'>Error loading blocked users.</div>";
   }
 }
   
