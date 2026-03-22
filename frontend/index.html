@@ -7362,7 +7362,11 @@ Try again after ${until.toLocaleTimeString()}.`);
       createPostPublishBtn.disabled = true;
 
       try {
+        if (selectedImages.some(it => !it.uploadedUrl && !it.blocked)) {
+          createPostPublishBtn.textContent = "Image control…";
+        }
         await uploadAllSelectedImagesAndSwapSrc();
+        createPostPublishBtn.textContent = "Publishing…";
         // Pulisci i tag dell'editor prima di salvare: rimuovi .tag-remove e unwrap .tagged-segment
         const editorClone = createPostContent.cloneNode(true);
         editorClone.querySelectorAll(".tag-remove").forEach(el => el.remove());
