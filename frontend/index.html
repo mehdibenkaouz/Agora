@@ -284,9 +284,11 @@
     .composer-card {
       padding: 18px 22px 22px;
       min-height: 600px;
+      max-height: calc(100vh - var(--topbar-h) - 40px);
       display: flex;
       flex-direction: column;
       gap: 18px;
+      overflow: hidden;
     }
 
     .hashtags {
@@ -828,7 +830,8 @@
 
     .rt-editor{
       min-height: 180px;
-      max-height: 38vh;     /* non cresce infinito */
+      max-height: none;
+      flex: 1 1 auto;
       overflow: auto;       /* scroll interno */
       border: 1px solid rgba(0,0,0,0.10);
       background: rgba(248,247,243,0.92);

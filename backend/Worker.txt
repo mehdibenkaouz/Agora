@@ -225,7 +225,9 @@ export default {
           "INSERT INTO sessions (token, user_id, created_at, expires_at) VALUES (?1, ?2, ?3, ?4)"
         ).bind(token, finalUserId, now, expiresAt).run();
 
-        return json({ ok: true, token, user: { id: finalUserId, email: emailRaw } }, 200, ALLOWED_ORIGIN);
+        const loginRes = json({ ok: true, token, user: { id: finalUserId, email: emailRaw } }, 200, ALLOWED_ORIGIN);
+        loginRes.headers.set("Set-Cookie", sessionCookie(token));
+        return loginRes;
       }
       
       const singleCommentMatch = url.pathname.match(/^\/api\/comments\/([^/]+)$/);
@@ -245,9 +247,25 @@ export default {
         return json({ ok: true, comment: c }, 200, ALLOWED_ORIGIN);
       }
 
+      // ── LOGOUT ──
+      if (url.pathname === "/api/logout" && request.method === "POST") {
+        let token = getRequestToken(request);
+        if (!token) {
+          const cookies = request.headers.get("Cookie") || "";
+          const m = cookies.match(/(?:^|;\s*)agora_session=([^\s;]+)/);
+          if (m) token = m[1];
+        }
+        if (token) {
+          await env.dbagora.prepare("DELETE FROM sessions WHERE token = ?1").bind(token).run();
+        }
+        const logoutRes = json({ ok: true }, 200, ALLOWED_ORIGIN);
+        logoutRes.headers.set("Set-Cookie", clearSessionCookie());
+        return logoutRes;
+      }
+
       if (url.pathname === "/api/me" && request.method === "GET") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const row = await env.dbagora.prepare(
@@ -276,8 +294,8 @@ export default {
       }
 
       if (url.pathname === "/api/profile" && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
@@ -307,8 +325,8 @@ export default {
 
       // ── DELETE ACCOUNT ───────────────────────────────────────────────
       if (url.pathname === "/api/account" && request.method === "DELETE") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
@@ -448,8 +466,8 @@ export default {
 
       // ── POSTS: POST ──────────────────────────────────────────────────
       if (url.pathname === "/api/posts" && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
@@ -535,8 +553,7 @@ export default {
 
 // ── POSTS: GET ───────────────────────────────────────────────────
       if (url.pathname === "/api/posts" && request.method === "GET") {
-        const authHeader = request.headers.get("Authorization") || "";
-        const feedToken  = parseBearer(authHeader);
+        const feedToken = getRequestToken(request);
         const feedSession = feedToken ? await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(feedToken, new Date().toISOString()).first() : null;
@@ -625,8 +642,7 @@ export default {
 
       // ── MY POSTS: GET /api/my/posts ──────────────────────────────────
       if (url.pathname === "/api/my/posts" && request.method === "GET") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -655,8 +671,8 @@ export default {
         const postId = decodeURIComponent(postCommentsMatch[1] || "").trim();
         if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
 
-        const authHeaderC = request.headers.get("Authorization") || "";
-        const feedTokenC  = parseBearer(authHeaderC);
+
+        const feedTokenC = getRequestToken(request);
         const feedSessionC = feedTokenC ? await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(feedTokenC, new Date().toISOString()).first() : null;
@@ -699,8 +715,7 @@ export default {
 
       // ── COMMENTS: POST ───────────────────────────────────────────────
       if (postCommentsMatch && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
@@ -798,8 +813,7 @@ export default {
       // ── DELETE COMMENT ───────────────────────────────────────────────
       const commentDeleteMatch = url.pathname.match(/^\/api\/posts\/([^/]+)\/comments\/([^/]+)$/);
       if (commentDeleteMatch && request.method === "DELETE") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -835,8 +849,7 @@ export default {
 
       // ── DELETE ALL MY POSTS ──────────────────────────────────────────
       if (url.pathname === "/api/my/posts" && request.method === "DELETE") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
@@ -876,8 +889,8 @@ export default {
 
       // ── DELETE ALL MY COMMENTS ───────────────────────────────────────
       if (url.pathname === "/api/my/comments" && request.method === "DELETE") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
@@ -901,8 +914,8 @@ export default {
 
       // ── DELETE POST ──────────────────────────────────────────────────
       if (url.pathname.startsWith("/api/posts/") && request.method === "DELETE") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
 
         const session = await env.dbagora.prepare(
@@ -1049,7 +1062,9 @@ export default {
 
         const back = new URL(payload.returnTo);
         back.hash = "token=" + encodeURIComponent(token);
-        return new Response(null, { status: 302, headers: { "Location": back.toString(), ...securityHeaders(ALLOWED_ORIGIN) } });
+        const redirectRes = new Response(null, { status: 302, headers: { "Location": back.toString(), ...securityHeaders(ALLOWED_ORIGIN) } });
+        redirectRes.headers.set("Set-Cookie", sessionCookie(token));
+        return redirectRes;
       }
 
 
@@ -1091,8 +1106,8 @@ export default {
       }
 
       if (url.pathname === "/api/media/upload" && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1123,8 +1138,8 @@ export default {
       }
 
       if (url.pathname === "/api/media/delete" && request.method === "DELETE") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1141,8 +1156,8 @@ export default {
       }
 // ── NSFW CHECK (ResNet-50 + Llama Vision a 2 livelli) ──────────
       if (url.pathname === "/api/media/nsfw-check" && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1226,8 +1241,9 @@ export default {
 
       // ── SAVED POSTS ──────────────────────────────────────────────────
       if (url.pathname === "/api/saved" && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1245,8 +1261,9 @@ export default {
       }
 
       if (url.pathname === "/api/saved" && request.method === "DELETE") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1262,8 +1279,8 @@ export default {
       }
 
       if (url.pathname === "/api/saved" && request.method === "GET") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1291,8 +1308,8 @@ export default {
       // ═══════════════════════════════════════════════════════════════
       const logicalMatch = url.pathname.match(/^\/api\/posts\/([^/]+)\/logical$/);
       if (logicalMatch && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1367,9 +1384,9 @@ export default {
       // ═══════════════════════════════════════════════════════════════
       const segReportMatch = url.pathname.match(/^\/api\/segments\/([^/]+)\/report$/);
       if (segReportMatch && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
+        
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first();
@@ -1488,8 +1505,8 @@ export default {
       }
 
       if (url.pathname === "/api/map/sessions" && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1511,8 +1528,7 @@ export default {
       }
 
       if (url.pathname.startsWith("/api/map/sessions/") && request.method === "DELETE") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1758,8 +1774,7 @@ export default {
 
       // ── BLOCKS ───────────────────────────────────────────────────────
       if (url.pathname === "/api/blocks" && request.method === "GET") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1781,8 +1796,7 @@ export default {
       }
 
       if (url.pathname === "/api/blocks" && request.method === "DELETE") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1801,8 +1815,7 @@ export default {
       }
 
       if (url.pathname === "/api/blocks" && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1849,8 +1862,7 @@ export default {
 
       // ── BLOCK COMPLAINTS (utente bloccato invia reclamo) ─────────────
       if (url.pathname === "/api/complaints" && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1922,8 +1934,7 @@ export default {
 
         // ── NOTIFICATIONS: GET ───────────────────────────────────────────
       if (url.pathname === "/api/notifications" && request.method === "GET") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -1942,14 +1953,15 @@ export default {
 
       // ── NOTIFICATIONS: MARK ALL READ ─────────────────────────────────
       if (url.pathname === "/api/notifications/read" && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first();
         if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
+       
         await env.dbagora.prepare(
           "UPDATE notifications SET read = 1 WHERE user_id = ?1"
         ).bind(session.user_id).run();
@@ -1958,8 +1970,8 @@ export default {
 
       // ── SEARCH ───────────────────────────────────────────────────────
       if (url.pathname === "/api/search" && request.method === "GET") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         const session = token ? await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
         ).bind(token, new Date().toISOString()).first() : null;
@@ -2261,8 +2273,8 @@ export default {
 
       // POST /api/bugs — utente loggato segnala un bug
       if (url.pathname === "/api/bugs" && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+       
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -2461,8 +2473,8 @@ export default {
 
       // ── TERMS ACCEPT ─────────────────────────────────────────────────
       if (url.pathname === "/api/terms/accept" && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        
+        const token = getRequestToken(request);
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -2482,8 +2494,8 @@ export default {
       // ── POST REPORT: POST /api/posts/:id/report ─────────────────
       const postReportMatch = url.pathname.match(/^\/api\/posts\/([^/]+)\/report$/);
       if (postReportMatch && request.method === "POST") {
-        const auth = request.headers.get("Authorization") || "";
-        const token = parseBearer(auth);
+        const token = getRequestToken(request);
+
         if (!token) return json({ ok: false, error: "missing_token" }, 401, ALLOWED_ORIGIN);
         const session = await env.dbagora.prepare(
           "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
@@ -2664,6 +2676,13 @@ async function flagSpam(env, userId, actionType, intervals, score) {
 // ════════════════════════════════════════════════════════════════════════
 // ── HELPERS ─────────────────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════
+const COOKIE_NAME = "agora_session";
+function sessionCookie(token, maxAge = 60 * 60 * 24 * 30) {
+  return `${COOKIE_NAME}=${token}; HttpOnly; Secure; SameSite=Lax; Path=/api; Max-Age=${maxAge}`;
+}
+function clearSessionCookie() {
+  return `${COOKIE_NAME}=; HttpOnly; Secure; SameSite=Lax; Path=/api; Max-Age=0`;
+}
 
 function corsHeaders(origin) {
   return {
@@ -2705,6 +2724,15 @@ function json(obj, status, origin) {
 function parseBearer(authHeader) {
   const m = authHeader.match(/^Bearer\s+(.+)$/i);
   return m ? m[1].trim() : "";
+}
+
+function getRequestToken(request) {
+  const auth = request.headers.get("Authorization") || "";
+  const bearer = parseBearer(auth);
+  if (bearer) return bearer;
+  const cookies = request.headers.get("Cookie") || "";
+  const m = cookies.match(/(?:^|;\s*)agora_session=([^\s;]+)/);
+  return m ? m[1] : "";
 }
 
 async function signState(obj, secret) {
@@ -2753,7 +2781,12 @@ function safeJsonParse(value) {
 
 async function requireAuthUserId(request, env, allowedOrigin) {
   const auth = request.headers.get("Authorization") || "";
-  const token = parseBearer(auth);
+  let token = parseBearer(auth);
+  if (!token) {
+    const cookies = request.headers.get("Cookie") || "";
+    const m = cookies.match(/(?:^|;\s*)agora_session=([^\s;]+)/);
+    if (m) token = m[1];
+  }
   if (!token) {
     return { error: json({ ok: false, error: "missing_token" }, 401, allowedOrigin) };
   }
