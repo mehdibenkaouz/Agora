@@ -3302,7 +3302,7 @@ document.getElementById("modalSubmit").addEventListener("click",async()=>{
       const res=await _mapFetch("/api/map/sessions",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify(bodyObj)
+        body:JSON.stringify({name,topic,type,place,duration,lat:pendingLat,lng:pendingLng})
       });
     const data=await res.json();
     if(data.ok){
