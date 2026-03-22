@@ -844,9 +844,9 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const API_BASE   = "https://agora-api.convergegame.workers.dev";
+  const API_BASE   = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
   const ADMIN_KEY  = "agora_admin_token";
-  const USER_KEY   = "agora_token";
+  const USER_KEY   = "agora_logged_in";
 
   let adminToken   = localStorage.getItem(ADMIN_KEY) || "";
   let allUsers     = [];
@@ -862,7 +862,9 @@
   // ── API ─────────────────────────────────────────────────
   async function adminApi(path, opts = {}) {
     const headers = { "Content-Type": "application/json", "X-Admin-Token": adminToken, ...(opts.headers || {}) };
-    const res = await fetch(API_BASE + path, { ...opts, headers });
+    const fetchOpts = { ...opts, headers };
+    if (!API_BASE) fetchOpts.credentials = "include";
+    const res = await fetch((API_BASE || "") + path, fetchOpts);
     return res.json();
   }
 
@@ -903,11 +905,13 @@
     err.textContent = "";
 
     try {
-      const res = await fetch(API_BASE + "/api/admin/auth", {
+      const fetchOpts = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: pwd, user_token: userToken })
-      });
+        body: JSON.stringify({ password: pwd })
+      };
+      if (!API_BASE) fetchOpts.credentials = "include";
+      const res = await fetch((API_BASE || "") + "/api/admin/auth", fetchOpts);
       const data = await res.json();
 
       if (data.ok) {
