@@ -5390,11 +5390,28 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       accountMenu.setAttribute("aria-hidden", "true");
     }
 
+    let _turnstileLoaded = false;
+    window.onTurnstileLoad = function() {
+      if (typeof turnstile !== "undefined") {
+        turnstile.render('#turnstileWidget', {
+          sitekey: '0x4AAAAAACuGXLDK1aSz1OK_',
+          theme: 'auto',
+          size: 'flexible'
+        });
+      }
+    };
     function openModal() {
       authModal.classList.add("open");
       authModal.setAttribute("aria-hidden", "false");
       closeMenu();
       setTimeout(() => emailInput?.focus(), 0);
+      if (!_turnstileLoaded) {
+        _turnstileLoaded = true;
+        const s = document.createElement("script");
+        s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad";
+        s.async = true;
+        document.head.appendChild(s);
+      }
     }
     function closeModal() {
       authModal.classList.remove("open");
