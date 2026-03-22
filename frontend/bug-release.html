@@ -870,35 +870,22 @@
     // ── LOAD BUGS ────────────────────────────────────────────
     async function loadBugs() {
       try {
-        // Admin vede tutti i bug via endpoint admin; utenti normali vedono solo quelli confermati
         if (isAdmin()) {
-          const token = getToken();
           const adminToken = localStorage.getItem("agora_admin_token") || "";
-          // Prova endpoint admin se admin_token presente
           if (adminToken) {
-            const res = await fetch(API_BASE + "/api/admin/bugs", {
-              headers: { "X-Admin-Token": adminToken }
+            const res = await fetch((API_BASE || "") + "/api/admin/bugs", {
+              headers: { "X-Admin-Token": adminToken },
+              credentials: API_BASE ? "omit" : "include"
             });
             const data = await res.json().catch(() => ({}));
             if (data.ok) { renderBugs(data.bugs || []); return; }
           }
         }
-        // Fallback: endpoint pubblico (non esiste, quindi usiamo admin con graceful fallback)
-        // Per gli utenti normali mostriamo solo confirmed/in_progress/resolved recuperati da admin
-        // L'endpoint GET /api/releases è pubblico, ma per i bug usiamo /api/admin/bugs solo se admin
-        // Gli utenti normali vedono solo un sottoinsieme: confirmed + in_progress + resolved
-        const adminToken = localStorage.getItem("agora_admin_token") || "";
-        if (adminToken) {
-          const res = await fetch(API_BASE + "/api/admin/bugs", {
-            headers: { "X-Admin-Token": adminToken }
-          });
-          const data = await res.json().catch(() => ({}));
-          if (data.ok) { renderBugs(data.bugs || []); return; }
-        }
-        // Nessun accesso admin disponibile — mostra lista vuota con messaggio appropriato
-        bugList.innerHTML = `<div class="empty-box">Bug reports are visible once confirmed by the admin.</div>`;
+        const data = await api("/api/bugs");
+        renderBugs(data.bugs || []);
       } catch(e) {
-        bugList.innerHTML = `<div class="empty-box">Could not load bug reports.</div>`;
+        console.warn("loadBugs failed:", e);
+        bugList.innerHTML = `<div class="empty-box">Unable to load bug reports.</div>`;
       }
     }
 
