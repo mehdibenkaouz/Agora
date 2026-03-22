@@ -1,13 +1,41 @@
 export default {
   async fetch(request, env, ctx) {
+    // VARIABILE SISTEMA DI MANUTENZIONE
+    const MAINTENANCE_MODE = false;
+    const ADMIN_EMAIL = "risposte04@gmail.com";
+    // ------ FINE VARIABILE
     const origin = request.headers.get("Origin") || "";
     const ALLOWED = ["https://agorapolis.org", "https://www.agorapolis.org"];
     const ALLOWED_ORIGIN = origin.endsWith(".pages.dev") || ALLOWED.includes(origin) ? origin : ALLOWED[0];
     const url = new URL(request.url);
 
+    // SISTEMA DI MANUTENZIONE
+    if (MAINTENANCE_MODE) {
+      return new Response(
+        JSON.stringify({
+          ok: false,
+          error: "maintenance"
+        }),
+        {
+          status: 503,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            ...securityHeaders(ALLOWED_ORIGIN)
+          }
+        }
+      );
+    }
+
+    if (MAINTENANCE_MODE && user.email !== ADMIN_EMAIL) {
+      return json({ ok:false, error:"maintenance" }, 503, ALLOWED_ORIGIN);
+    }
+    // --- FINE SISTEMA DI MANUTENZIONE ---
     // --- CORS ---
     if (request.method === "OPTIONS") {
-      return new Response(null, { status: 204, headers: corsHeaders(ALLOWED_ORIGIN) });
+      return new Response(null, {
+        status: 204,
+        headers: securityHeaders(ALLOWED_ORIGIN)
+      });
     }
 
     try {
@@ -238,7 +266,7 @@ export default {
         const picture_url = String(body.picture_url || "").trim().slice(0, 1000);
 
         if (!display_name) return json({ ok: false, error: "invalid_display_name" }, 400, ALLOWED_ORIGIN);
-        if (picture_url && !/^https?:\/\//i.test(picture_url) && !picture_url.startsWith("/media/")) {
+        if (picture_url && !/^https:\/\//i.test(picture_url) && !picture_url.startsWith("/media/")) {
           return json({ ok: false, error: "invalid_picture_url" }, 400, ALLOWED_ORIGIN);
         }
 
@@ -924,7 +952,7 @@ export default {
       // ── GOOGLE AUTH ──────────────────────────────────────────────────
       if (url.pathname === "/api/auth/google/start" && request.method === "GET") {
         const returnTo = new URL(request.url).searchParams.get("returnTo") || env.FRONTEND_ORIGIN + "/";
-        if (!returnTo.startsWith(env.FRONTEND_ORIGIN)) return new Response("Invalid returnTo", { status: 400 });
+        if (!returnTo.startsWith(env.FRONTEND_ORIGIN)) return new Response("Invalid returnTo", { status: 400, headers: {"Content-Type": "text/plain; charset=utf-8", ...securityHeaders(ALLOWED_ORIGIN)}});
 
         const state = await signState({ returnTo, ts: Date.now() }, env.STATE_SECRET);
         const auth = new URL("https://accounts.google.com/o/oauth2/v2/auth");
@@ -934,18 +962,18 @@ export default {
         auth.searchParams.set("state", state);
         auth.searchParams.set("prompt", "select_account");
         auth.searchParams.set("redirect_uri", env.GOOGLE_REDIRECT_URI);
-        return Response.redirect(auth.toString(), 302);
+        return new Response(null, { status: 302, headers: { "Location": back.toString(), ...securityHeaders(ALLOWED_ORIGIN) } });
       }
 
       if (url.pathname === "/api/auth/google/callback" && request.method === "GET") {
         const qp = new URL(request.url).searchParams;
         const code = qp.get("code") || "";
         const state = qp.get("state") || "";
-        if (!code || !state) return new Response("Missing code/state", { status: 400 });
+        if (!code || !state) return new Response("Missing code/state", { status: 400, headers: {"Content-Type": "text/plain; charset=utf-8", ...securityHeaders(ALLOWED_ORIGIN)}});
 
         const payload = await verifyState(state, env.STATE_SECRET);
-        if (!payload) return new Response("Invalid state", { status: 400 });
-        if (Date.now() - payload.ts > 10 * 60 * 1000) return new Response("State expired", { status: 400 });
+        if (!payload) return new Response("Invalid state", { status: 400, headers: {"Content-Type": "text/plain; charset=utf-8", ...securityHeaders(ALLOWED_ORIGIN)}});
+        if (Date.now() - payload.ts > 10 * 60 * 1000) return new Response("State expired", { status: 400, headers: {"Content-Type": "text/plain; charset=utf-8", ...securityHeaders(ALLOWED_ORIGIN)}});
 
         const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
           method: "POST",
@@ -960,21 +988,21 @@ export default {
         });
 
         const tokenJson = await tokenRes.json();
-        if (!tokenRes.ok) return new Response("Token exchange failed", { status: 400 });
+        if (!tokenRes.ok) return new Response("Token exchange failed", { status: 400, headers: {"Content-Type": "text/plain; charset=utf-8", ...securityHeaders(ALLOWED_ORIGIN)}});
 
         const idToken = tokenJson.id_token;
-        if (!idToken) return new Response("No id_token", { status: 400 });
+        if (!idToken) return new Response("No id_token", { status: 400, headers: {"Content-Type": "text/plain; charset=utf-8", ...securityHeaders(ALLOWED_ORIGIN)}});
 
         const infoRes = await fetch("https://oauth2.googleapis.com/tokeninfo?id_token=" + encodeURIComponent(idToken));
         const info = await infoRes.json();
-        if (!infoRes.ok) return new Response("Invalid id_token", { status: 400 });
-        if (info.aud !== env.GOOGLE_CLIENT_ID) return new Response("Invalid aud", { status: 400 });
+        if (!infoRes.ok) return new Response("Invalid id_token", { status: 400, headers: {"Content-Type": "text/plain; charset=utf-8", ...securityHeaders(ALLOWED_ORIGIN)}});
+        if (info.aud !== env.GOOGLE_CLIENT_ID) return new Response("Invalid aud", { status: 400, headers: {"Content-Type": "text/plain; charset=utf-8", ...securityHeaders(ALLOWED_ORIGIN)}});
 
         const email = String(info.email || "").toLowerCase();
         const sub = String(info.sub || "");
         const name = String(info.name || "");
         const picture = String(info.picture || "");
-        if (!email || !sub) return new Response("Missing user info", { status: 400 });
+        if (!email || !sub) return new Response("Missing user info", { status: 400, headers: {"Content-Type": "text/plain; charset=utf-8", ...securityHeaders(ALLOWED_ORIGIN)}});
 
         const now = new Date().toISOString();
         let user = await env.dbagora.prepare("SELECT id FROM users WHERE google_sub = ?1").bind(sub).first();
@@ -1003,7 +1031,7 @@ export default {
 
         const back = new URL(payload.returnTo);
         back.hash = "token=" + encodeURIComponent(token);
-        return Response.redirect(back.toString(), 302);
+        return new Response(null, { status: 302, headers: { "Location": back.toString(), ...securityHeaders(ALLOWED_ORIGIN) } });
       }
 
       if (url.pathname === "/api/debug/oauth" && request.method === "GET") {
@@ -2546,10 +2574,30 @@ function corsHeaders(origin) {
   };
 }
 
+function securityHeaders(origin) {
+  return {
+    ...corsHeaders(origin),
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Frame-Options": "DENY",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=(), usb=(), accelerometer=(), gyroscope=()",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "Content-Security-Policy": [
+      "default-src 'none'",
+      "frame-ancestors 'none'",
+      "base-uri 'none'",
+      "form-action 'none'"
+    ].join("; ")
+  };
+}
+
 function json(obj, status, origin) {
   return new Response(JSON.stringify(obj), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8", ...corsHeaders(origin) },
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      ...securityHeaders(origin)
+    },
   });
 }
 
