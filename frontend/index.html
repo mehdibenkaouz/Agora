@@ -509,11 +509,14 @@
     .modal-backdrop.open{ display: flex; }
     .modal{
       width: min(540px, 100%);
+      max-height: calc(100vh - 36px);
       background: var(--panel);
       border: 1px solid var(--line);
       border-radius: 28px;
       box-shadow: var(--shadow);
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
     :root[data-theme="dark"] .modal{
       background: var(--panel);
@@ -576,7 +579,7 @@
       stroke-linecap: round; stroke-linejoin: round;
     }
 
-    .modal-body{ padding: 18px; display: grid; gap: 14px; }
+    .modal-body{ padding: 18px; display: grid; gap: 14px; overflow-y: auto; min-height: 0; }
 
     .oauth-btn{
       width: 100%;
@@ -767,6 +770,46 @@
   }
 
     @media (max-width: 480px){
+      .preview-grid{
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .preview-item{
+      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      aspect-ratio: 1;
+      background: rgba(0,0,0,0.04);
+    }
+    .preview-item img{
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 10px;
+    }
+    .preview-remove{
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 28px;
+      height: 28px;
+      border-radius: 999px;
+      border: none;
+      background: rgba(0,0,0,0.55);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .preview-remove svg{
+      width: 14px;
+      height: 14px;
+      stroke: #fff;
+      stroke-width: 2.4;
+      fill: none;
+    }
       .preview-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
@@ -887,8 +930,11 @@
 
     .img-node img{
       display: block;
-      max-width: 100%;
+      max-width: min(100%, 280px);
+      max-height: 200px;
+      width: auto;
       height: auto;
+      object-fit: contain;
       border-radius: 14px;
       border: 1px solid rgba(0,0,0,0.10);
     }
@@ -7132,11 +7178,11 @@ const logicalBtn = card.querySelector(".logical-btn");
         const item = document.createElement("div");
         item.className = "preview-item";
         item.innerHTML = img.isVideo
-          ? `<video src="${img.url}" muted style="width:100%;height:100%;object-fit:cover;border-radius:10px;"></video>
+          ? `<video src="${img.url}" muted style="max-width:140px;max-height:120px;object-fit:cover;border-radius:10px;display:block;"></video>
              <button type="button" class="preview-remove" aria-label="Remove">
                <svg viewBox="0 0 24 24"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
              </button>`
-          : `<img src="${img.url}" alt="Selected image" />
+          : `<img src="${img.url}" alt="Selected image" style="max-width:140px;max-height:120px;object-fit:cover;border-radius:10px;display:block;" />
              <button type="button" class="preview-remove" aria-label="Remove">
                <svg viewBox="0 0 24 24"><path d="M6 6l12 12"/><path d="M18 6L6 18"/></svg>
              </button>`;
