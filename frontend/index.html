@@ -3688,8 +3688,8 @@
   </div>
 </div>
   <script>
-    const API_BASE = "https://agora-api.convergegame.workers.dev";
-    const TOKEN_KEY = "agora_token";
+    const API_BASE = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
+    const TOKEN_KEY = "agora_logged_in";
 
     const TERMS_ACCEPT_KEY = "agora_terms_accepted_v3";
     const TERMS_VERSION = "2026-03-20-v3";
@@ -4466,23 +4466,23 @@
       return localStorage.getItem(TOKEN_KEY) || "";
     }
     function setToken(t) {
-      localStorage.setItem(TOKEN_KEY, t);
+      if (t) localStorage.setItem(TOKEN_KEY, "1");
+      else localStorage.removeItem(TOKEN_KEY);
     }
-
     async function api(path, opts = {}) {
       const headers = Object.assign({}, opts.headers || {});
-      const token = getToken();
-      if (token) headers["Authorization"] = "Bearer " + token;
 
       const body = opts.body;
 
-      // Se NON è FormData e NON hai già impostato Content-Type, usa JSON
       const isFormData = (typeof FormData !== "undefined") && (body instanceof FormData);
       if (!isFormData && !headers["Content-Type"]) {
         headers["Content-Type"] = "application/json";
       }
 
-      const res = await fetch(API_BASE + path, { ...opts, headers });
+      const fetchOpts = { ...opts, headers };
+      if (!API_BASE) fetchOpts.credentials = "include";
+
+      const res = await fetch((API_BASE || "") + path, fetchOpts);
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok) throw new Error((data && data.error) ? data.error : ("http_" + res.status));
@@ -5419,10 +5419,9 @@ async function uploadAllSelectedImagesAndSwapSrc() {
     }
 
     async function refreshMe() {
-      const token = getToken();
-
-      if (!token) {
+      if (!getToken()) {
         CURRENT_USER = null;
+
         feedHint.textContent = "";
         accountMenuSub.textContent = "Not logged in";
         menuPrimaryAction.textContent = "Login";
@@ -5448,7 +5447,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
         syncAccountAvatar();
         updateThreadAuthState();
       } catch {
-        localStorage.removeItem(TOKEN_KEY);
+        setToken(null);
         CURRENT_USER = null;
         accountMenuSub.textContent = "Not logged in";
         menuPrimaryAction.textContent = "Login";
@@ -6252,7 +6251,8 @@ const logicalBtn = card.querySelector(".logical-btn");
     // });
     menuPrimaryAction.addEventListener("click", async () => {
       if (getToken()) {
-        localStorage.removeItem(TOKEN_KEY);
+        try { await api("/api/logout", { method: "POST" }); } catch {}
+        setToken(null);
         await refreshMe();
         await loadFeed();
         closeMenu();
@@ -6634,13 +6634,10 @@ const logicalBtn = card.querySelector(".logical-btn");
         if (!key) return;
 
         try {
-          const token = localStorage.getItem("token") || ""; // usa il tuo storage reale se diverso
-          await fetch(`${API_BASE}/api/media/delete`, {
+          await fetch("/api/media/delete", {
             method: "DELETE",
-            headers: {
-              "Content-Type": "application/json",
-              ...(token ? { "Authorization": `Bearer ${token}` } : {})
-            },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({ key })
           });
         } catch (err) {
@@ -6795,10 +6792,10 @@ const logicalBtn = card.querySelector(".logical-btn");
         node.remove();
         if (!key) return;
         try {
-          await fetch(`${API_BASE}/api/media/delete`, {
+          await fetch("/api/media/delete", {
             method: "DELETE",
-            headers: { "Content-Type": "application/json",
-              ...(getToken() ? { "Authorization": `Bearer ${getToken()}` } : {}) },
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
             body: JSON.stringify({ key })
           });
         } catch(err) { console.warn("media delete failed:", err); }
@@ -7390,7 +7387,7 @@ Try again after ${until.toLocaleTimeString()}.`);
     // Google login from modal
     googleLoginBtn.addEventListener("click", () => {
       const returnTo = window.location.origin + "/";
-      window.location.href = API_BASE + "/api/auth/google/start?returnTo=" + encodeURIComponent(returnTo);
+      window.location.href = "/api/auth/google/start?returnTo=" + encodeURIComponent(returnTo);
     });
 
     // Email OTP login — Step 1: invia codice
@@ -7493,9 +7490,8 @@ Try again after ${until.toLocaleTimeString()}.`);
     (function pickTokenFromHash() {
       const m = (window.location.hash || "").match(/token=([^&]+)/);
       if (!m) return;
-      const t = decodeURIComponent(m[1]);
-      localStorage.setItem(TOKEN_KEY, t);
-      history.replaceState(null, "", window.location.pathname); // pulisce l'hash
+      setToken("1");
+      history.replaceState(null, "", window.location.pathname);
     })();
 
 
