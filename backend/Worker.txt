@@ -2285,15 +2285,15 @@ export default {
       // GET /api/bugs — pubblico, solo bug confermati/in_progress/resolved
       if (url.pathname === "/api/bugs" && request.method === "GET") {
         const rows = await env.dbagora.prepare(
-          `SELECT b.id, b.title, b.description, b.status, b.created_at,
+          `SELECT br.id, br.title, br.description, br.status, br.created_at,
             COALESCE(NULLIF(TRIM(u.display_name),''), substr(u.email,1,instr(u.email,'@')-1)) AS reporter_name
-          FROM bugs b LEFT JOIN users u ON u.id = b.user_id
-          WHERE b.status IN ('confirmed','in_progress','resolved')
-          ORDER BY b.created_at DESC LIMIT 50`
+          FROM bug_reports br LEFT JOIN users u ON u.id = br.user_id
+          WHERE br.status IN ('confirmed','in_progress','resolved')
+          ORDER BY br.created_at DESC LIMIT 50`
         ).all();
         return json({ ok: true, bugs: rows.results || [] }, 200, ALLOWED_ORIGIN);
       }
-      
+
       // GET /api/admin/bugs
       if (url.pathname === "/api/admin/bugs" && request.method === "GET") {
         const adm = await requireAdmin(request);

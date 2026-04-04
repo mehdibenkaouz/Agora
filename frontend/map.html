@@ -3356,9 +3356,9 @@ const POI_CATEGORY_QUERIES = [
   { key: "museum", q: "museum", emoji: "🏛️" },
   { key: "library", q: "library", emoji: "📚" },
   { key: "university", q: "university", emoji: "🎓" },
-  { key: "gallery", q: "art gallery", emoji: "🖼️" },
-  { key: "theatre", q: "theatre", emoji: "🎭" },
-  { key: "archive", q: "archive", emoji: "🗂️" },
+  { key: "gallery", q: "art_gallery", emoji: "🖼️" },
+  { key: "theatre", q: "performing_arts_theater", emoji: "🎭" },
+  { key: "archive", q: "cultural_center", emoji: "🗂️" },
 ];
 
 let poiVisible = true;
@@ -3396,7 +3396,7 @@ function _sleep(ms) {
 }
 
 function _hasPoiProvider() {
-  return hasMapTilerKey();
+  return true;
 }
 
 function _poiCellStep(zoom) {
@@ -3407,10 +3407,10 @@ function _poiCellStep(zoom) {
 }
 
 function _poiQueryLimit(zoom) {
-  if (zoom >= 16) return 10;
-  if (zoom >= 15) return 8;
-  if (zoom >= 14) return 6;
-  return 4;
+  if (zoom >= 16) return 20;
+  if (zoom >= 15) return 20;
+  if (zoom >= 14) return 15;
+  return 10;
 }
 
 function _cloneBounds(bounds) {
@@ -3499,30 +3499,31 @@ function _poiEmoji(item) {
   return "📍";
 }
 
-function _normalizeMapTilerPOIs(features, queryDef) {
+function _normalizeMapTilerPOIs(data, queryDef) {
   const out = [];
-  for (const feature of features || []) {
-    const coords = feature?.geometry?.coordinates;
-    if (!Array.isArray(coords) || coords.length < 2) continue;
-    const lng = Number(coords[0]);
-    const lat = Number(coords[1]);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
-    const props = feature.properties || {};
-    const name = feature.text || props.name || feature.place_name || "";
-    if (!name) continue;
-    const categories = Array.isArray(props.categories) ? props.categories : [];
-    const key = String(feature.id || props.ref || `${queryDef.key}:${name.toLowerCase()}:${lat.toFixed(5)}:${lng.toFixed(5)}`);
+  const items = data.places || data.features || [];
+  for (const item of items) {
+    let lat, lng, name, categories, key;
+    if (item.lat != null && item.name) {
+      lat = Number(item.lat);
+      lng = Number(item.lng || item.lon);
+      name = item.name || "";
+      categories = item.types || [];
+      key = item.id || `${queryDef.key}:${name.toLowerCase()}:${lat.toFixed(5)}:${lng.toFixed(5)}`;
+    } else {
+      const coords = item?.geometry?.coordinates;
+      if (!Array.isArray(coords) || coords.length < 2) continue;
+      lng = Number(coords[0]);
+      lat = Number(coords[1]);
+      const props = item.properties || {};
+      name = item.text || props.name || item.place_name || "";
+      categories = Array.isArray(props.categories) ? props.categories : [];
+      key = String(item.id || props.ref || `${queryDef.key}:${name.toLowerCase()}:${lat.toFixed(5)}:${lng.toFixed(5)}`);
+    }
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || !name) continue;
     out.push({
-      _key: key,
-      _ts: Date.now(),
-      lat,
-      lon: lng,
-      name,
-      placeName: feature.place_name || name,
-      categories,
-      raw: feature,
-      queryKey: queryDef.key,
-      emoji: queryDef.emoji,
+      _key: key, _ts: Date.now(), lat, lon: lng, name, placeName: name,
+      categories, raw: item, queryKey: queryDef.key, emoji: queryDef.emoji,
     });
   }
   return out;
@@ -3626,17 +3627,11 @@ function rerenderPOIMarkersForTheme() {
 
 async function _fetchMapTilerPoi(task, signal) {
   const [w, s, e, n] = task.bbox;
-  const limit = _poiQueryLimit(task.zoom);
-  const proximity = `${task.center.lng.toFixed(6)},${task.center.lat.toFixed(6)}`;
-  const url = new URL(`https://api.maptiler.com/geocoding/${encodeURIComponent(task.query.q)}.json`);
-  url.searchParams.set("bbox", `${w},${s},${e},${n}`);
-  url.searchParams.set("proximity", proximity);
-  url.searchParams.set("types", "poi");
-  url.searchParams.set("limit", String(limit));
-  url.searchParams.set("autocomplete", "false");
-  url.searchParams.set("fuzzyMatch", "false");
-  url.searchParams.set("language", getMapTilerLang());
-  url.searchParams.set("key", MAPTILER_API_KEY);
+  const centerLat = (s + n) / 2;
+  const centerLng = (w + e) / 2;
+  const dlat = Math.abs(n - s) * 111320;
+  const dlng = Math.abs(e - w) * 111320 * Math.cos(centerLat * Math.PI / 180);
+  const radius = Math.min(Math.max(dlat, dlng) / 2, 5000);
 
   const timeoutCtrl = new AbortController();
   const timeoutId = setTimeout(() => timeoutCtrl.abort(), POI_REQUEST_TIMEOUT_MS);
@@ -3644,11 +3639,11 @@ async function _fetchMapTilerPoi(task, signal) {
   signal.addEventListener("abort", onAbort, { once: true });
 
   try {
-    const res = await fetch(url.toString(), {
-      signal: timeoutCtrl.signal,
-      headers: { "Accept": "application/json" },
-    });
-    if (!res.ok) throw new Error(`MapTiler HTTP ${res.status}`);
+    const res = await _mapFetch(
+      `/api/map/places?lat=${centerLat.toFixed(5)}&lng=${centerLng.toFixed(5)}&radius=${Math.round(radius)}&type=${encodeURIComponent(task.query.q)}`,
+      { signal: timeoutCtrl.signal }
+    );
+    if (!res.ok) throw new Error(`Places proxy HTTP ${res.status}`);
     return await res.json();
   } finally {
     clearTimeout(timeoutId);
@@ -3669,7 +3664,7 @@ async function _drainPoiQueue(viewToken) {
       const data = await _fetchMapTilerPoi(task, _poiAbortCtrl.signal);
       if (viewToken !== _poiActiveViewToken) break;
       poiCellCache.set(task.cacheKey, Date.now());
-      const items = _normalizeMapTilerPOIs(data.features || [], task.query);
+      const items = _normalizeMapTilerPOIs(data, task.query);
       _upsertPoiStore(items);
       _trimPoiCaches();
       _syncVisiblePoiMarkers(_expandedBounds(map.getBounds(), 0.02), { silent: false });
