@@ -1482,6 +1482,58 @@ export default {
         }}, 200, ALLOWED_ORIGIN);
       }
 
+      // ── MAP PLACES PROXY (Google Places API) ─────────────────────────
+      if (url.pathname === "/api/map/places" && request.method === "GET") {
+        const PLACES_TTL = 14 * 24 * 60 * 60;
+        const ALLOWED_TYPES = ["museum","library","university","art_gallery","performing_arts_theater","cultural_center","book_store","community_center"];
+        const lat = parseFloat(url.searchParams.get("lat"));
+        const lng = parseFloat(url.searchParams.get("lng"));
+        const radius = Math.min(parseFloat(url.searchParams.get("radius") || "1500"), 5000);
+        const type = url.searchParams.get("type") || "library";
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return json({ ok: false, error: "invalid_coords" }, 400, ALLOWED_ORIGIN);
+        if (!ALLOWED_TYPES.includes(type)) return json({ ok: false, error: "invalid_type" }, 400, ALLOWED_ORIGIN);
+        if (!env.GOOGLE_PLACES_API_KEY) return json({ ok: false, error: "missing_google_key" }, 500, ALLOWED_ORIGIN);
+
+        const cacheKey = `gp:${type}:${lat.toFixed(3)}:${lng.toFixed(3)}:${Math.round(radius/100)*100}`;
+        if (env.PLACES_CACHE) {
+          try {
+            const cached = await env.PLACES_CACHE.get(cacheKey, "json");
+            if (cached) return json(cached, 200, ALLOWED_ORIGIN);
+          } catch(_) {}
+        }
+
+        const gRes = await fetch("https://places.googleapis.com/v1/places:searchNearby", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": env.GOOGLE_PLACES_API_KEY,
+            "X-Goog-FieldMask": "places.id,places.displayName,places.location,places.types",
+          },
+          body: JSON.stringify({
+            includedTypes: [type],
+            maxResultCount: 20,
+            locationRestriction: { circle: { center: { latitude: lat, longitude: lng }, radius } },
+          }),
+        });
+        if (!gRes.ok) {
+          const errText = await gRes.text().catch(() => "");
+          return json({ ok: false, error: `google_error_${gRes.status}`, detail: errText }, 502, ALLOWED_ORIGIN);
+        }
+        const gData = await gRes.json();
+        const places = (gData.places || []).map(p => ({
+          id: p.id || "",
+          name: p.displayName?.text || "",
+          lat: p.location?.latitude || 0,
+          lng: p.location?.longitude || 0,
+          types: p.types || [],
+        }));
+        const result = { ok: true, places, ts: Date.now() };
+        if (env.PLACES_CACHE) {
+          try { await env.PLACES_CACHE.put(cacheKey, JSON.stringify(result), { expirationTtl: PLACES_TTL }); } catch(_) {}
+        }
+        return json(result, 200, ALLOWED_ORIGIN);
+      }
+      
       // ── MAP ──────────────────────────────────────────────────────────
       if (url.pathname === "/api/map/sessions" && request.method === "GET") {
         const now = new Date().toISOString();
