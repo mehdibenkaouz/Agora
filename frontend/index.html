@@ -3790,7 +3790,7 @@
       return String(CURRENT_USER?.email || "").trim().toLowerCase();
     }
     const createPostBtn = document.getElementById("createPostBtn");
-
+    
     // Create post modal
     const createPostModal = document.getElementById("createPostModal");
     const createPostClose = document.getElementById("createPostClose");
@@ -3818,6 +3818,16 @@
 
 
     let lastTypingState = { bold:false };
+
+    let draftSaveTimer = null;
+
+    function scheduleDraftSave() {
+      clearTimeout(draftSaveTimer);
+      draftSaveTimer = setTimeout(() => {
+        saveCreatePostDraft().catch(console.warn);
+      }, 500);
+    }
+
 
     function captureTypingState(){
       if (!selectionInsideEditor()) return;
@@ -4458,20 +4468,44 @@
       if (Number.isFinite(px)) applyFontSizePx(px);
     });
 
-    // Aggiorna UI quando muovi il cursore/selezioni testo
-    createPostContent.addEventListener("keyup", () => { saveEditorSelection(); updateToolbarState(); });
-    createPostContent.addEventListener("mouseup", () => { saveEditorSelection(); updateToolbarState(); });
-    createPostContent.addEventListener("focus", () => { dbg("editor:focus"); saveEditorSelection(); updateToolbarState(); });
 
+
+    
 
     document.addEventListener("selectionchange", () => {
       dbg("selectionchange");
       if (selectionInsideEditor()) saveEditorSelection();
       updateToolbarState();
     });
+
     // Paste testo: incolla come plain text (evita font/alignment strani)
     createPostContent.addEventListener("paste", (e) => {
       // Le immagini vengono già gestite dal listener sul modal (handlePaste).
+      const text = e.clipboardData?.getData("text/plain");
+      if (typeof text === "string") {
+        e.preventDefault();
+        document.execCommand("insertText", false, text);
+      }
+    });
+
+    createPostContent.addEventListener("input", scheduleDraftSave);
+
+    window.addEventListener("beforeunload", () => {
+      if (draftHasContent()) {
+        try { saveCreatePostDraft(); } catch {}
+      }
+    });
+    createPostContent.addEventListener("input", scheduleDraftSave);
+    imageFileInput.addEventListener("change", scheduleDraftSave);
+    createPostModal.addEventListener("paste", () => setTimeout(scheduleDraftSave, 0));
+
+    window.addEventListener("beforeunload", () => {
+      if (draftHasContent()) {
+        try { saveCreatePostDraft(); } catch {}
+      }
+    });
+
+    createPostContent.addEventListener("paste", (e) => {
       const text = e.clipboardData?.getData("text/plain");
       if (typeof text === "string") {
         e.preventDefault();
@@ -4483,6 +4517,8 @@
     const imageFileInput = document.getElementById("imageFileInput");
     const imagePreview = document.getElementById("imagePreview");
 
+    imageFileInput.addEventListener("change", scheduleDraftSave);
+    createPostModal.addEventListener("paste", () => setTimeout(scheduleDraftSave, 0));
     const feed = document.getElementById("feed");
     const feedHint = document.getElementById("feedHint");
 
@@ -6518,18 +6554,17 @@ const logicalBtn = card.querySelector(".logical-btn");
     rtTagBtn?.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
-      // Salva la selezione prima di aprire il menu
+
       const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      tagSavedRange = null;
+
+      if (sel && sel.rangeCount > 0) {
         const r = sel.getRangeAt(0);
-        if (createPostContent.contains(r.startContainer)) {
+        if (createPostContent.contains(r.startContainer) && createPostContent.contains(r.endContainer)) {
           tagSavedRange = r.cloneRange();
         }
       }
-      if (!tagSavedRange || tagSavedRange.collapsed) {
-        alert("Select some text first, then click Tag.");
-        return;
-      }
+
       const isOpen = rtTagMenu.style.display !== "none";
       rtTagMenu.style.display = isOpen ? "none" : "block";
     });
@@ -6771,7 +6806,7 @@ const logicalBtn = card.querySelector(".logical-btn");
 
     let pendingQuotedPost = null; // post object da citare
 
-    function openCreatePostModal(opts) {
+    async function openCreatePostModal(opts) {
       pendingQuotedPost = (opts && opts.quotedPost) || null;
 
       // Mostra/nascondi la preview della citazione
@@ -6803,6 +6838,7 @@ const logicalBtn = card.querySelector(".logical-btn");
       createPostModal.setAttribute("aria-hidden", "false");
       closeMenu();
       closeModal();
+      await restoreCreatePostDraft().catch(console.warn);
       setTimeout(() => createPostContent?.focus(), 0);
     }
 
@@ -6819,6 +6855,173 @@ const logicalBtn = card.querySelector(".logical-btn");
     }
     // --- Images state (frontend only for now) ---
     const selectedImages = []; // { id, file, url }
+
+    const DRAFT_KEY = "agora_create_post_draft_v1";
+    const DRAFT_DB_NAME = "agora_drafts_db";
+    const DRAFT_STORE = "media";
+
+    function draftHasContent() {
+      return !!(
+        (createPostContent?.innerHTML || "").trim() ||
+        selectedImages.length ||
+        pendingQuotedPost
+      );
+    }
+
+    function openDraftDb() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DRAFT_DB_NAME, 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(DRAFT_STORE)) {
+            db.createObjectStore(DRAFT_STORE);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbSet(key, value) {
+      const db = await openDraftDb();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(DRAFT_STORE, "readwrite");
+        tx.objectStore(DRAFT_STORE).put(value, key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+    }
+
+    async function idbGet(key) {
+      const db = await openDraftDb();
+      const out = await new Promise((resolve, reject) => {
+        const tx = db.transaction(DRAFT_STORE, "readonly");
+        const req = tx.objectStore(DRAFT_STORE).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+      db.close();
+      return out;
+    }
+
+    async function idbDelete(key) {
+      const db = await openDraftDb();
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction(DRAFT_STORE, "readwrite");
+        tx.objectStore(DRAFT_STORE).delete(key);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+      });
+      db.close();
+    }
+
+    async function saveCreatePostDraft() {
+      if (!draftHasContent()) {
+        sessionStorage.removeItem(DRAFT_KEY);
+        return;
+      }
+
+      const mediaMeta = [];
+
+      for (const img of selectedImages) {
+        const mediaKey = `draft_media_${img.id}`;
+        if (img.file) {
+          await idbSet(mediaKey, img.file);
+        }
+        mediaMeta.push({
+          id: img.id,
+          isVideo: !!img.isVideo,
+          uploadedUrl: img.uploadedUrl || "",
+          uploadedKey: img.uploadedKey || "",
+          mediaKey
+        });
+      }
+
+      const payload = {
+        html: createPostContent.innerHTML || "",
+        quote: pendingQuotedPost || null,
+        media: mediaMeta,
+        savedAt: Date.now()
+      };
+
+      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+    }
+    async function restoreCreatePostDraft() {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (!raw) return false;
+
+      let draft;
+      try {
+        draft = JSON.parse(raw);
+      } catch {
+        sessionStorage.removeItem(DRAFT_KEY);
+        return false;
+      }
+
+      createPostContent.innerHTML = draft.html || "";
+
+      clearImages();
+
+      for (const m of (draft.media || [])) {
+        const file = await idbGet(m.mediaKey).catch(() => null);
+        if (!file) continue;
+
+        const url = URL.createObjectURL(file);
+        selectedImages.push({
+          id: m.id,
+          file,
+          url,
+          isVideo: !!m.isVideo,
+          uploadedUrl: m.uploadedUrl || "",
+          uploadedKey: m.uploadedKey || ""
+        });
+      }
+
+      renderImagePreview();
+
+      pendingQuotedPost = draft.quote || null;
+      const previewEl = document.getElementById("quotePreview");
+      if (previewEl) {
+        if (pendingQuotedPost) {
+          previewEl.innerHTML = `
+            <div class="quote-preview-inner">
+              <div class="quote-preview-label">Quoting</div>
+              <div class="quote-preview-text">${escapeHtml(stripHtml(pendingQuotedPost.content_text || pendingQuotedPost.content || "").slice(0, 300))}</div>
+              <button type="button" class="quote-preview-remove">✕</button>
+            </div>
+          `;
+          previewEl.style.display = "block";
+          previewEl.querySelector(".quote-preview-remove")?.addEventListener("click", () => {
+            pendingQuotedPost = null;
+            previewEl.style.display = "none";
+            previewEl.innerHTML = "";
+            saveCreatePostDraft().catch(console.warn);
+          });
+        } else {
+          previewEl.style.display = "none";
+          previewEl.innerHTML = "";
+        }
+      }
+
+      updatePostCounterAndPublish();
+      return true;
+    }
+    async function clearCreatePostDraft() {
+      const raw = sessionStorage.getItem(DRAFT_KEY);
+      if (raw) {
+        try {
+          const draft = JSON.parse(raw);
+          for (const m of (draft.media || [])) {
+            if (m.mediaKey) {
+              await idbDelete(m.mediaKey).catch(() => {});
+            }
+          }
+        } catch {}
+      }
+
+      sessionStorage.removeItem(DRAFT_KEY);
+    }
 
     function getEditorZoom() {
       // Chrome supporta zoom come numero; fallback 1
