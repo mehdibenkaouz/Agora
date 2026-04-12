@@ -6148,7 +6148,7 @@ const logicalBtn = card.querySelector(".logical-btn");
         const pinBtn = card.querySelector(".post-menu-pin");
         if (pinBtn) {
           pinBtn.addEventListener("click", async () => {
-            closeAllMenus();
+            closeAllPostMenus();
             const reason = prompt("Motivo del pin (visibile agli utenti):");
             if (!reason || !reason.trim()) return;
             try {
@@ -6166,7 +6166,7 @@ const logicalBtn = card.querySelector(".logical-btn");
         const unpinBtn = card.querySelector(".post-menu-unpin");
         if (unpinBtn) {
           unpinBtn.addEventListener("click", async () => {
-            closeAllMenus();
+            closeAllPostMenus();
             try {
               const r = await fetch(`/api/admin/posts/${encodeURIComponent(p.id)}/unpin`, {
                 method: "POST",
