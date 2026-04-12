@@ -4495,23 +4495,7 @@
         try { saveCreatePostDraft(); } catch {}
       }
     });
-    createPostContent.addEventListener("input", scheduleDraftSave);
-    imageFileInput.addEventListener("change", scheduleDraftSave);
-    createPostModal.addEventListener("paste", () => setTimeout(scheduleDraftSave, 0));
 
-    window.addEventListener("beforeunload", () => {
-      if (draftHasContent()) {
-        try { saveCreatePostDraft(); } catch {}
-      }
-    });
-
-    createPostContent.addEventListener("paste", (e) => {
-      const text = e.clipboardData?.getData("text/plain");
-      if (typeof text === "string") {
-        e.preventDefault();
-        document.execCommand("insertText", false, text);
-      }
-    });
     const mediaDropzone = document.getElementById("mediaDropzone");
     const pickImagesBtn = document.getElementById("pickImagesBtn");
     const imageFileInput = document.getElementById("imageFileInput");
