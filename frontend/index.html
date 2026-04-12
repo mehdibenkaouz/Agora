@@ -3835,6 +3835,10 @@
         lastEditorRange = r.cloneRange();
       }
     }
+    function getOpenButtonText(comment) {
+      const count = Number(comment?.reply_count) || 0;
+      return `💬 ${count > 99 ? "100+" : count} Open`;
+    }
 
     function restoreEditorSelection() {
       if (!lastEditorRange) return false;
@@ -5037,7 +5041,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
                 <span class="comment-time">${when}</span>
                 <button class="c-open-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(p.id)}" data-author="${escapeHtml(who)}"
                   style="background:none;border:none;cursor:pointer;font-size:.75rem;color:var(--muted);padding:0;opacity:.7;">
-                  💬  ${Number(c.reply_count) > 99 ? '100+' : (Number(c.reply_count) || 0)}  Open
+                  ${getOpenButtonText(c)}
                 </button>
               </div>
             </div>`;
@@ -5174,7 +5178,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
               <span class="comment-time">${when}</span>
               <button class="c-open-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}" data-author="${escapeHtml(who)}"
                 style="background:none;border:none;cursor:pointer;font-size:.75rem;color:var(--muted);padding:0;opacity:.7;">
-                💬  0  Open
+                ${getOpenButtonText(c)}
               </button>
             </div>
           `;
