@@ -5751,8 +5751,10 @@ async function uploadAllSelectedImagesAndSwapSrc() {
         }
       }
       
-    function renderPosts(posts, savedIds = new Set(), append = false) {
-      if (!append) {
+    function renderPosts(posts, savedIds = new Set(), mode = "replace") {
+      const append = mode === "append";
+      const prepend = mode === "prepend";
+      if (!append && !prepend) {
         feed.innerHTML = "";
         postByKey.clear();
       }
@@ -5760,11 +5762,14 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       const canInteract = !!getToken();
 
       if (!posts.length) {
-        feed.innerHTML = "<div style='color:#666;'>No posts yet.</div>";
-        clearThread();
+        if (!append && !prepend) {
+          feed.innerHTML = "<div style='color:#666;'>No posts yet.</div>";
+          clearThread();
+        }
         return;
       }
-
+      const appendFrag = document.createDocumentFragment();
+      const prependFrag = document.createDocumentFragment();
       posts.forEach((p, idx) => {
         knownPostIds.add(p.id);
         const key = makePostKey(p, idx);
@@ -6299,7 +6304,14 @@ const logicalBtn = card.querySelector(".logical-btn");
           if (getToken()) setTimeout(() => threadInput?.focus(), 0);
         });
 
-        feed.appendChild(card);
+        if (prepend && prependFrag.childNodes.length) {
+          feed.prepend(prependFrag);
+        } else if (appendFrag.childNodes.length) {
+          feed.appendChild(appendFrag);
+        }
+
+        const target = prepend ? prependFrag : appendFrag;
+        target.appendChild(card);
       });
 
       // If selected thread disappeared after refresh, reset
@@ -6313,6 +6325,31 @@ const logicalBtn = card.querySelector(".logical-btn");
     let feedExhausted = false;
     const knownPostIds = new Set();
     let FEED_POLL_INTERVAL = null;
+
+
+    let silentFeedRefreshInFlight = false;
+
+    function getFeedAnchor() {
+      const cards = [...document.querySelectorAll(".post-card[data-post-id]")];
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect();
+        if (rect.bottom > 0) {
+          return {
+            postId: card.dataset.postId,
+            top: rect.top
+          };
+        }
+      }
+      return null;
+    }
+
+    function restoreFeedAnchor(anchor) {
+      if (!anchor?.postId) return;
+      const el = document.querySelector(`.post-card[data-post-id="${CSS.escape(anchor.postId)}"]`);
+      if (!el) return;
+      const delta = el.getBoundingClientRect().top - anchor.top;
+      if (delta) window.scrollBy(0, delta);
+    }
 
     function getFeedAnchor() {
       const cards = [...document.querySelectorAll(".post-card[data-post-id]")];
@@ -6337,17 +6374,35 @@ const logicalBtn = card.querySelector(".logical-btn");
     }
 
     async function refreshFeedSilently() {
-      if (feedLoading || document.hidden) return;
-
-      // non toccare il feed mentre un thread commenti è aperto
+      if (feedLoading || silentFeedRefreshInFlight || document.hidden) return;
       if (activeThreadKey) return;
 
-      // se hai già caricato più pagine e sei molto giù, evita refresh distruttivi
-      if (feedOffset > FEED_PAGE_SIZE && window.scrollY > 160) return;
+      silentFeedRefreshInFlight = true;
+      try {
+        const data = await api(`/api/posts?limit=${FEED_PAGE_SIZE}&offset=0`, { method: "GET" });
 
-      const anchor = getFeedAnchor();
-      await loadFeed(false);
-      restoreFeedAnchor(anchor);
+        let savedIds = new Set();
+        if (getToken()) {
+          try {
+            const saved = await api("/api/saved", { method: "GET" });
+            (saved.posts || []).forEach(p => savedIds.add(p.id));
+          } catch (_) {}
+        }
+
+        const incoming = data.posts || [];
+        const newPosts = incoming.filter(p => !knownPostIds.has(p.id));
+
+        if (!newPosts.length) return;
+
+        const preservePosition = window.scrollY > 80;
+        const anchor = preservePosition ? getFeedAnchor() : null;
+
+        renderPosts(newPosts, savedIds, "prepend");
+
+        if (anchor) restoreFeedAnchor(anchor);
+      } finally {
+        silentFeedRefreshInFlight = false;
+      }
     }
 
     function startFeedPolling() {
@@ -6379,7 +6434,7 @@ const logicalBtn = card.querySelector(".logical-btn");
           } catch (_) {}
         }
         const posts = data.posts || [];
-        renderPosts(posts, savedIds, append);
+        renderPosts(posts, savedIds, append ? "append" : "replace");
         feedOffset += posts.length;
         const sentinel = document.getElementById("feedSentinel");
         if (posts.length < FEED_PAGE_SIZE) {
