@@ -1867,6 +1867,7 @@
         <div class="profile-grid">
           <div class="profile-avatar-box">
             <div id="profileAvatarPreview" class="profile-avatar-preview"></div>
+            <div id="viewUserName" style="display:none; font-size:1.1rem; font-weight:600; margin-top:8px; text-align:center;"></div>
             <button id="profilePickAvatarBtn" class="file-btn" type="button">Upload avatar</button>
             <input id="profileAvatarFileInput" type="file" accept="image/*" hidden />
             <input id="profilePictureUrlInput" type="hidden" />
@@ -3105,6 +3106,11 @@ if (VIEW_USER_ID) {
       profileAvatarPreview.style.visibility = "visible"; // ← mostra solo ora
   }
     loadAwards(VIEW_USER_ID);
+    const viewUserNameEl = document.getElementById("viewUserName");
+    if (viewUserNameEl) {
+      viewUserNameEl.textContent = VIEW_USER.display_name || VIEW_USER.email || "";
+      viewUserNameEl.style.display = "block";
+    }
     document.documentElement.style.visibility = "visible";
   return;
 }
