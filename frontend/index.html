@@ -6314,6 +6314,56 @@ const logicalBtn = card.querySelector(".logical-btn");
     const knownPostIds = new Set();
     let FEED_POLL_INTERVAL = null;
 
+    function getFeedAnchor() {
+      const cards = [...document.querySelectorAll(".post-card[data-post-id]")];
+      for (const card of cards) {
+        const rect = card.getBoundingClientRect();
+        if (rect.bottom > 0) {
+          return {
+            postId: card.dataset.postId,
+            top: rect.top
+          };
+        }
+      }
+      return null;
+    }
+
+    function restoreFeedAnchor(anchor) {
+      if (!anchor?.postId) return;
+      const el = document.querySelector(`.post-card[data-post-id="${CSS.escape(anchor.postId)}"]`);
+      if (!el) return;
+      const delta = el.getBoundingClientRect().top - anchor.top;
+      window.scrollBy(0, delta);
+    }
+
+    async function refreshFeedSilently() {
+      if (feedLoading || document.hidden) return;
+
+      // non toccare il feed mentre un thread commenti è aperto
+      if (activeThreadKey) return;
+
+      // se hai già caricato più pagine e sei molto giù, evita refresh distruttivi
+      if (feedOffset > FEED_PAGE_SIZE && window.scrollY > 160) return;
+
+      const anchor = getFeedAnchor();
+      await loadFeed(false);
+      restoreFeedAnchor(anchor);
+    }
+
+    function startFeedPolling() {
+      if (FEED_POLL_INTERVAL) clearInterval(FEED_POLL_INTERVAL);
+
+      FEED_POLL_INTERVAL = setInterval(() => {
+        refreshFeedSilently().catch(() => {});
+      }, 5000);
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (!document.hidden) {
+        refreshFeedSilently().catch(() => {});
+      }
+    });
+
     async function loadFeed(append = false) {
       if (feedLoading) return;
       if (append && feedExhausted) return;
@@ -7977,6 +8027,7 @@ async function runSearch() {
 
       await loadFeed();
       startNotifPolling();
+      startFeedPolling();
     })();
 
     // Infinite scroll sentinel
