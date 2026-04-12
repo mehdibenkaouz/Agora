@@ -6304,12 +6304,6 @@ const logicalBtn = card.querySelector(".logical-btn");
           if (getToken()) setTimeout(() => threadInput?.focus(), 0);
         });
 
-        if (prepend && prependFrag.childNodes.length) {
-          feed.prepend(prependFrag);
-        } else if (appendFrag.childNodes.length) {
-          feed.appendChild(appendFrag);
-        }
-
         const target = prepend ? prependFrag : appendFrag;
         target.appendChild(card);
       });
