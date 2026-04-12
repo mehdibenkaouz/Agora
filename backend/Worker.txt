@@ -559,6 +559,9 @@ export default {
         ).bind(feedToken, new Date().toISOString()).first() : null;
         const feedUid = feedSession?.user_id || null;
 
+        const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "30", 10), 1), 100);
+        const offset = Math.max(parseInt(url.searchParams.get("offset") || "0", 10), 0);
+
         const rows = await env.dbagora.prepare(
           `SELECT
               p.id,
@@ -575,6 +578,9 @@ export default {
                 END
               ) AS author_display_name,
               COALESCE(u.picture_url, '') AS author_picture_url,
+              COALESCE(p.is_pinned, 0) AS is_pinned,
+              COALESCE(p.pin_reason, '') AS pin_reason,
+              p.pinned_at,
               (SELECT COUNT(*) FROM comments c WHERE c.post_id = p.id AND c.deleted_at IS NULL) as comment_count,
               (SELECT COUNT(*) FROM post_logic_votes lv WHERE lv.post_id = p.id) as logical_count,
               (SELECT COUNT(*) FROM post_quotes pq WHERE pq.source_post_id = p.id) as quote_count
@@ -588,9 +594,14 @@ export default {
           ))
           AND COALESCE(u.banned, 0) = 0
           AND COALESCE(p.hidden, 0) = 0
-          ORDER BY p.created_at DESC
-          LIMIT 30`
-        ).bind(feedUid).all();
+          ORDER BY
+            COALESCE(p.is_pinned, 0) DESC,
+            CASE
+              WHEN COALESCE(p.is_pinned, 0) = 1 THEN p.pinned_at
+              ELSE p.created_at
+            END DESC
+          LIMIT ?2 OFFSET ?3`
+        ).bind(feedUid, limit, offset).all();
 
         const posts = rows.results || [];
         for (const post of posts) {
@@ -2544,6 +2555,64 @@ export default {
         return json({ ok: true, version, accepted_at: now }, 200, ALLOWED_ORIGIN);
       }
 
+      // ── Route pin ─────────────────
+      const adminPostPin = url.pathname.match(/^\/api\/admin\/posts\/([^/]+)\/pin$/);
+      if (adminPostPin && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const postId = String(adminPostPin[1] || "").trim();
+        const body = await request.json().catch(() => ({}));
+        const reason = String(body.reason || "").trim().slice(0, 240);
+
+        if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
+        if (!reason) return json({ ok: false, error: "missing_reason" }, 400, ALLOWED_ORIGIN);
+
+        const exists = await env.dbagora.prepare(
+          "SELECT id FROM posts WHERE id = ?1 LIMIT 1"
+        ).bind(postId).first();
+
+        if (!exists) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
+
+        const nowIso = new Date().toISOString();
+
+        await env.dbagora.prepare(
+          "UPDATE posts SET is_pinned = 0, pin_reason = NULL, pinned_at = NULL, pinned_by_user_id = NULL WHERE COALESCE(is_pinned, 0) = 1"
+        ).run();
+
+        await env.dbagora.prepare(
+          `UPDATE posts
+          SET is_pinned = 1,
+              pin_reason = ?1,
+              pinned_at = ?2,
+              pinned_by_user_id = ?3
+          WHERE id = ?4`
+        ).bind(reason, nowIso, String(adm.user_id), postId).run();
+
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── Route unpin ─────────────────
+
+      const adminPostUnpin = url.pathname.match(/^\/api\/admin\/posts\/([^/]+)\/unpin$/);
+      if (adminPostUnpin && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const postId = String(adminPostUnpin[1] || "").trim();
+        if (!postId) return json({ ok: false, error: "missing_post_id" }, 400, ALLOWED_ORIGIN);
+
+        await env.dbagora.prepare(
+          `UPDATE posts
+          SET is_pinned = 0,
+              pin_reason = NULL,
+              pinned_at = NULL,
+              pinned_by_user_id = NULL
+          WHERE id = ?1`
+        ).bind(postId).run();
+
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
 
       // ── POST REPORT: POST /api/posts/:id/report ─────────────────
       const postReportMatch = url.pathname.match(/^\/api\/posts\/([^/]+)\/report$/);

@@ -1084,6 +1084,9 @@
     }
     .post-menu-item:hover{ background: rgba(0,0,0,0.06); }
     .post-menu-item.danger{ color: rgba(160,0,0,0.95); }
+    .pin-banner{ display:flex; align-items:center; gap:8px; background:rgba(87,25,41,0.08); border-left:3px solid #571929; border-radius:6px; padding:6px 10px; margin-bottom:8px; font-size:0.82em; color:#571929; }
+    :root[data-theme="dark"] .pin-banner{ background:rgba(200,120,130,0.13); color:#e8a0aa; border-color:#e8a0aa; }
+    .pin-banner svg{ flex-shrink:0; width:14px; height:14px; fill:currentColor; }
 
     .confirm-modal{ position:fixed; inset:0; display:none; z-index:2000; }
     .confirm-modal.open{ display:block; }
@@ -4511,6 +4514,10 @@
     const emailInput = document.getElementById("emailInput");
     const passwordInput = document.getElementById("passwordInput");
 
+    function getAdminToken() {
+        return localStorage.getItem("agora_admin_token") || "";
+      }
+      
     function getToken() {
       return localStorage.getItem(TOKEN_KEY) || "";
     }
@@ -5759,6 +5766,12 @@ async function uploadAllSelectedImagesAndSwapSrc() {
           myEmail.includes("@") &&
           myEmail === String(p.author_email || "").trim().toLowerCase();
 
+
+        const isAdminUser = !!getAdminToken();
+        const pinItem = isAdminUser ? (p.is_pinned
+          ? `<button class="post-menu-item post-menu-unpin" type="button" role="menuitem" data-post-id="${escapeHtml(p.id)}">📌 Unpin</button>`
+          : `<button class="post-menu-item post-menu-pin" type="button" role="menuitem" data-post-id="${escapeHtml(p.id)}">📌 Pin</button>`
+        ) : "";
         const postMenuHtml = isMine ? `
           <div class="post-menu-wrap">
             <button class="post-menu-btn" type="button" aria-label="Post options" aria-haspopup="menu" aria-expanded="false">
@@ -5769,6 +5782,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
               </svg>
             </button>
             <div class="post-menu" role="menu" aria-hidden="true">
+              ${pinItem}
               <button class="post-menu-item danger post-menu-delete" type="button" role="menuitem">Delete</button>
             </div>
           </div>
@@ -5782,17 +5796,33 @@ async function uploadAllSelectedImagesAndSwapSrc() {
               </svg>
             </button>
             <div class="post-menu" role="menu" aria-hidden="true">
-            <button class="post-menu-item post-menu-report" type="button" role="menuitem"
-              data-post-id="${escapeHtml(p.id)}">Report</button>
-            <button class="post-menu-item post-menu-block" type="button" role="menuitem"
-              data-author-email="${escapeHtml(p.author_email || "")}"
-              data-author-name="${escapeHtml(p.author_display_name || p.author_email || "utente")}">Blocca</button>
+              ${pinItem}
+              <button class="post-menu-item post-menu-report" type="button" role="menuitem"
+                data-post-id="${escapeHtml(p.id)}">Report</button>
+              <button class="post-menu-item post-menu-block" type="button" role="menuitem"
+                data-author-email="${escapeHtml(p.author_email || "")}"
+                data-author-name="${escapeHtml(p.author_display_name || p.author_email || "utente")}">Blocca</button>
+            </div>
+          </div>
+        ` : isAdminUser ? `
+          <div class="post-menu-wrap">
+            <button class="post-menu-btn" type="button" aria-label="Post options" aria-haspopup="menu" aria-expanded="false">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="5" r="1.8"></circle>
+                <circle cx="12" cy="12" r="1.8"></circle>
+                <circle cx="12" cy="19" r="1.8"></circle>
+              </svg>
+            </button>
+            <div class="post-menu" role="menu" aria-hidden="true">
+              ${pinItem}
             </div>
           </div>
         ` : "";
+
         if (isMine) card.classList.add("my-post");
         const contentHtml = renderPostBodyWithMore(p.content || "", key);
         card.innerHTML = `
+        ${p.is_pinned ? `<div class="pin-banner"><svg viewBox="0 0 24 24"><path d="M12 2l2.5 6.5H21l-5.5 4 2 7L12 16l-5.5 3.5 2-7L3 8.5h6.5z"/></svg><span>📌 Post in evidenza${p.pin_reason ? ` — ${escapeHtml(p.pin_reason)}` : ''}</span></div>` : ''}
           <div class="post-head">
             <div style="display:flex; align-items:center; gap:10px; min-width:0;">
             <a href="account.html?view=${encodeURIComponent(p.author_id || '')}" style="display:flex;align-items:center;gap:10px;min-width:0;color:inherit;text-decoration:none;">
@@ -6115,6 +6145,39 @@ const logicalBtn = card.querySelector(".logical-btn");
         const menu = card.querySelector(".post-menu");
         const delPostBtn = card.querySelector(".post-menu-delete");
         const blockPostBtn = card.querySelector(".post-menu-block");
+        const pinBtn = card.querySelector(".post-menu-pin");
+        if (pinBtn) {
+          pinBtn.addEventListener("click", async () => {
+            closeAllMenus();
+            const reason = prompt("Motivo del pin (visibile agli utenti):");
+            if (!reason || !reason.trim()) return;
+            try {
+              const r = await fetch(`/api/admin/posts/${encodeURIComponent(p.id)}/pin`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "X-Admin-Token": getAdminToken() },
+                credentials: "include",
+                body: JSON.stringify({ reason: reason.trim() })
+              });
+              const d = await r.json();
+              if (d.ok) { await loadFeed(); } else { alert("Errore: " + (d.error || "sconosciuto")); }
+            } catch(e) { alert("Errore di rete."); }
+          });
+        }
+        const unpinBtn = card.querySelector(".post-menu-unpin");
+        if (unpinBtn) {
+          unpinBtn.addEventListener("click", async () => {
+            closeAllMenus();
+            try {
+              const r = await fetch(`/api/admin/posts/${encodeURIComponent(p.id)}/unpin`, {
+                method: "POST",
+                headers: { "X-Admin-Token": getAdminToken() },
+                credentials: "include"
+              });
+              const d = await r.json();
+              if (d.ok) { await loadFeed(); } else { alert("Errore: " + (d.error || "sconosciuto")); }
+            } catch(e) { alert("Errore di rete."); }
+          });
+        }
         const reportPostBtn = card.querySelector(".post-menu-report");
 
         menuBtn?.addEventListener("click", (e) => {
