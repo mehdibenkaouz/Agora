@@ -5757,8 +5757,8 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       if (!append && !prepend) {
         feed.innerHTML = "";
         postByKey.clear();
+        knownPostIds.clear();
       }
-
       const canInteract = !!getToken();
 
       if (!posts.length) {
@@ -6306,10 +6306,16 @@ const logicalBtn = card.querySelector(".logical-btn");
 
         const target = prepend ? prependFrag : appendFrag;
         target.appendChild(card);
-      });
+        });
 
-      // If selected thread disappeared after refresh, reset
-      if (activeThreadKey && !postByKey.has(activeThreadKey)) clearThread();
+        if (prepend && prependFrag.childNodes.length) {
+          feed.prepend(prependFrag);
+        } else if (appendFrag.childNodes.length) {
+          feed.appendChild(appendFrag);
+        }
+
+        // If selected thread disappeared after refresh, reset
+        if (activeThreadKey && !postByKey.has(activeThreadKey)) clearThread();
     }
 
 
