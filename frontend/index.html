@@ -5170,7 +5170,13 @@ async function uploadAllSelectedImagesAndSwapSrc() {
               <div class="comment-bubble ${side}">${text}</div>
               ${commentMenuHtml}
             </div>
-            <span class="comment-time">${when}</span>
+            <div style="display:flex;align-items:center;gap:8px;padding:0 2px;">
+              <span class="comment-time">${when}</span>
+              <button class="c-open-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}" data-author="${escapeHtml(who)}"
+                style="background:none;border:none;cursor:pointer;font-size:.75rem;color:var(--muted);padding:0;opacity:.7;">
+                💬  0  Open
+              </button>
+            </div>
           `;
 
           // Attacca eventi menu al nuovo commento
@@ -5201,6 +5207,12 @@ async function uploadAllSelectedImagesAndSwapSrc() {
             });
           });
 
+          div.querySelectorAll(".c-open-btn").forEach(btn => {
+            btn.addEventListener("click", async e => {
+              e.stopPropagation();
+              await drillIntoComment(btn.dataset.postId, btn.dataset.commentId, btn.dataset.author);
+            });
+          });
           if (threadComments) threadComments.appendChild(div);
         });
 
@@ -5750,6 +5762,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       }
 
       posts.forEach((p, idx) => {
+        knownPostIds.add(p.id);
         const key = makePostKey(p, idx);
         postByKey.set(key, p);
         const st = ensurePostUI(key, p);
@@ -6294,6 +6307,8 @@ const logicalBtn = card.querySelector(".logical-btn");
     const FEED_PAGE_SIZE = 20;
     let feedLoading = false;
     let feedExhausted = false;
+    const knownPostIds = new Set();
+    let FEED_POLL_INTERVAL = null;
 
     async function loadFeed(append = false) {
       if (feedLoading) return;
@@ -6323,6 +6338,7 @@ const logicalBtn = card.querySelector(".logical-btn");
         feedLoading = false;
       }
     }
+    
     
     // Thread interactions (frontend-only for now)
     threadSendBtn?.addEventListener("click", trySendThreadComment);
