@@ -1857,32 +1857,7 @@
         min-height: 0;
       }
     }
-    @media (max-width: 600px) {
-      .rt-toolbar {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        overflow-x: visible !important;
-        overflow: visible !important;
-        white-space: normal !important;
-        gap: 8px 6px;
-        padding: 8px;
-      }
-      .rt-toolbar .rt-sep {
-        display: none !important;
-      }
-      .rt-toolbar .rt-size {
-        flex-basis: 100%;
-      }
-      .rt-toolbar .rt-tag-wrap {
-        flex-basis: 100%;
-      }
-      .rt-tag-menu {
-        position: absolute;
-        bottom: 100%;
-        left: 0;
-        z-index: 100;
-      }
-    }
+
 
 
     .brand {
@@ -3081,18 +3056,26 @@
   }
 
   .rt-toolbar {
-    gap: 6px;
+    gap: 8px 6px;
     padding: 8px;
     border-radius: 14px;
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    overflow: visible;
+    flex-wrap: wrap;
   }
 
-  .rt-toolbar::-webkit-scrollbar {
+  .rt-toolbar .rt-sep {
     display: none;
   }
+
+  .rt-toolbar .rt-size {
+    flex-basis: 100%;
+  }
+
+  .rt-toolbar .rt-tag-wrap {
+    flex-basis: 100%;
+  }
+
+
 
   .rt-btn,
   .rt-size select {
@@ -3454,6 +3437,35 @@
     .post-card.lang-open {
       z-index: 300;
     }
+
+
+
+    /* ===== Fullscreen create-post ===== */
+    .modal.fullscreen {
+      width: 100% !important;
+      max-width: 100% !important;
+      max-height: 100vh !important;
+      height: 100vh;
+      border-radius: 0 !important;
+    }
+    .modal.fullscreen .modal-body {
+      flex: 1;
+    }
+    .modal.fullscreen .rt-editor {
+      min-height: 50vh;
+      max-height: none;
+      flex: 1;
+    }
+    .modal.fullscreen .modal-backdrop {
+      padding: 0;
+    }
+    .modal-head .icon-x + .icon-x {
+      margin-left: 0;
+    }
+    /* Quando fullscreen, cambia icona a "riduci" */
+    .modal.fullscreen #createPostExpand svg path:nth-child(1) { d: path("M4 14h3a2 2 0 012 2v3"); }
+    .modal.fullscreen #createPostExpand svg path:nth-child(2) { d: path("M20 10V7a0 0 0 000 0h0"); }
+    
   </style>
 </head>
 
@@ -3665,6 +3677,14 @@
           <div class="modal-title" id="createPostTitle">Create post</div>
           <div class="modal-sub">Write something worth reading.</div>
         </div>
+        <button id="createPostExpand" class="icon-x" aria-label="Fullscreen" title="Fullscreen">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M8 3H5a2 2 0 00-2 2v3"/>
+            <path d="M21 8V5a2 2 0 00-2-2h-3"/>
+            <path d="M16 21h3a2 2 0 002-2v-3"/>
+            <path d="M3 16v3a2 2 0 002 2h3"/>
+          </svg>
+        </button>
         <button id="createPostClose" class="icon-x" aria-label="Close">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 6l12 12" />
@@ -6612,24 +6632,46 @@ const logicalBtn = card.querySelector(".logical-btn");
 
         if (!tagSavedRange || tagSavedRange.collapsed) return;
 
-        // Controlla che la selezione non sia già dentro un tag
+        // Cerca se la selezione è già dentro un tagged-segment
+        let existingTag = null;
         let node = tagSavedRange.startContainer;
         while (node && node !== createPostContent) {
           if (node.nodeType === 1 && node.classList?.contains("tagged-segment")) {
-            alert("This text is already tagged. Remove the existing tag first.");
-            return;
+            existingTag = node;
+            break;
           }
           node = node.parentNode;
         }
 
         const labelMap = { question: "Question", clarification: "Clarification", sources: "Sources" };
+
+        if (existingTag) {
+          if (existingTag.getAttribute("data-tag") === tagType) {
+            // Stesso tag → rimuovi (unwrap)
+            const parent = existingTag.parentNode;
+            const rmBtn = existingTag.querySelector(".tag-remove");
+            if (rmBtn) rmBtn.remove();
+            while (existingTag.firstChild) {
+              parent.insertBefore(existingTag.firstChild, existingTag);
+            }
+            parent.removeChild(existingTag);
+          } else {
+            // Tag diverso → cambia
+            existingTag.setAttribute("data-tag", tagType);
+            existingTag.setAttribute("data-tag-label", labelMap[tagType] || tagType);
+            existingTag.className = "tagged-segment";
+          }
+          tagSavedRange = null;
+          return;
+        }
+
+        // Nessun tag → applica nuovo
         const span = document.createElement("span");
         span.className = "tagged-segment";
         span.setAttribute("data-tag", tagType);
         span.setAttribute("data-tag-label", labelMap[tagType] || tagType);
         span.setAttribute("contenteditable", "true");
 
-        // Pulsante per rimuovere il tag
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
         removeBtn.className = "tag-remove";
@@ -6638,7 +6680,6 @@ const logicalBtn = card.querySelector(".logical-btn");
         removeBtn.addEventListener("click", (ev) => {
           ev.preventDefault();
           ev.stopPropagation();
-          // Unwrap: sposta i contenuti fuori dallo span
           const parent = span.parentNode;
           while (span.firstChild) {
             if (span.firstChild === removeBtn) { span.removeChild(removeBtn); continue; }
@@ -6651,8 +6692,6 @@ const logicalBtn = card.querySelector(".logical-btn");
           tagSavedRange.surroundContents(span);
           span.appendChild(removeBtn);
         } catch(err) {
-          // surroundContents fallisce se la selezione attraversa nodi
-          // fallback: estrai, wrappa, reinserisci
           const fragment = tagSavedRange.extractContents();
           span.appendChild(fragment);
           span.appendChild(removeBtn);
@@ -6661,6 +6700,19 @@ const logicalBtn = card.querySelector(".logical-btn");
 
         tagSavedRange = null;
       });
+    });
+
+    // ── FULLSCREEN TOGGLE ────────────────────────────────────────────
+    const expandBtn = document.getElementById("createPostExpand");
+    expandBtn?.addEventListener("click", () => {
+      const modal = expandBtn.closest(".modal");
+      if (!modal) return;
+      modal.classList.toggle("fullscreen");
+      // Aggiorna anche il backdrop padding
+      const backdrop = modal.closest(".modal-backdrop");
+      if (backdrop) {
+        backdrop.style.padding = modal.classList.contains("fullscreen") ? "0" : "";
+      }
     });
 
     // Funzione per estrarre i segmenti taggati dall'editor prima del publish
