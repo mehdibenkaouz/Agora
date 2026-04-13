@@ -816,7 +816,9 @@
     /* --- Rich text editor (contenteditable) --- */
     /* --- Toolbar Word-like --- */
     .rt-toolbar{
-      display:flex;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 4px;
       align-items:center;
       gap:8px;
       flex-wrap:wrap;
@@ -1375,19 +1377,35 @@
       fill: #ffffff !important;
       stroke: #ffffff !important;
     }
-    .rt-tag-menu{
-      position: absolute; top: 100%; left: 0; z-index: 100;
-      background: #fff; border: 1px solid rgba(0,0,0,0.12);
-      border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.12);
-      padding: 4px 0; min-width: 170px;
+    .rt-tag-menu {
+      display: none;
+      position: absolute;
+      bottom: 100%;
+      left: 0;
+      z-index: 100;
+      background: var(--bg, #1a1a2e);
+      border: 1px solid var(--border, #333);
+      border-radius: 8px;
+      padding: 6px;
+      box-shadow: 0 -4px 16px rgba(0,0,0,0.4);
+      min-width: 180px;
+    }
+    
+    .rt-tag-menu[style*="display: block"],
+    .rt-tag-menu.open {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
     }
     :root[data-theme="dark"] .rt-tag-menu{
       background: #1a1a1a; border-color: rgba(255,255,255,0.12);
     }
-    .rt-tag-option{
-      display: block; width: 100%; padding: 8px 14px; border: none;
-      background: none; cursor: pointer; font-size: 0.88rem;
-      text-align: left; color: inherit;
+    .rt-tag-option {
+      padding: 10px 14px;
+      border-radius: 6px;
+      text-align: left;
+      white-space: nowrap;
+      font-size: 15px;
     }
     .rt-tag-option:hover{
       background: rgba(87,25,41,0.08);
@@ -1837,6 +1855,32 @@
       }
       .thread-comments{
         min-height: 0;
+      }
+    }
+    @media (max-width: 600px) {
+      .rt-toolbar {
+        gap: 8px 6px;
+        padding: 8px;
+      }
+    
+      .rt-toolbar .rt-btn {
+        min-width: 36px;
+        min-height: 36px;
+        padding: 6px 8px;
+      }
+    
+      .rt-toolbar .rt-sep {
+        display: none;
+      }
+    
+      .rt-toolbar .rt-size {
+        flex-basis: 100%;
+        order: 10;
+      }
+    
+      .rt-toolbar .rt-tag-wrap {
+        flex-basis: 100%;
+        order: 11;
       }
     }
 
