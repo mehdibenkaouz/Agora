@@ -1861,26 +1861,29 @@
       .rt-toolbar {
         gap: 8px 6px;
         padding: 8px;
+        overflow: visible;
       }
-    
-      .rt-toolbar .rt-btn {
-        min-width: 36px;
-        min-height: 36px;
-        padding: 6px 8px;
-      }
-    
       .rt-toolbar .rt-sep {
         display: none;
       }
-    
+      .rt-toolbar .rt-btn {
+        min-width: 38px;
+        min-height: 38px;
+      }
       .rt-toolbar .rt-size {
         flex-basis: 100%;
-        order: 10;
       }
-    
       .rt-toolbar .rt-tag-wrap {
         flex-basis: 100%;
-        order: 11;
+      }
+      .rt-tag-menu {
+        position: absolute;
+        bottom: 100%;
+        left: 0;
+        z-index: 100;
+      }
+      .rt-editor {
+        min-height: 180px;
       }
     }
 
