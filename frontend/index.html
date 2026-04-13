@@ -1859,16 +1859,16 @@
     }
     @media (max-width: 600px) {
       .rt-toolbar {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        overflow-x: visible !important;
+        overflow: visible !important;
+        white-space: normal !important;
         gap: 8px 6px;
         padding: 8px;
-        overflow: visible;
       }
       .rt-toolbar .rt-sep {
-        display: none;
-      }
-      .rt-toolbar .rt-btn {
-        min-width: 38px;
-        min-height: 38px;
+        display: none !important;
       }
       .rt-toolbar .rt-size {
         flex-basis: 100%;
@@ -1881,9 +1881,6 @@
         bottom: 100%;
         left: 0;
         z-index: 100;
-      }
-      .rt-editor {
-        min-height: 180px;
       }
     }
 
