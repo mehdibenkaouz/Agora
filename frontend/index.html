@@ -3604,6 +3604,16 @@
     :root[data-theme="dark"] .field > span {
       color: #fff;
     }
+
+    .modal.fullscreen .rt-upload-btn {
+      display: inline-flex !important;
+    }
+
+    .rt-editor.is-dragover {
+      outline: 2px dashed var(--brand);
+      outline-offset: -4px;
+      background: rgba(var(--brand-rgb), 0.05);
+    }
     
   </style>
 </head>
@@ -3886,6 +3896,7 @@
                   <button type="button" class="rt-tag-option" data-tag="sources">📚 Sources</button>
                 </div>
               </div>
+              <button type="button" id="rtUploadBtn" class="rt-btn rt-upload-btn" title="Upload images" style="display:none;">📎 Upload</button>
               <button type="button" id="createPostExpand" class="rt-btn rt-expand-btn" aria-label="Fullscreen" title="Fullscreen">
                 <svg viewBox="0 0 24 24" width="16" height="16" class="expand-icon" style="stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;">
                   <path d="M8 3H5a2 2 0 00-2 2v3"/>
@@ -6850,10 +6861,17 @@ const logicalBtn = card.querySelector(".logical-btn");
 
     // ── FULLSCREEN TOGGLE ────────────────────────────────────────────
     const expandBtn = document.getElementById("createPostExpand");
+    const rtUploadBtn = document.getElementById("rtUploadBtn");
+
     expandBtn?.addEventListener("click", () => {
       const modal = expandBtn.closest(".modal");
       if (!modal) return;
       modal.classList.toggle("fullscreen");
+    });
+
+    rtUploadBtn?.addEventListener("click", () => {
+      const fileInput = document.getElementById("imageFileInput");
+      if (fileInput) fileInput.click();
     });
 
     // Funzione per estrarre i segmenti taggati dall'editor prima del publish
@@ -7847,6 +7865,31 @@ const logicalBtn = card.querySelector(".logical-btn");
 
     // Paste: gestiamo SOLO sul modal (un solo listener)
     createPostModal.addEventListener("paste", handlePaste);
+    // Drag & drop direttamente nell'editor (utile in fullscreen)
+    createPostContent.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      createPostContent.classList.add("is-dragover");
+    });
+    createPostContent.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      createPostContent.classList.remove("is-dragover");
+    });
+    createPostContent.addEventListener("drop", (e) => {
+      const files = e.dataTransfer?.files;
+      if (files && files.length > 0) {
+        let hasMedia = false;
+        for (const f of files) {
+          if (isImageFile(f) || isVideoFile(f)) hasMedia = true;
+        }
+        if (hasMedia) {
+          e.preventDefault();
+          e.stopPropagation();
+          createPostContent.classList.remove("is-dragover");
+          addMany(files);
+        }
+      }
+    });
 
     createPostClose.addEventListener("click", closeCreatePostModal);
     createPostModal.addEventListener("click", (e) => {
