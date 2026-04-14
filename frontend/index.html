@@ -3584,6 +3584,9 @@
     .modal.fullscreen .rt-expand-btn .collapse-icon { display: inline-block !important; }
     .modal:not(.fullscreen) .rt-expand-btn .expand-icon { display: inline-block; }
     .modal:not(.fullscreen) .rt-expand-btn .collapse-icon { display: none !important; }
+    :root[data-theme="dark"] .field > span {
+      color: #fff;
+    }
     
   </style>
 </head>
@@ -3874,10 +3877,12 @@
                   <path d="M3 16v3a2 2 0 002 2h3"/>
                 </svg>
                 <svg viewBox="0 0 24 24" width="16" height="16" class="collapse-icon" style="display:none;stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;">
-                  <path d="M4 14h3a2 2 0 012 2v3"/>
-                  <path d="M14 10h3a2 2 0 002-2V5"/>
-                  <path d="M10 14v3a2 2 0 01-2 2H5"/>
-                  <path d="M14 10V7a2 2 0 012-2h3"/>
+                  <path d="M14 10l7-7"/>
+                  <path d="M10 14l-7 7"/>
+                  <path d="M21 3h-7"/>
+                  <path d="M21 3v7"/>
+                  <path d="M3 21h7"/>
+                  <path d="M3 21v-7"/>
                 </svg>
               </button>
             </div>
