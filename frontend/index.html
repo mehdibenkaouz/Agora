@@ -7186,7 +7186,7 @@ const logicalBtn = card.querySelector(".logical-btn");
 
       sessionStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
     }
-    async function restoreCreatePostDraft() {
+async function restoreCreatePostDraft() {
       const raw = sessionStorage.getItem(DRAFT_KEY);
       if (!raw) return false;
 
@@ -7202,11 +7202,14 @@ const logicalBtn = card.querySelector(".logical-btn");
 
       clearImages();
 
+      // Ripristina i file da IndexedDB e crea nuovi blob URL
+      const idToNewUrl = {};
       for (const m of (draft.media || [])) {
         const file = await idbGet(m.mediaKey).catch(() => null);
         if (!file) continue;
 
         const url = URL.createObjectURL(file);
+        idToNewUrl[m.id] = url;
         selectedImages.push({
           id: m.id,
           file,
@@ -7218,6 +7221,19 @@ const logicalBtn = card.querySelector(".logical-btn");
       }
 
       renderImagePreview();
+
+      // Aggiorna gli src delle immagini nell'editor con i nuovi blob URL
+      createPostContent.querySelectorAll(".img-node").forEach(node => {
+        const imgId = node.dataset.imgId;
+        if (imgId && idToNewUrl[imgId]) {
+          const img = node.querySelector("img");
+          if (img) img.src = idToNewUrl[imgId];
+          const video = node.querySelector("video");
+          if (video) video.src = idToNewUrl[imgId];
+        }
+        // Ri-attacca gli event handler (move, resize, delete)
+        bindImageNode(node);
+      });
 
       pendingQuotedPost = draft.quote || null;
       const previewEl = document.getElementById("quotePreview");
