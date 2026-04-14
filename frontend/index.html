@@ -3506,8 +3506,25 @@
       width: 100%;
       box-sizing: border-box;
       background: var(--panel);
+      color: var(--text);
+    }
+    :root[data-theme="dark"] .modal.fullscreen .rt-toolbar {
+      background: var(--panel);
+      color: #fff;
     }
 
+    :root[data-theme="dark"] .modal.fullscreen .rt-toolbar .rt-btn {
+      color: #fff;
+    }
+
+    :root[data-theme="dark"] .modal.fullscreen .rt-toolbar .rt-size {
+      color: #fff;
+    }
+
+    :root[data-theme="dark"] .modal.fullscreen .rt-toolbar .rt-size select {
+      color: #fff;
+    }
+    
     .modal.fullscreen .rt-toolbar .rt-sep {
       display: none;
     }
@@ -3877,12 +3894,10 @@
                   <path d="M3 16v3a2 2 0 002 2h3"/>
                 </svg>
                 <svg viewBox="0 0 24 24" width="16" height="16" class="collapse-icon" style="display:none;stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;">
-                  <path d="M14 10l7-7"/>
-                  <path d="M10 14l-7 7"/>
-                  <path d="M21 3h-7"/>
-                  <path d="M21 3v7"/>
-                  <path d="M3 21h7"/>
-                  <path d="M3 21v-7"/>
+                  <path d="M4 14h6v6"/>
+                  <path d="M3 21l7-7"/>
+                  <path d="M20 10h-6V4"/>
+                  <path d="M21 3l-7 7"/>
                 </svg>
               </button>
             </div>
