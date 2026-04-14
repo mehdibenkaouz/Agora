@@ -4992,7 +4992,13 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       }
 
       // preview testuale (sicuro)
-      const previewPlain = plain.slice(0, FEED_PREVIEW_LIMIT);
+      // Taglia al confine di parola più vicino (senza spezzare parole)
+      let cutPoint = FEED_PREVIEW_LIMIT;
+      if (plain.length > FEED_PREVIEW_LIMIT) {
+        const lastSpace = plain.lastIndexOf(' ', FEED_PREVIEW_LIMIT);
+        if (lastSpace > FEED_PREVIEW_LIMIT * 0.8) cutPoint = lastSpace;
+      }
+      const previewPlain = plain.slice(0, cutPoint);
       const previewSafe = escapeHtml(previewPlain);
 
       return `
