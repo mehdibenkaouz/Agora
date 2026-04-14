@@ -3452,30 +3452,13 @@
       height: 100%;
       border-radius: 0 !important;
       border: none !important;
+      display: flex;
+      flex-direction: column;
     }
 
     .modal.fullscreen .modal-head {
-      padding: 6px 10px;
-      border-bottom: none;
-    }
-
-    .modal.fullscreen .modal-head > div:first-child {
       display: none;
     }
-
-    .modal.fullscreen #createPostClose {
-      display: none;
-    }
-
-    .modal.fullscreen #createPostExpand {
-      border: none;
-      background: transparent;
-    }
-
-    .modal.fullscreen #createPostExpand .expand-icon { display: none; }
-    .modal.fullscreen #createPostExpand .collapse-icon { display: block !important; }
-    .modal:not(.fullscreen) #createPostExpand .expand-icon { display: block; }
-    .modal:not(.fullscreen) #createPostExpand .collapse-icon { display: none; }
 
     .modal.fullscreen .modal-body {
       padding: 0;
@@ -3484,11 +3467,18 @@
       flex-direction: column;
       flex: 1;
       min-height: 0;
-      overflow: hidden;
+      overflow: visible;
     }
 
     .modal.fullscreen .dropzone {
       display: none;
+    }
+
+    .modal.fullscreen .form {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
     }
 
     .modal.fullscreen .field {
@@ -3504,8 +3494,7 @@
     }
 
     .modal.fullscreen .rt-toolbar {
-      position: sticky;
-      top: 0;
+      flex-shrink: 0;
       z-index: 10;
       border-radius: 0;
       border: none;
@@ -3516,6 +3505,7 @@
       overflow: visible;
       width: 100%;
       box-sizing: border-box;
+      background: var(--panel);
     }
 
     .modal.fullscreen .rt-toolbar .rt-sep {
@@ -3565,42 +3555,35 @@
       box-shadow: none;
     }
 
+    :root[data-theme="dark"] .modal.fullscreen .rt-editor:focus {
+      border: none;
+      box-shadow: none;
+    }
+
     .modal.fullscreen #rtCounter {
       display: none;
     }
 
     .modal.fullscreen #createPostPublishBtn {
-      position: sticky;
-      bottom: 0;
+      flex-shrink: 0;
       margin: 0;
       border-radius: 0;
       width: 100%;
       min-height: 50px;
       font-size: 1.05rem;
       z-index: 10;
-      flex-shrink: 0;
     }
 
     .modal.fullscreen .form-note {
       display: none;
     }
-    
-    /* Quando fullscreen, cambia icona a "riduci" */
-    .modal.fullscreen #createPostExpand svg path:nth-child(1) { d: path("M4 14h3a2 2 0 012 2v3"); }
-    .modal.fullscreen #createPostExpand svg path:nth-child(2) { d: path("M20 10V7a0 0 0 000 0h0"); }
-    .modal.fullscreen #createPostExpand {
-      position: fixed;
-      top: 8px;
-      left: 8px;
-      z-index: 20;
-      background: transparent;
-      border: none;
-    }
-    
-    .modal.fullscreen #createPostExpand .expand-icon { display: none; }
-    .modal.fullscreen #createPostExpand .collapse-icon { display: block !important; }
-    .modal:not(.fullscreen) #createPostExpand .expand-icon { display: block; }
-    .modal:not(.fullscreen) #createPostExpand .collapse-icon { display: none; }
+
+    /* Expand/collapse icon toggle */
+    .rt-expand-btn { margin-left: auto; }
+    .modal.fullscreen .rt-expand-btn .expand-icon { display: none !important; }
+    .modal.fullscreen .rt-expand-btn .collapse-icon { display: inline-block !important; }
+    .modal:not(.fullscreen) .rt-expand-btn .expand-icon { display: inline-block; }
+    .modal:not(.fullscreen) .rt-expand-btn .collapse-icon { display: none !important; }
     
   </style>
 </head>
@@ -3813,18 +3796,7 @@
           <div class="modal-title" id="createPostTitle">Create post</div>
           <div class="modal-sub">Write something worth reading.</div>
         </div>
-        <button id="createPostExpand" class="icon-x" aria-label="Fullscreen" title="Fullscreen">
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="expand-icon">
-            <path d="M8 3H5a2 2 0 00-2 2v3"/>
-            <path d="M21 8V5a2 2 0 00-2-2h-3"/>
-            <path d="M16 21h3a2 2 0 002-2v-3"/>
-            <path d="M3 16v3a2 2 0 002 2h3"/>
-          </svg>
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="collapse-icon" style="display:none">
-            <path d="M19 12H5"/>
-            <path d="M12 5l-7 7 7 7"/>
-          </svg>
-        </button>
+
         <button id="createPostClose" class="icon-x" aria-label="Close">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 6l12 12" />
@@ -3894,6 +3866,18 @@
                   <button type="button" class="rt-tag-option" data-tag="sources">📚 Sources</button>
                 </div>
               </div>
+        <button id="createPostExpand" class="icon-x" aria-label="Fullscreen" title="Fullscreen">
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="expand-icon">
+            <path d="M8 3H5a2 2 0 00-2 2v3"/>
+            <path d="M21 8V5a2 2 0 00-2-2h-3"/>
+            <path d="M16 21h3a2 2 0 002-2v-3"/>
+            <path d="M3 16v3a2 2 0 002 2h3"/>
+          </svg>
+          <svg viewBox="0 0 24 24" aria-hidden="true" class="collapse-icon" style="display:none">
+            <path d="M19 12H5"/>
+            <path d="M12 5l-7 7 7 7"/>
+          </svg>
+        </button>
             </div>
 
 
