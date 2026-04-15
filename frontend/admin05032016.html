@@ -1394,29 +1394,29 @@
 
   async function uploadSpamProofImages(files) {
     const out = [];
-    const userToken = localStorage.getItem(USER_KEY) || "";
 
     for (const file of [...files].slice(0, 8)) {
       const fd = new FormData();
       fd.append("file", file);
 
-      const headers = {};
-      if (userToken) headers["Authorization"] = "Bearer " + userToken;
-
       const opts = {
         method: "POST",
         body: fd,
-        headers
+        credentials: "include"
       };
-      if (!API_BASE) opts.credentials = "include";
 
       const res = await fetch((API_BASE || "") + "/api/media/upload", opts);
       const data = await res.json();
-      if (!data.ok) throw new Error(data.error || "upload_failed");
+
+      if (!data.ok) {
+        throw new Error(data.error || "upload_failed");
+      }
+
       out.push(data.url);
     }
+
     return out;
-  }
+}
 
   document.getElementById("rejectSpamSendBtn").onclick = async () => {
     if (!rejectSpamComplaintId) return;
