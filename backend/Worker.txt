@@ -499,8 +499,15 @@ export default {
         // ── SERVER-SIDE SPAM CHECK ────────────────────────────────────
         const spamResult = await checkSpamServer(env, session.user_id, "post");
         if (spamResult.isSpam) {
-          const lastPost = await env.dbagora.prepare("SELECT id, content FROM posts WHERE user_id = ?1 ORDER BY created_at DESC LIMIT 1").bind(session.user_id).first();
-          await flagSpam(env, session.user_id, "post", spamResult.intervals, spamResult.score, lastPost ? lastPost.content.replace(/<[^>]*>/g,'') : '', lastPost ? lastPost.id : '');
+          // Only flag if no active spam flag exists for this user+action (avoid duplicates)
+          const existingFlag = await env.dbagora.prepare(
+            "SELECT id, detected_at FROM spam_flags WHERE user_id = ?1 AND action_type = 'post' ORDER BY detected_at DESC LIMIT 1"
+          ).bind(session.user_id).first();
+          const flagStillActive = existingFlag && (Date.now() - new Date(existingFlag.detected_at).getTime()) < 30 * 60 * 1000;
+          if (!flagStillActive) {
+            const lastPost = await env.dbagora.prepare("SELECT id, content FROM posts WHERE user_id = ?1 ORDER BY created_at DESC LIMIT 1").bind(session.user_id).first();
+            await flagSpam(env, session.user_id, "post", spamResult.intervals, spamResult.score, lastPost ? lastPost.content.replace(/<[^>]*>/g,'') : '', lastPost ? lastPost.id : '');
+          }
           return json({ ok: false, error: "spam_detected", until: spamResult.until }, 429, ALLOWED_ORIGIN);
         }
 
@@ -763,8 +770,15 @@ export default {
         // ── SERVER-SIDE SPAM CHECK (commenti) ────────────────────────
         const spamResultC = await checkSpamServer(env, session.user_id, "comment");
         if (spamResultC.isSpam) {
-          const lastComment = await env.dbagora.prepare("SELECT content, post_id FROM comments WHERE user_id = ?1 ORDER BY created_at DESC LIMIT 1").bind(session.user_id).first();
-          await flagSpam(env, session.user_id, "comment", spamResultC.intervals, spamResultC.score, lastComment ? lastComment.content : '', lastComment ? lastComment.post_id : '');
+          // Only flag if no active spam flag exists for this user+action (avoid duplicates)
+          const existingFlagC = await env.dbagora.prepare(
+            "SELECT id, detected_at FROM spam_flags WHERE user_id = ?1 AND action_type = 'comment' ORDER BY detected_at DESC LIMIT 1"
+          ).bind(session.user_id).first();
+          const flagStillActiveC = existingFlagC && (Date.now() - new Date(existingFlagC.detected_at).getTime()) < 30 * 60 * 1000;
+          if (!flagStillActiveC) {
+            const lastComment = await env.dbagora.prepare("SELECT content, post_id FROM comments WHERE user_id = ?1 ORDER BY created_at DESC LIMIT 1").bind(session.user_id).first();
+            await flagSpam(env, session.user_id, "comment", spamResultC.intervals, spamResultC.score, lastComment ? lastComment.content : '', lastComment ? lastComment.post_id : '');
+          }
           return json({ ok: false, error: "spam_detected", until: spamResultC.until }, 429, ALLOWED_ORIGIN);
         }
 
@@ -1974,6 +1988,14 @@ export default {
           return json({ ok: false, error: "message_too_short" }, 400, ALLOWED_ORIGIN);
         }
 
+        // Max 5 spam complaints per user (global limit)
+        const totalComplaints = await env.dbagora.prepare(
+          "SELECT COUNT(*) as cnt FROM spam_complaints WHERE complainant_id = ?1"
+        ).bind(session.user_id).first();
+        if ((totalComplaints?.cnt || 0) >= 5) {
+          return json({ ok: false, error: "max_complaints_reached" }, 429, ALLOWED_ORIGIN);
+        }
+
         let flag = await env.dbagora.prepare(`
           SELECT id, detected_at
           FROM spam_flags
@@ -2343,7 +2365,7 @@ export default {
           LIMIT 1
         `).bind(flagId).first();
 
-        if (complaint && complaint.status !== "rejected") {
+      if (complaint && complaint.status !== "rejected" && complaint.status !== "resolved") {
           return json({ ok: false, error: "reject_spam_complaint_first" }, 409, ALLOWED_ORIGIN);
         }
 
@@ -2370,7 +2392,7 @@ export default {
           LIMIT 1
         `).bind(flagId).first();
 
-        if (complaint && complaint.status !== "rejected") {
+        if (complaint && complaint.status !== "rejected" && complaint.status !== "resolved") {
           return json({ ok: false, error: "reject_spam_complaint_first" }, 409, ALLOWED_ORIGIN);
         }
 

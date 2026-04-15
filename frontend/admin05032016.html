@@ -504,7 +504,82 @@
     .stat-card.c-banned .stat-value { color: var(--blue); }
 
 
-        /* ── REJECT SPAM OVERLAY ── */
+        /* ── BAN OVERLAY ── */
+    .ban-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(6px);
+      z-index: 225;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .ban-overlay.open { display: flex; }
+
+    .ban-box {
+      width: min(760px, 100%);
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      padding: 24px;
+      position: relative;
+    }
+    .ban-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: var(--accent2);
+    }
+    .ban-title {
+      font-family: var(--font-head);
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .ban-sub {
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 18px;
+    }
+    .ban-label {
+      display:block;
+      font-size:10px;
+      text-transform:uppercase;
+      letter-spacing:1px;
+      color:var(--muted);
+      margin-bottom:6px;
+    }
+    .ban-target {
+      background: var(--card);
+      border: 1px solid var(--border2);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 12px;
+      padding: 10px 12px;
+      margin-bottom: 14px;
+    }
+    .ban-textarea {
+      width:100%;
+      min-height:120px;
+      background:var(--card);
+      border:1px solid var(--border2);
+      color:var(--text);
+      font-family:var(--font-mono);
+      font-size:12px;
+      padding:10px 12px;
+      outline:none;
+      resize:vertical;
+      margin-bottom:16px;
+    }
+    .ban-textarea:focus { border-color: var(--accent2); }
+    .ban-actions {
+      display:flex;
+      justify-content:flex-end;
+      gap:8px;
+    }
+
+    /* ── REJECT SPAM OVERLAY ── */
     .reject-spam-overlay {
       position: fixed; inset: 0;
       background: rgba(0,0,0,0.65);
@@ -939,6 +1014,23 @@
   </div>
 
 </div>
+<div class="ban-overlay" id="banOverlay">
+  <div class="ban-box">
+    <div class="ban-title">Ban user</div>
+    <div class="ban-sub">Write a clear reason before banning. This keeps moderation traceable and consistent.</div>
+
+    <label class="ban-label">User</label>
+    <div id="banTarget" class="ban-target">—</div>
+
+    <label class="ban-label">Reason</label>
+    <textarea id="banReason" class="ban-textarea" placeholder="Write the reason for this ban..."></textarea>
+
+    <div class="ban-actions">
+      <button class="confirm-cancel" type="button" onclick="closeBanModal()">Cancel</button>
+      <button class="confirm-ok" type="button" id="banSendBtn">Confirm ban</button>
+    </div>
+  </div>
+</div>
 
 <div class="reject-spam-overlay" id="rejectSpamOverlay">
   <div class="reject-spam-box">
@@ -983,6 +1075,8 @@
 
   let adminToken   = localStorage.getItem(ADMIN_KEY) || "";
   let rejectSpamComplaintId = null;
+  let pendingBanUserId = null;
+  let pendingBanUserName = "";
   let allUsers     = [];
   let confirmCb    = null;
 
@@ -1247,7 +1341,10 @@
           </div>
         </td>
         <td style="color:var(--muted);font-size:11px">${fmtDate(u.created_at)}</td>
-        <td><span class="badge ${u.banned ? 'badge-banned' : 'badge-active'}">${u.banned ? 'bannato' : 'attivo'}</span></td>
+        <td>
+          <span class="badge ${u.banned ? 'badge-banned' : 'badge-active'}">${u.banned ? 'bannato' : 'attivo'}</span>
+          ${u.banned && u.ban_reason ? `<div style="margin-top:6px;color:var(--muted);font-size:10px;max-width:220px;line-height:1.5">${esc(u.ban_reason)}</div>` : ""}
+        </td>
         <td>
           ${u.banned
             ? `<button class="action-btn" onclick="unbanUser('${u.id}', '${esc(u.display_name)}')">Unban</button>`
@@ -1461,20 +1558,62 @@
       btn.textContent = "Invia rifiuto";
     }
   };
+  function openBanModal(userId, name) {
+    pendingBanUserId = userId;
+    pendingBanUserName = name || "";
+    document.getElementById("banTarget").textContent = name || userId || "—";
+    document.getElementById("banReason").value = "";
+    document.getElementById("banOverlay").classList.add("open");
+  }
 
+  function closeBanModal() {
+    pendingBanUserId = null;
+    pendingBanUserName = "";
+    document.getElementById("banOverlay").classList.remove("open");
+  }
+
+  document.getElementById("banSendBtn").onclick = async () => {
+    if (!pendingBanUserId) return;
+
+    const reason = document.getElementById("banReason").value.trim();
+    if (reason.length < 5) {
+      showToast("Scrivi una motivazione più chiara.", true);
+      return;
+    }
+
+    const btn = document.getElementById("banSendBtn");
+    btn.disabled = true;
+    btn.textContent = "Invio...";
+
+    try {
+      const data = await adminApi("/api/admin/ban", {
+        method: "POST",
+        body: JSON.stringify({
+          user_id: pendingBanUserId,
+          reason
+        })
+      });
+
+      if (!data.ok) {
+        showToast("Errore: " + data.error, true);
+        return;
+      }
+
+      closeBanModal();
+      showToast(`${pendingBanUserName || "Utente"} bannato.`);
+      loadAll();
+    } catch (e) {
+      showToast("Errore: " + (e.message || e), true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Confirm ban";
+    }
+  };
   // ════════════════════════════════════════════════════════
   // ── ACTIONS ─────────────────────────────────────────────
   // ════════════════════════════════════════════════════════
   function banUser(userId, name) {
-    openConfirm(
-      "Banna utente",
-      `Sei sicuro di voler bannare "${name}"? L'account verrà disabilitato e tutte le sessioni invalidate.`,
-      async () => {
-        const data = await adminApi("/api/admin/ban", { method: "POST", body: JSON.stringify({ user_id: userId }) });
-        if (data.ok) { showToast(`${name} bannato.`); loadAll(); }
-        else showToast("Errore: " + data.error, true);
-      }
-    );
+    openBanModal(userId, name);
   }
 
   function unbanUser(userId, name) {
