@@ -1032,7 +1032,7 @@
             </div>
           </td>
           <td><div class="intervals">${intervalsHtml || '<span style="color:var(--muted);font-size:10px">—</span>'}</div></td>
-          <td><span class="badge ${f.banned ? 'badge-banned' : 'badge-active'}">${f.banned ? 'bannato' : 'attivo'}</span></td>
+          <td><span class="badge ${f.banned ? 'badge-banned' : (Date.now() < new Date(f.detected_at).getTime() + 30*60*1000) ? 'badge-active' : 'badge-resolved'}">${f.banned ? 'bannato' : (Date.now() < new Date(f.detected_at).getTime() + 30*60*1000) ? 'attivo' : 'disattivo'}</span></td>
           <td>
             ${f.banned
               ? `<button class="action-btn" onclick="unbanUser('${f.user_id}', '${esc(f.display_name)}')">Unban</button>`
