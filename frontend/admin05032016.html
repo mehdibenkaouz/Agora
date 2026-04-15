@@ -648,7 +648,7 @@
           <th>Tipo</th>
           <th>Rilevato</th>
           <th>Score</th>
-          <th>Intervalli (ms)</th>
+          <th>CONTENUTO</th>
           <th>Stato</th>
           <th>Azioni</th>
         </tr>
@@ -1031,7 +1031,7 @@
               <div class="score-val">${f.score}</div>
             </div>
           </td>
-          <td><div class="intervals">${intervalsHtml || '<span style="color:var(--muted);font-size:10px">—</span>'}</div></td>
+          <td>${f.content_preview ? (f.action_type === 'comment' && f.post_id ? `<a href="/?post=${esc(f.post_id)}" target="_blank" style="color:var(--accent);font-size:12px;text-decoration:underline">${esc(f.content_preview)}</a>` : `<span style="color:var(--muted);font-size:12px">${esc(f.content_preview)}</span>`) : '<span style="color:var(--muted);font-size:10px">—</span>'}</td>
           <td><span class="badge ${f.banned ? 'badge-banned' : (Date.now() < new Date(f.detected_at).getTime() + 30*60*1000) ? 'badge-active' : 'badge-resolved'}">${f.banned ? 'bannato' : (Date.now() < new Date(f.detected_at).getTime() + 30*60*1000) ? 'attivo' : 'disattivo'}</span></td>
           <td>
             ${f.banned
