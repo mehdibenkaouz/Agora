@@ -1651,6 +1651,20 @@
       stroke-linecap:round;
       stroke-linejoin:round;
     }
+    .thread-lang-select{
+      background: var(--panel-2);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 4px 6px;
+      font-size: .75rem;
+      cursor: pointer;
+      outline: none;
+    }
+    :root[data-theme="dark"] .thread-lang-select{
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.12);
+    }
 
     .thread-body{
       display:flex;
@@ -3777,8 +3791,23 @@
               <h2 id="threadTitle">Comments</h2>
               <div class="thread-sub" id="threadSub"></div>
             </div>
-            <button id="threadClearBtn" class="thread-clear" type="button" aria-label="Clear thread">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
+            <select id="threadLangSelect" class="thread-lang-select" title="Traduci commenti">
+              <option value="">— Lingua</option>
+              <option value="it">IT</option>
+              <option value="en">EN</option>
+              <option value="fr">FR</option>
+              <option value="de">DE</option>
+              <option value="es">ES</option>
+              <option value="pt">PT</option>
+              <option value="ar">AR</option>
+              <option value="zh">ZH</option>
+              <option value="ja">JA</option>
+              <option value="ko">KO</option>
+              <option value="ru">RU</option>
+              <option value="hi">HI</option>
+              <option value="el">EL</option>
+            </select>
+            <button id="threadClearBtn" class="thread-clear" type="button" aria-label="Clear thread">              <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 6l12 12"></path>
                 <path d="M18 6L6 18"></path>
               </svg>
@@ -6754,6 +6783,29 @@ const logicalBtn = card.querySelector(".logical-btn");
       e.stopPropagation();
       clearThread();
       hideThreadPanel();
+      const ls = document.getElementById("threadLangSelect");
+      if (ls) ls.value = "";
+    });
+
+    document.getElementById("threadLangSelect")?.addEventListener("change", async function() {
+      const lang = this.value;
+      const bubbles = document.querySelectorAll("#threadComments .comment-bubble");
+      if (!lang) {
+        bubbles.forEach(b => {
+          if (b.dataset.original) b.textContent = b.dataset.original;
+        });
+        return;
+      }
+      for (const b of bubbles) {
+        if (!b.dataset.original) b.dataset.original = b.textContent;
+        const text = b.dataset.original.trim();
+        if (!text) continue;
+        try {
+          const res = await fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" + encodeURIComponent(lang) + "&dt=t&q=" + encodeURIComponent(text));
+          const data = await res.json();
+          b.textContent = data[0].map(c => c[0]).filter(Boolean).join("");
+        } catch(_){}
+      }
     });
 
     // Account dropdown interactions
