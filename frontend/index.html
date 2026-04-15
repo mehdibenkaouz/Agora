@@ -3678,18 +3678,29 @@
       overflow: visible;
     }
     
+    /* il bottone lingua NON deve stare sopra ai menu */
     .lang-picker {
       position: relative;
-      z-index: 100;
+      z-index: auto;
     }
     
+    /* la tendina può stare sopra al contenuto del post, ma non in modo assurdo */
     .lang-picker-dropdown {
-      z-index: 9999;
+      z-index: 120;
     }
     
-    /* quando la tendina lingua è aperta, tutto il post sale sopra gli altri */
+    /* il post sale solo un po' quando la tendina è aperta */
     .post-card.lang-open {
-      z-index: 300;
+      z-index: 40;
+    }
+    
+    /* i menu veri devono stare sopra ai bottoni lingua */
+    .account-menu {
+      z-index: 500;
+    }
+    
+    .post-menu {
+      z-index: 500;
     }
 
 
