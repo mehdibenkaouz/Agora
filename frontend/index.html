@@ -5238,6 +5238,14 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       }[c]));
     }
 
+    function escapeAttr(s) {
+      return String(s || "")
+        .replace(/&/g,"&amp;")
+        .replace(/"/g,"&quot;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;");
+    }
+
     function stripHtml(html) {
       const tmp = document.createElement("div");
       tmp.innerHTML = html;
@@ -8622,12 +8630,30 @@ async function restoreCreatePostDraft() {
           notifList.innerHTML = `<div class="notif-empty">No notifications yet.</div>`;
           return;
         }
-        notifList.innerHTML = notifs.map(n => `
+        notifList.innerHTML = notifs.map(n => {
+          let proofImages = [];
+          try { proofImages = JSON.parse(n.proof_images_json || "[]") || []; } catch(_) {}
+
+          return `
           <div class="notif-item ${n.read ? '' : 'unread'}" data-post-id="${n.post_id || ''}" data-comment-id="${n.comment_id || ''}">
-            <div class="notif-item-msg">${escapeHtml(n.message)}</div>
+            <div class="notif-item-msg" style="white-space:pre-wrap">${escapeHtml(n.message)}</div>
+            ${proofImages.length ? `
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+                ${proofImages.map(url => `
+                  <a href="${escapeAttr(url)}" target="_blank" rel="noopener">
+                    <img
+                      src="${escapeAttr(url)}"
+                      alt="Proof"
+                      style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"
+                    />
+                  </a>
+                `).join("")}
+              </div>
+            ` : ""}
             <div class="notif-item-time">${new Date(n.created_at).toLocaleString()}</div>
-      </div>
-    `).join("");
+          </div>
+          `;
+        }).join("");
 
         // Click su notifica → vai al post
         notifList.querySelectorAll(".notif-item").forEach(item => {
