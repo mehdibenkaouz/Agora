@@ -648,7 +648,7 @@
           <th>Tipo</th>
           <th>Rilevato</th>
           <th>Score</th>
-          <th>Intervalli (ms)</th>
+          <th>CONTENUTO</th>
           <th>Stato</th>
           <th>Azioni</th>
         </tr>
@@ -1013,8 +1013,8 @@
 
         return `<tr>
           <td>
-            <a href="account.html?user=${esc(u.email)}" target="_blank" style="color:inherit;text-decoration:none;">
-              ${esc(u.display_name || u.email)}
+            <a href="account.html?user=${esc(f.email)}" target="_blank" style="color:inherit;text-decoration:none;">
+              ${esc(f.display_name || f.email)}
             </a>
               ${avatarHtml(f.picture_url, f.display_name)}
               <div>
@@ -1031,19 +1031,36 @@
               <div class="score-val">${f.score}</div>
             </div>
           </td>
-          <td><div class="intervals">${intervalsHtml || '<span style="color:var(--muted);font-size:10px">—</span>'}</div></td>
-          <td><span class="badge ${f.banned ? 'badge-banned' : 'badge-active'}">${f.banned ? 'bannato' : 'attivo'}</span></td>
+          <td>${f.content_preview ? (f.action_type === 'comment' && f.post_id ? `<a href="/?post=${esc(f.post_id)}" target="_blank" style="color:var(--accent);font-size:12px;text-decoration:underline">${esc(f.content_preview)}</a>` : `<span style="color:var(--muted);font-size:12px">${esc(f.content_preview)}</span>`) : '<span style="color:var(--muted);font-size:10px">—</span>'}</td>
+          <td><span class="badge ${f.banned ? 'badge-banned' : (Date.now() < new Date(f.detected_at).getTime() + 30*60*1000) ? 'badge-active' : 'badge-resolved'}">${f.banned ? 'bannato' : (Date.now() < new Date(f.detected_at).getTime() + 30*60*1000) ? 'attivo' : 'disattivo'}</span></td>
           <td>
             ${f.banned
               ? `<button class="action-btn" onclick="unbanUser('${f.user_id}', '${esc(f.display_name)}')">Unban</button>`
               : `<button class="action-btn danger" onclick="banUser('${f.user_id}', '${esc(f.display_name)}')">Ban</button>`
             }
+            <button class="action-btn" onclick="dismissSpam('${f.id}')">Ignora</button>
+            <button class="action-btn" onclick="unblockSpam('${f.id}')">Sblocca</button>
           </td>
         </tr>`;
       }).join("");
     } catch (e) {
       document.getElementById("spam-tbody").innerHTML = `<tr class="loading-row"><td colspan="7">Errore caricamento</td></tr>`;
     }
+  }
+
+  async function dismissSpam(flagId) {
+    if (!confirm("Vuoi ignorare questo flag spam?")) return;
+    const data = await adminApi(`/api/admin/spam/${flagId}/dismiss`, { method: "POST" });
+    if (!data.ok) { alert(data.error || "Errore"); return; }
+    loadSpam();
+  }
+
+  async function unblockSpam(flagId) {
+    if (!confirm("Vuoi sbloccare il timer di 30 minuti per questo utente?")) return;
+    const data = await adminApi(`/api/admin/spam/${flagId}/unblock`, { method: "POST" });
+    if (!data.ok) { alert(data.error || "Errore"); return; }
+    alert("Timer sbloccato");
+    loadSpam();
   }
 
   // ════════════════════════════════════════════════════════

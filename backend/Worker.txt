@@ -491,7 +491,8 @@ export default {
         // ── SERVER-SIDE SPAM CHECK ────────────────────────────────────
         const spamResult = await checkSpamServer(env, session.user_id, "post");
         if (spamResult.isSpam) {
-          await flagSpam(env, session.user_id, "post", spamResult.intervals, spamResult.score);
+          const lastPost = await env.dbagora.prepare("SELECT id, content FROM posts WHERE user_id = ?1 ORDER BY created_at DESC LIMIT 1").bind(session.user_id).first();
+          await flagSpam(env, session.user_id, "post", spamResult.intervals, spamResult.score, lastPost ? lastPost.content.replace(/<[^>]*>/g,'') : '', lastPost ? lastPost.id : '');
           return json({ ok: false, error: "spam_detected", until: spamResult.until }, 429, ALLOWED_ORIGIN);
         }
 
@@ -754,7 +755,8 @@ export default {
         // ── SERVER-SIDE SPAM CHECK (commenti) ────────────────────────
         const spamResultC = await checkSpamServer(env, session.user_id, "comment");
         if (spamResultC.isSpam) {
-          await flagSpam(env, session.user_id, "comment", spamResultC.intervals, spamResultC.score);
+          const lastComment = await env.dbagora.prepare("SELECT content, post_id FROM comments WHERE user_id = ?1 ORDER BY created_at DESC LIMIT 1").bind(session.user_id).first();
+          await flagSpam(env, session.user_id, "comment", spamResultC.intervals, spamResultC.score, lastComment ? lastComment.content : '', lastComment ? lastComment.post_id : '');
           return json({ ok: false, error: "spam_detected", until: spamResultC.until }, 429, ALLOWED_ORIGIN);
         }
 
@@ -2210,7 +2212,7 @@ export default {
         if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
 
         const rows = await env.dbagora.prepare(`
-          SELECT sf.id, sf.action_type, sf.detected_at, sf.intervals_json, sf.score,
+          SELECT sf.id, sf.action_type, sf.detected_at, sf.intervals_json, sf.score, COALESCE(sf.content_preview,'') AS content_preview, COALESCE(sf.post_id,'') AS post_id,
             u.email, u.id AS user_id,
             COALESCE(NULLIF(TRIM(u.display_name),''),
               CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
@@ -2222,6 +2224,35 @@ export default {
           ORDER BY sf.detected_at DESC LIMIT 200
         `).all();
         return json({ ok: true, flags: rows.results || [] }, 200, ALLOWED_ORIGIN);
+      }
+
+      // POST /api/admin/spam/:id/dismiss — ignora spam flag
+      if (url.pathname.startsWith("/api/admin/spam/") && url.pathname.endsWith("/dismiss") && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const flagId = url.pathname.split("/")[4];
+        if (!flagId) return json({ ok: false, error: "missing id" }, 400, ALLOWED_ORIGIN);
+
+      await env.dbagora.prepare("DELETE FROM spam_flags WHERE id = ?1").bind(flagId).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // POST /api/admin/spam/:id/unblock — sblocca timer 30min senza rimuovere il flag
+      if (url.pathname.startsWith("/api/admin/spam/") && url.pathname.endsWith("/unblock") && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const flagId = url.pathname.split("/")[4];
+        if (!flagId) return json({ ok: false, error: "missing id" }, 400, ALLOWED_ORIGIN);
+
+        const row = await env.dbagora.prepare("SELECT user_id, action_type FROM spam_flags WHERE id = ?1").bind(flagId).first();
+        if (!row) return json({ ok: false, error: "not found" }, 404, ALLOWED_ORIGIN);
+
+        const expired = new Date(Date.now() - 31 * 60 * 1000).toISOString();
+        await env.dbagora.prepare("UPDATE spam_flags SET detected_at = ?1 WHERE user_id = ?2 AND action_type = ?3").bind(expired, row.user_id, row.action_type).run();
+        await env.dbagora.prepare("DELETE FROM action_timestamps WHERE user_id = ?1 AND action_type = ?2").bind(row.user_id, row.action_type).run();
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
       // GET /api/admin/users — lista tutti gli utenti
@@ -2779,19 +2810,20 @@ async function checkSpamServer(env, userId, actionType) {
   };
 }
 
-// Scrive spam flag nel DB (segnalazione silenziosa admin)
-async function flagSpam(env, userId, actionType, intervals, score) {
+async function flagSpam(env, userId, actionType, intervals, score, contentPreview, postId) {
   try {
     await env.dbagora.prepare(`
-      INSERT INTO spam_flags (id, user_id, action_type, detected_at, intervals_json, score)
-      VALUES (?1,?2,?3,?4,?5,?6)
+      INSERT INTO spam_flags (id, user_id, action_type, detected_at, intervals_json, score, content_preview, post_id)
+      VALUES (?1,?2,?3,?4,?5,?6,?7,?8)
     `).bind(
       crypto.randomUUID(),
       userId,
       actionType,
       new Date().toISOString(),
       JSON.stringify(intervals || []),
-      score
+      score,
+      (contentPreview || '').slice(0, 120),
+      postId || ''
     ).run();
   } catch (_) {}
 }
