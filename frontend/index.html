@@ -177,6 +177,36 @@
     .center-col  { padding-right: 0; }
     .right-column{ padding-left: 0; }
 
+    /* ── Scrollbar elegante center-col ── */
+    .main-column::-webkit-scrollbar{
+      width: 6px;
+    }
+    .main-column::-webkit-scrollbar-track{
+      background: transparent;
+    }
+    .main-column::-webkit-scrollbar-thumb{
+      background: rgba(0,0,0,0.12);
+      border-radius: 99px;
+    }
+    .main-column::-webkit-scrollbar-thumb:hover{
+      background: rgba(0,0,0,0.22);
+    }
+    .main-column{
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0,0,0,0.12) transparent;
+    }
+
+    /* Dark mode */
+    :root[data-theme="dark"] .main-column::-webkit-scrollbar-thumb{
+      background: rgba(255,255,255,0.10);
+    }
+    :root[data-theme="dark"] .main-column::-webkit-scrollbar-thumb:hover{
+      background: rgba(255,255,255,0.20);
+    }
+    :root[data-theme="dark"] .main-column{
+      scrollbar-color: rgba(255,255,255,0.10) transparent;
+    }
+
     /* ── Column resizer ──────────────────────────────── */
     #resizeDivider{
       align-self: stretch;
