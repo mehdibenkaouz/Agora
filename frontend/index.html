@@ -2347,6 +2347,96 @@
 .notif-item-time { font-size: .78rem; color: var(--muted); }
 .notif-empty { padding: 28px 18px; text-align: center; color: var(--muted); font-size: .95rem; }
 
+/* ===== Notification complaint detail ===== */
+.notif-complaint-overlay{
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgba(0,0,0,0.50);
+  backdrop-filter: blur(8px);
+  z-index: 1700;
+}
+.notif-complaint-overlay.open{ display:flex; }
+
+.notif-complaint-card{
+  width: min(760px, 100%);
+  max-height: 82vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+}
+
+.notif-complaint-head{
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.notif-complaint-title{
+  font-weight: 800;
+  font-size: 1.02rem;
+}
+.notif-complaint-body{
+  overflow-y: auto;
+  padding: 16px 18px 18px;
+}
+
+.notif-complaint-gallery{
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.notif-complaint-gallery a{
+  display: block;
+  line-height: 0;
+}
+.notif-complaint-gallery img{
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  display: block;
+}
+
+.notif-complaint-text{
+  white-space: pre-wrap;
+  line-height: 1.55;
+  font-size: .95rem;
+}
+
+.notif-complaint-time{
+  margin-top: 12px;
+  font-size: .80rem;
+  color: var(--muted);
+}
+
+@media (max-width: 760px){
+  .notif-complaint-overlay{
+    padding: 0;
+    align-items: flex-end;
+  }
+  .notif-complaint-card{
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 22px 22px 0 0;
+  }
+  .notif-complaint-gallery img{
+    width: calc(50% - 5px);
+    height: 140px;
+  }
+}
+
 /* ===== Search ===== */
 .search-overlay {
   position: fixed;
@@ -8592,9 +8682,14 @@ async function restoreCreatePostDraft() {
     });
 
     // ===== NOTIFICATIONS =====
-    function getNotifModal() { return document.getElementById("notifModal"); }
-    function getNotifClose() { return document.getElementById("notifClose"); }
-    function getNotifList()  { return document.getElementById("notifList"); };
+function getNotifModal() { return document.getElementById("notifModal"); }
+function getNotifClose() { return document.getElementById("notifClose"); }
+function getNotifList()  { return document.getElementById("notifList"); }
+function getNotifComplaintModal() { return document.getElementById("notifComplaintModal"); }
+function getNotifComplaintClose() { return document.getElementById("notifComplaintClose"); }
+function getNotifComplaintGallery() { return document.getElementById("notifComplaintGallery"); }
+function getNotifComplaintText() { return document.getElementById("notifComplaintText"); }
+function getNotifComplaintTime() { return document.getElementById("notifComplaintTime"); }
     const notifBtn   = document.querySelector(".action-btn[aria-label='Notifications']");
     const notifDot   = notifBtn?.querySelector(".notif-dot");
 
@@ -8610,7 +8705,40 @@ async function restoreCreatePostDraft() {
       if (window._updateNotifDotMobile) window._updateNotifDotMobile(count);
     }
     let NOTIF_POLL = null;
-    
+    function openNotifComplaintDetail(payload = {}) {
+    const modal = getNotifComplaintModal();
+    const gallery = getNotifComplaintGallery();
+    const textEl = getNotifComplaintText();
+    const timeEl = getNotifComplaintTime();
+
+    if (!modal || !gallery || !textEl || !timeEl) return;
+
+    let proofImages = [];
+    try {
+      proofImages = JSON.parse(payload.proof_images_json || "[]") || [];
+    } catch(_) {}
+
+    gallery.innerHTML = proofImages.length
+      ? proofImages.map(url => `
+          <a href="${escapeAttr(url)}" target="_blank" rel="noopener">
+            <img src="${escapeAttr(url)}" alt="Proof image" />
+          </a>
+        `).join("")
+      : "";
+
+    textEl.textContent = payload.message || "";
+    timeEl.textContent = payload.created_at ? new Date(payload.created_at).toLocaleString() : "";
+
+    modal.classList.add("open");
+    modal.setAttribute("aria-hidden", "false");
+  }
+
+  function closeNotifComplaintDetail() {
+    const modal = getNotifComplaintModal();
+    if (!modal) return;
+    modal.classList.remove("open");
+    modal.setAttribute("aria-hidden", "true");
+  } 
     async function loadNotifications() {
       if (!getToken()) return;
       const notifList = getNotifList(); 
@@ -8631,37 +8759,47 @@ async function restoreCreatePostDraft() {
           return;
         }
         notifList.innerHTML = notifs.map(n => {
-          let proofImages = [];
-          try { proofImages = JSON.parse(n.proof_images_json || "[]") || []; } catch(_) {}
+          const isComplaintNotif =
+            n.type === "spam_complaint_rejected" ||
+            n.type === "spam_complaint_resolved" ||
+            !!(n.proof_images_json && n.proof_images_json !== "[]");
 
           return `
-          <div class="notif-item ${n.read ? '' : 'unread'}" data-post-id="${n.post_id || ''}" data-comment-id="${n.comment_id || ''}">
+          <div
+            class="notif-item ${n.read ? '' : 'unread'}"
+            data-post-id="${escapeAttr(n.post_id || '')}"
+            data-comment-id="${escapeAttr(n.comment_id || '')}"
+            data-type="${escapeAttr(n.type || '')}"
+            data-message="${escapeAttr(n.message || '')}"
+            data-created-at="${escapeAttr(n.created_at || '')}"
+            data-proof-images-json="${escapeAttr(n.proof_images_json || '[]')}"
+            data-is-complaint="${isComplaintNotif ? '1' : '0'}"
+          >
             <div class="notif-item-msg" style="white-space:pre-wrap">${escapeHtml(n.message)}</div>
-            ${proofImages.length ? `
-              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
-                ${proofImages.map(url => `
-                  <a href="${escapeAttr(url)}" target="_blank" rel="noopener">
-                    <img
-                      src="${escapeAttr(url)}"
-                      alt="Proof"
-                      style="width:72px;height:72px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"
-                    />
-                  </a>
-                `).join("")}
-              </div>
-            ` : ""}
             <div class="notif-item-time">${new Date(n.created_at).toLocaleString()}</div>
           </div>
           `;
         }).join("");
 
-        // Click su notifica → vai al post
+        // Click su notifica
         notifList.querySelectorAll(".notif-item").forEach(item => {
           item.addEventListener("click", () => {
+            const isComplaint = item.dataset.isComplaint === "1";
+
+            if (isComplaint) {
+              openNotifComplaintDetail({
+                message: item.dataset.message || "",
+                created_at: item.dataset.createdAt || "",
+                proof_images_json: item.dataset.proofImagesJson || "[]"
+              });
+              return;
+            }
+
             const postId = item.dataset.postId;
             if (!postId) return;
+
             closeNotifModal();
-            // Trova il post nel feed e apri il thread
+
             for (const [key, p] of postByKey.entries()) {
               if (p.id === postId) {
                 setActiveCard(key);
@@ -8704,6 +8842,34 @@ async function restoreCreatePostDraft() {
   
   let _notifListenersAttached = false;
   function _attachNotifListeners() {
+    if (_notifListenersAttached) return;
+
+    getNotifClose()?.addEventListener("click", closeNotifModal);
+
+    getNotifModal()?.addEventListener("click", (e) => {
+      if (e.target === getNotifModal()) closeNotifModal();
+    });
+
+    getNotifComplaintClose()?.addEventListener("click", closeNotifComplaintDetail);
+
+    getNotifComplaintModal()?.addEventListener("click", (e) => {
+      if (e.target === getNotifComplaintModal()) closeNotifComplaintDetail();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        if (getNotifComplaintModal()?.classList.contains("open")) {
+          closeNotifComplaintDetail();
+          return;
+        }
+        if (getNotifModal()?.classList.contains("open")) {
+          closeNotifModal();
+        }
+      }
+    });
+
+    _notifListenersAttached = true;
+  }
     if (_notifListenersAttached) return;
     getNotifClose()?.addEventListener("click", closeNotifModal);
     getNotifModal()?.addEventListener("click", (e) => {
@@ -9231,6 +9397,24 @@ document.addEventListener("DOMContentLoaded", function () {
   </div>
 </div>
 
+
+<div id="notifComplaintModal" class="notif-complaint-overlay" aria-hidden="true">
+  <div class="notif-complaint-card" role="dialog" aria-modal="true" aria-labelledby="notifComplaintTitle">
+    <div class="notif-complaint-head">
+      <div class="notif-complaint-title" id="notifComplaintTitle">Complaint review</div>
+      <button id="notifComplaintClose" class="icon-x" aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6 6l12 12"/><path d="M18 6L6 18"/>
+        </svg>
+      </button>
+    </div>
+    <div class="notif-complaint-body">
+      <div id="notifComplaintGallery" class="notif-complaint-gallery"></div>
+      <div id="notifComplaintText" class="notif-complaint-text"></div>
+      <div id="notifComplaintTime" class="notif-complaint-time"></div>
+    </div>
+  </div>
+</div>
 
   <div id="mobileDrawer" class="mobile-drawer" aria-hidden="true">
   <div class="mobile-drawer-backdrop" id="mobileDrawerBackdrop"></div>
