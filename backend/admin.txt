@@ -1013,8 +1013,8 @@
 
         return `<tr>
           <td>
-            <a href="account.html?user=${esc(f.email)}" target="_blank" style="color:inherit;text-decoration:none;">
-              ${esc(f.display_name || f.email)}
+            <a href="account.html?user=${esc(u.email)}" target="_blank" style="color:inherit;text-decoration:none;">
+              ${esc(u.display_name || u.email)}
             </a>
               ${avatarHtml(f.picture_url, f.display_name)}
               <div>
