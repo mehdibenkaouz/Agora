@@ -174,7 +174,7 @@
       height: calc(100vh - var(--topbar-h) - 28px);
     }
     .left-rail   { padding-right: 22px; }
-    .center-col  { padding-right: 0; }
+    .center-col  { padding-right: 0; overflow: hidden; min-width: 0; }
     .right-column{ padding-left: 0; }
 
     /* ── Scrollbar elegante center-col ── */
@@ -1658,8 +1658,8 @@
       top: 100%;
       max-height: 240px;
       overflow-y: auto;
+      z-index: 15;
     }
-
     .thread-body{
       display:flex;
       flex-direction:column;
@@ -2847,6 +2847,58 @@
     min-width: 0;
   }
 
+  /* ── Scrollbar globale pannelli ── */
+  .right-column::-webkit-scrollbar,
+  .left-rail::-webkit-scrollbar,
+  .thread-comments::-webkit-scrollbar,
+  .thread-lang-picker .lang-picker-dropdown::-webkit-scrollbar{
+    width: 5px;
+  }
+  .right-column::-webkit-scrollbar-track,
+  .left-rail::-webkit-scrollbar-track,
+  .thread-comments::-webkit-scrollbar-track,
+  .thread-lang-picker .lang-picker-dropdown::-webkit-scrollbar-track{
+    background: transparent;
+  }
+  .right-column::-webkit-scrollbar-thumb,
+  .left-rail::-webkit-scrollbar-thumb,
+  .thread-comments::-webkit-scrollbar-thumb,
+  .thread-lang-picker .lang-picker-dropdown::-webkit-scrollbar-thumb{
+    background: rgba(0,0,0,0.10);
+    border-radius: 99px;
+  }
+  .right-column::-webkit-scrollbar-thumb:hover,
+  .left-rail::-webkit-scrollbar-thumb:hover,
+  .thread-comments::-webkit-scrollbar-thumb:hover,
+  .thread-lang-picker .lang-picker-dropdown::-webkit-scrollbar-thumb:hover{
+    background: rgba(0,0,0,0.20);
+  }
+  .right-column,
+  .left-rail,
+  .thread-comments,
+  .thread-lang-picker .lang-picker-dropdown{
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0,0,0,0.10) transparent;
+  }
+
+  :root[data-theme="dark"] .right-column::-webkit-scrollbar-thumb,
+  :root[data-theme="dark"] .left-rail::-webkit-scrollbar-thumb,
+  :root[data-theme="dark"] .thread-comments::-webkit-scrollbar-thumb,
+  :root[data-theme="dark"] .thread-lang-picker .lang-picker-dropdown::-webkit-scrollbar-thumb{
+    background: rgba(255,255,255,0.08);
+  }
+  :root[data-theme="dark"] .right-column::-webkit-scrollbar-thumb:hover,
+  :root[data-theme="dark"] .left-rail::-webkit-scrollbar-thumb:hover,
+  :root[data-theme="dark"] .thread-comments::-webkit-scrollbar-thumb:hover,
+  :root[data-theme="dark"] .thread-lang-picker .lang-picker-dropdown::-webkit-scrollbar-thumb:hover{
+    background: rgba(255,255,255,0.18);
+  }
+  :root[data-theme="dark"] .right-column,
+  :root[data-theme="dark"] .left-rail,
+  :root[data-theme="dark"] .thread-comments,
+  :root[data-theme="dark"] .thread-lang-picker .lang-picker-dropdown{
+    scrollbar-color: rgba(255,255,255,0.08) transparent;
+  }
   /* Feed cards */
   .feed-list {
     gap: 10px;
@@ -8711,7 +8763,7 @@ async function runSearch() {
       if (!divider || !layout) return;
 
       const MIN_W   = 200;
-      const MAX_W   = 560;
+      const MAX_W   = 480;
       const STORE   = "agora_right_col_w";
 
       function applyWidth(w) {
