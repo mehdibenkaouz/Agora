@@ -2426,7 +2426,10 @@ export default {
             ) AS display_name,
             COALESCE(picture_url,'') AS picture_url,
             created_at,
-            COALESCE(banned, 0) AS banned
+            COALESCE(banned, 0) AS banned,
+            COALESCE(ban_reason, '') AS ban_reason,
+            COALESCE(banned_by, '') AS banned_by,
+            banned_at
           FROM users ORDER BY created_at DESC LIMIT 500
         `).all();
         return json({ ok: true, users: rows.results || [] }, 200, ALLOWED_ORIGIN);
@@ -2591,7 +2594,11 @@ export default {
 
         const body = await request.json().catch(() => ({}));
         const userId = String(body.user_id || "").trim();
+        const reason = String(body.reason || "").trim().slice(0, 3000);
+
         if (!userId) return json({ ok: false, error: "missing_user_id" }, 400, ALLOWED_ORIGIN);
+        if (reason.length < 5) return json({ ok: false, error: "ban_reason_too_short" }, 400, ALLOWED_ORIGIN);
+        if (String(adm.user_id || "") === userId) return json({ ok: false, error: "cannot_ban_self" }, 400, ALLOWED_ORIGIN);
 
         const user = await env.dbagora.prepare(
           `SELECT id, email,
@@ -2609,54 +2616,15 @@ export default {
 
         if (!user) return json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN);
 
-        await env.dbagora.prepare("UPDATE users SET banned = 1 WHERE id = ?1").bind(userId).run();
+        const nowIso = new Date().toISOString();
 
-        // Invalida tutte le sessioni utente
+        await env.dbagora.prepare(
+          "UPDATE users SET banned = 1, ban_reason = ?1, banned_by = ?2, banned_at = ?3 WHERE id = ?4"
+        ).bind(reason, String(adm.user_id || ""), nowIso, userId).run();
+
         await env.dbagora.prepare("DELETE FROM sessions WHERE user_id = ?1").bind(userId).run();
-
-        // Invalida anche eventuali sessioni admin
         await env.dbagora.prepare("DELETE FROM admin_sessions WHERE user_id = ?1").bind(userId).run();
 
-        // Email informativa di ban con contatto reclami
-        try {
-          const appealEmail = String(env.BAN_APPEAL_EMAIL || "").trim();
-          const fromEmail = String(env.BAN_FROM_EMAIL || env.OTP_FROM_EMAIL || "AGORÀ <noreply@agorapolis.org>").trim();
-
-          if (appealEmail && user.email) {
-            await fetch("https://api.resend.com/emails", {
-              method: "POST",
-              headers: {
-                "Authorization": "Bearer " + env.RESEND_API_KEY,
-                "Content-Type": "application/json"
-              },
-              body: JSON.stringify({
-                from: fromEmail,
-                to: [user.email],
-                subject: "Your AGORÀ account has been suspended",
-                html: `
-                  <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#f8f7f3;border-radius:16px;color:#111">
-                    <h2 style="margin:0 0 16px;color:#571929;">AGORÀ</h2>
-                    <p style="margin:0 0 12px;">Hello ${String(user.display_name || user.email).replace(/</g,"&lt;").replace(/>/g,"&gt;")},</p>
-                    <p style="margin:0 0 12px;">
-                      your account has been suspended and access has been disabled.
-                    </p>
-                    <p style="margin:0 0 12px;">
-                      If you believe this decision is incorrect, you can contact us for an appeal at:
-                    </p>
-                    <p style="margin:0 0 16px;font-weight:700;color:#571929;">
-                      ${appealEmail.replace(/</g,"&lt;").replace(/>/g,"&gt;")}
-                    </p>
-                    <p style="margin:0;color:#666;">
-                      Please include the email associated with your account and any useful context for review.
-                    </p>
-                  </div>
-                `
-              })
-            });
-          }
-        } catch (_) {
-          // Non bloccare il ban se la mail fallisce
-        }
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 
@@ -2669,7 +2637,9 @@ export default {
         const userId = String(body.user_id || "").trim();
         if (!userId) return json({ ok: false, error: "missing_user_id" }, 400, ALLOWED_ORIGIN);
 
-        await env.dbagora.prepare("UPDATE users SET banned = 0 WHERE id = ?1").bind(userId).run();
+        await env.dbagora.prepare(
+          "UPDATE users SET banned = 0, ban_reason = '', banned_by = '', banned_at = NULL WHERE id = ?1"
+        ).bind(userId).run();
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
 

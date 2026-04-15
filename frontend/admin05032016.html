@@ -1600,7 +1600,11 @@
       }
 
       closeBanModal();
-      showToast(`${pendingBanUserName || "Utente"} bannato.`);
+      if (data.email_sent) {
+        showToast(`${pendingBanUserName || "Utente"} bannato. Email inviata.`);
+      } else {
+        showToast(`${pendingBanUserName || "Utente"} bannato, ma email non inviata: ${data.email_error || "errore sconosciuto"}`, true);
+      }
       loadAll();
     } catch (e) {
       showToast("Errore: " + (e.message || e), true);
