@@ -1038,12 +1038,20 @@
               ? `<button class="action-btn" onclick="unbanUser('${f.user_id}', '${esc(f.display_name)}')">Unban</button>`
               : `<button class="action-btn danger" onclick="banUser('${f.user_id}', '${esc(f.display_name)}')">Ban</button>`
             }
+            <button class="action-btn" onclick="dismissSpam('${f.id}')">Ignora</button>
           </td>
         </tr>`;
       }).join("");
     } catch (e) {
       document.getElementById("spam-tbody").innerHTML = `<tr class="loading-row"><td colspan="7">Errore caricamento</td></tr>`;
     }
+  }
+
+  async function dismissSpam(flagId) {
+    if (!confirm("Vuoi ignorare questo flag spam?")) return;
+    const data = await adminApi(`/api/admin/spam/${flagId}/dismiss`, { method: "POST" });
+    if (!data.ok) { alert(data.error || "Errore"); return; }
+    loadSpam();
   }
 
   // ════════════════════════════════════════════════════════
