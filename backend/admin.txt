@@ -707,7 +707,26 @@
       </tbody>
     </table>
   </div>
-
+    <div class="section-header" style="margin-top:28px">
+      <div class="section-title">Reclami Spam</div>
+    </div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Reclamante</th>
+          <th>Tipo</th>
+          <th>Contenuto</th>
+          <th>Messaggio</th>
+          <th>Data</th>
+          <th>Stato</th>
+          <th>Azioni</th>
+        </tr>
+      </thead>
+      <tbody id="spam-complaints-tbody">
+        <tr class="loading-row"><td colspan="7">CARICAMENTO...</td></tr>
+      </tbody>
+    </table>
+  </div>
   <!-- BUGS TAB -->
   <div class="tab-panel" id="tab-bugs">
     <div class="section-header">
@@ -1120,55 +1139,101 @@
   // ════════════════════════════════════════════════════════
   async function loadComplaints() {
     document.getElementById("complaints-tbody").innerHTML = `<tr class="loading-row"><td colspan="8">CARICAMENTO...</td></tr>`;
+    document.getElementById("spam-complaints-tbody").innerHTML = `<tr class="loading-row"><td colspan="7">CARICAMENTO...</td></tr>`;
     try {
-      const data = await adminApi("/api/admin/complaints");
-      if (!data.ok) { handleAdminError(data); return; }
+      const [blockData, spamData] = await Promise.all([
+        adminApi("/api/admin/complaints"),
+        adminApi("/api/admin/spam-complaints")
+      ]);
+      if (!blockData.ok) { handleAdminError(blockData); return; }
+      if (!spamData.ok) { handleAdminError(spamData); return; }
 
-      const complaints = data.complaints || [];
-      const pending = complaints.filter(c => c.status === "pending").length;
+      const complaints = blockData.complaints || [];
+      const spamComplaints = spamData.complaints || [];
+      const pending = complaints.filter(c => c.status === "pending").length
+                   + spamComplaints.filter(c => c.status === "pending").length;
+
       document.getElementById("cnt-complaints").textContent = pending;
       document.getElementById("stat-complaints").textContent = pending;
 
       if (!complaints.length) {
-        document.getElementById("complaints-tbody").innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">✉</div>Nessun reclamo</div></td></tr>`;
-        return;
+        document.getElementById("complaints-tbody").innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">✉</div>Nessun reclamo blocco</div></td></tr>`;
+      } else {
+        document.getElementById("complaints-tbody").innerHTML = complaints.map(c => `
+          <tr>
+            <td>
+              <div class="user-cell">
+                ${avatarHtml(c.complainant_picture, c.complainant_name)}
+                <div>
+                  <div class="user-name">${esc(c.complainant_name)}</div>
+                  <div class="user-email">${esc(c.complainant_email)}</div>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="user-name">${esc(c.blocker_name)}</div>
+              <div class="user-email">${esc(c.blocker_email)}</div>
+            </td>
+            <td><span class="badge badge-spam">Tipo ${c.block_type}</span></td>
+            <td style="color:var(--muted);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(c.block_reason || '—')}</td>
+            <td><div class="complaint-msg">${esc(c.message)}</div></td>
+            <td style="color:var(--muted);font-size:11px">${fmtDate(c.created_at)}</td>
+            <td>
+              <span class="badge ${
+                c.status === 'pending' ? 'badge-pending' :
+                c.status === 'resolved' ? 'badge-resolved' : 'badge-rejected'
+              }">${c.status}</span>
+            </td>
+            <td>
+              ${c.status === 'pending' ? `
+                <button class="action-btn" onclick="resolveComplaint('${c.id}','resolved')">Risolvi</button>
+                <button class="action-btn warn" onclick="resolveComplaint('${c.id}','rejected')">Respingi</button>
+              ` : '—'}
+            </td>
+          </tr>
+        `).join("");
       }
 
-      document.getElementById("complaints-tbody").innerHTML = complaints.map(c => `
-        <tr>
-          <td>
-            <div class="user-cell">
-              ${avatarHtml(c.complainant_picture, c.complainant_name)}
-              <div>
-                <div class="user-name">${esc(c.complainant_name)}</div>
-                <div class="user-email">${esc(c.complainant_email)}</div>
+      if (!spamComplaints.length) {
+        document.getElementById("spam-complaints-tbody").innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">⚠</div>Nessun reclamo spam</div></td></tr>`;
+      } else {
+        document.getElementById("spam-complaints-tbody").innerHTML = spamComplaints.map(c => `
+          <tr>
+            <td>
+              <div class="user-cell">
+                ${avatarHtml(c.complainant_picture, c.complainant_name)}
+                <div>
+                  <div class="user-name">${esc(c.complainant_name)}</div>
+                  <div class="user-email">${esc(c.complainant_email)}</div>
+                </div>
               </div>
-            </div>
-          </td>
-          <td>
-            <div class="user-name">${esc(c.blocker_name)}</div>
-            <div class="user-email">${esc(c.blocker_email)}</div>
-          </td>
-          <td><span class="badge badge-spam">Tipo ${c.block_type}</span></td>
-          <td style="color:var(--muted);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(c.block_reason || '—')}</td>
-          <td><div class="complaint-msg">${esc(c.message)}</div></td>
-          <td style="color:var(--muted);font-size:11px">${fmtDate(c.created_at)}</td>
-          <td>
-            <span class="badge ${
-              c.status === 'pending' ? 'badge-pending' :
-              c.status === 'resolved' ? 'badge-resolved' : 'badge-rejected'
-            }">${c.status}</span>
-          </td>
-          <td>
-            ${c.status === 'pending' ? `
-              <button class="action-btn" onclick="resolveComplaint('${c.id}','resolved')">Risolvi</button>
-              <button class="action-btn warn" onclick="resolveComplaint('${c.id}','rejected')">Respingi</button>
-            ` : '—'}
-          </td>
-        </tr>
-      `).join("");
+            </td>
+            <td><span class="badge badge-${c.action_type === 'comment' ? 'comment' : 'post'}">${esc(c.action_type)}</span></td>
+            <td>
+              <div class="bug-desc" style="max-width:240px;max-height:none">
+                ${esc(c.content_preview || '—')}
+              </div>
+            </td>
+            <td><div class="complaint-msg">${esc(c.message)}</div></td>
+            <td style="color:var(--muted);font-size:11px">${fmtDate(c.created_at)}</td>
+            <td>
+              <span class="badge ${
+                c.status === 'pending' ? 'badge-pending' :
+                c.status === 'resolved' ? 'badge-resolved' : 'badge-rejected'
+              }">${c.status}</span>
+            </td>
+            <td>
+              ${c.status === 'pending' ? `
+                <button class="action-btn" onclick="resolveSpamComplaint('${c.id}','resolved')">Accogli</button>
+                <button class="action-btn warn" onclick="resolveSpamComplaint('${c.id}','rejected')">Respingi</button>
+              ` : '—'}
+            </td>
+          </tr>
+        `).join("");
+      }
     } catch (e) {
       document.getElementById("complaints-tbody").innerHTML = `<tr class="loading-row"><td colspan="8">Errore caricamento</td></tr>`;
+      document.getElementById("spam-complaints-tbody").innerHTML = `<tr class="loading-row"><td colspan="7">Errore caricamento</td></tr>`;
     }
   }
 
@@ -1206,6 +1271,17 @@
       body: JSON.stringify({ status })
     });
     if (data.ok) { showToast(`Reclamo ${label}.`); loadComplaints(); }
+    else showToast("Errore: " + data.error, true);
+  }
+
+
+  async function resolveSpamComplaint(id, status) {
+    const label = status === "resolved" ? "accolto" : "respinto";
+    const data = await adminApi(`/api/admin/spam-complaints/${id}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ status })
+    });
+    if (data.ok) { showToast(`Reclamo spam ${label}.`); loadComplaints(); }
     else showToast("Errore: " + data.error, true);
   }
 
