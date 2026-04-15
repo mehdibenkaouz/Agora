@@ -108,11 +108,12 @@
       background: var(--bg);
       color: var(--text);
       font-family: Inter, Arial, Helvetica, sans-serif;
-      overflow-x: hidden;
+      overflow: hidden;
       max-width: 100%;
+      height: 100%;
     }
 
-    body { min-height: 100vh; }
+    body { height: 100%; }
     a { color: inherit; text-decoration: none; }
 
     /* Topbar */
@@ -124,8 +125,10 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      position: sticky;
+      position: fixed;
       top: 0;
+      left: 0;
+      right: 0;
       z-index: 20;
     }
 
@@ -157,14 +160,18 @@
     .page {
       width: min(calc(100% - 24px), var(--maxw));
       margin: 0 auto;
-      padding: 28px 0 40px;
+      padding: 0;
+      padding-top: calc(var(--topbar-h) + 28px);
+      height: 100vh;
+      overflow: hidden;
     }
 
     .layout {
       display: grid;
       grid-template-columns: 90px minmax(0, 1fr) 10px var(--right-col-width, 270px);
       gap: 0;
-      align-items: start;
+      align-items: stretch;
+      height: calc(100vh - var(--topbar-h) - 28px);
     }
     .left-rail   { padding-right: 22px; }
     .center-col  { padding-right: 0; }
@@ -225,7 +232,8 @@
       display: flex;
       flex-direction: column;
       gap: 28px;
-      padding-top: 44px;
+      padding-top: 43px;
+      overflow-y: auto;
     }
 
     .action-btn {
@@ -270,6 +278,8 @@
       display: flex;
       flex-direction: column;
       gap: 20px;
+      overflow-y: auto;
+      padding-bottom: 40px;
     }
 
     .composer-card,
@@ -667,12 +677,17 @@
   .top-links { display: none; }
   .mobile-menu-btn { display: flex; }
   .brand-logo, .logo { height: 46px; width: 46px; }
+  /* Ripristina scroll su mobile */
+  html, body { overflow: auto; overflow-x: hidden; height: auto; }
+  .main-column { overflow-y: visible; padding-bottom: 0; }
 
   /* Layout */
-  .page { padding: 10px 0 80px; }
+  .page { padding: 10px 0 80px; padding-top: calc(56px + 10px); height: auto; overflow: visible; }
   .layout {
     grid-template-columns: 1fr !important;
     gap: 0;
+    height: auto;
+    align-items: start;
   }
   #resizeDivider { display: none !important; }
 
@@ -1835,29 +1850,23 @@
     .empty-feed h2{ display:none; }
     #feedHint{ display:none; }
 
-    /* --- Sticky side rails (desktop) --- */
+    /* --- Fixed side rails (desktop) --- */
     @media (min-width: 761px){
       .left-rail{
-        position: sticky;
-        top: calc(var(--topbar-h) + 22px);
-        padding-top: 0;
-        height: fit-content;
+        padding-top: 22px;
+        overflow-y: auto;
       }
       .right-column{
-        position: sticky;
-        top: calc(var(--topbar-h) + 22px);
-        height: fit-content;
+        overflow-y: auto;
       }
-      /* keep the thread panel fully usable within viewport */
       .comments-card{
-        height: calc(100vh - var(--topbar-h) - 44px);
+        height: 100%;
         min-height: 0;
       }
       .thread-comments{
         min-height: 0;
       }
     }
-
 
 
     .brand {
