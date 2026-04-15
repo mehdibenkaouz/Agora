@@ -5167,6 +5167,10 @@
             const msg = err?.data?.error || err?.message || "unknown_error";
             if (msg === "complaint_already_pending") {
               noteEl.textContent = "A complaint for this spam event is already pending.";
+            } else if (msg === "max_complaints_reached") {
+              noteEl.textContent = "You have sent 5 complaints, that's the maximum.";
+              sendBtn.disabled = true;
+              sendBtn.textContent = "Limit reached";
             } else {
               noteEl.textContent = "Complaint failed: " + msg;
             }
