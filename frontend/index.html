@@ -5227,6 +5227,26 @@
         document.addEventListener("keydown", onKey);
       }
 
+    // ===== Close thread language dropdown on outside click =====
+    document.addEventListener("click", (e) => {
+      const dropdown = document.getElementById("threadLangDropdown");
+      const btn = document.getElementById("threadLangBtn");
+
+      if (!dropdown || !dropdown.classList.contains("open")) return;
+
+      // se clicchi dentro dropdown → NON chiudere
+      if (dropdown.contains(e.target)) return;
+
+      // se clicchi il bottone → lascia gestire al toggle
+      if (btn && btn.contains(e.target)) return;
+
+      // altrimenti chiudi
+      dropdown.classList.remove("open");
+
+      // opzionale: togli anche lo stato dal post
+      const post = dropdown.closest(".post-card");
+      if (post) post.classList.remove("lang-open");
+    });
     /* ===== NSFW Pre-check ===== */
     async function checkImageNSFW(file) {
       try {
