@@ -1651,19 +1651,13 @@
       stroke-linecap:round;
       stroke-linejoin:round;
     }
-    .thread-lang-select{
-      background: var(--panel-2);
-      color: var(--text);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 4px 6px;
-      font-size: .75rem;
-      cursor: pointer;
-      outline: none;
-    }
-    :root[data-theme="dark"] .thread-lang-select{
-      background: rgba(255,255,255,0.06);
-      border-color: rgba(255,255,255,0.12);
+    .thread-lang-picker .lang-picker-dropdown{
+      right: 0;
+      left: auto;
+      bottom: auto;
+      top: 100%;
+      max-height: 240px;
+      overflow-y: auto;
     }
 
     .thread-body{
@@ -3791,22 +3785,27 @@
               <h2 id="threadTitle">Comments</h2>
               <div class="thread-sub" id="threadSub"></div>
             </div>
-            <select id="threadLangSelect" class="thread-lang-select" title="Traduci commenti">
-              <option value="">— Lingua</option>
-              <option value="it">IT</option>
-              <option value="en">EN</option>
-              <option value="fr">FR</option>
-              <option value="de">DE</option>
-              <option value="es">ES</option>
-              <option value="pt">PT</option>
-              <option value="ar">AR</option>
-              <option value="zh">ZH</option>
-              <option value="ja">JA</option>
-              <option value="ko">KO</option>
-              <option value="ru">RU</option>
-              <option value="hi">HI</option>
-              <option value="el">EL</option>
-            </select>
+            <div class="lang-picker thread-lang-picker">
+              <button class="lang-picker-btn" id="threadLangBtn" type="button" aria-label="Traduci commenti">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" style="stroke:var(--muted);stroke-width:2;"><path d="M12.87 15.07l-2.54-2.51.03-.03A17.52 17.52 0 0 0 14.07 6H17V4h-7V2H8v2H1v2h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z" stroke-width="0.5" fill="currentColor"/></svg>
+              </button>
+              <div class="lang-picker-dropdown" id="threadLangDropdown">
+                <div class="lang-option" data-lang="" data-flag="">✕ Originale</div>
+                <div class="lang-option" data-lang="it" data-flag="it"><img src="https://flagcdn.com/w20/it.png" class="lang-flag" alt=""> IT — Italiano</div>
+                <div class="lang-option" data-lang="en" data-flag="gb"><img src="https://flagcdn.com/w20/gb.png" class="lang-flag" alt=""> EN — English</div>
+                <div class="lang-option" data-lang="es" data-flag="es"><img src="https://flagcdn.com/w20/es.png" class="lang-flag" alt=""> ES — Español</div>
+                <div class="lang-option" data-lang="fr" data-flag="fr"><img src="https://flagcdn.com/w20/fr.png" class="lang-flag" alt=""> FR — Français</div>
+                <div class="lang-option" data-lang="de" data-flag="de"><img src="https://flagcdn.com/w20/de.png" class="lang-flag" alt=""> DE — Deutsch</div>
+                <div class="lang-option" data-lang="pt" data-flag="pt"><img src="https://flagcdn.com/w20/pt.png" class="lang-flag" alt=""> PT — Português</div>
+                <div class="lang-option" data-lang="ru" data-flag="ru"><img src="https://flagcdn.com/w20/ru.png" class="lang-flag" alt=""> RU — Русский</div>
+                <div class="lang-option" data-lang="zh" data-flag="cn"><img src="https://flagcdn.com/w20/cn.png" class="lang-flag" alt=""> ZH — 中文</div>
+                <div class="lang-option" data-lang="ar" data-flag="sa"><img src="https://flagcdn.com/w20/sa.png" class="lang-flag" alt=""> AR — العربية</div>
+                <div class="lang-option" data-lang="ja" data-flag="jp"><img src="https://flagcdn.com/w20/jp.png" class="lang-flag" alt=""> JA — 日本語</div>
+                <div class="lang-option" data-lang="ko" data-flag="kr"><img src="https://flagcdn.com/w20/kr.png" class="lang-flag" alt=""> KO — 한국어</div>
+                <div class="lang-option" data-lang="hi" data-flag="in"><img src="https://flagcdn.com/w20/in.png" class="lang-flag" alt=""> HI — हिन्दी</div>
+                <div class="lang-option" data-lang="el" data-flag="gr"><img src="https://flagcdn.com/w20/gr.png" class="lang-flag" alt=""> EL — Ελληνικά</div>
+              </div>
+            </div>
             <button id="threadClearBtn" class="thread-clear" type="button" aria-label="Clear thread">              <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 6l12 12"></path>
                 <path d="M18 6L6 18"></path>
@@ -5428,6 +5427,8 @@ async function uploadAllSelectedImagesAndSwapSrc() {
         THREAD_ACTIVE_POST_ID = p.id;
         COMMENT_POLL_INTERVAL = setInterval(() => pollNewComments(p.id), 3000);
 
+        if (threadTranslateLang) translateThreadComments();
+
         bumpFeedCountsForKey(currentKey);
 
       } catch (err) {
@@ -5659,7 +5660,8 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       if (threadComments) {
         threadComments.innerHTML = inner;
         requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
-    
+        if (threadTranslateLang) translateThreadComments();
+
         // Attacca eventi Open sui figli
         threadComments.querySelectorAll(".c-open-btn").forEach(btn => {
           btn.addEventListener("click", async e => {
@@ -6783,17 +6785,16 @@ const logicalBtn = card.querySelector(".logical-btn");
       e.stopPropagation();
       clearThread();
       hideThreadPanel();
-      const ls = document.getElementById("threadLangSelect");
-      if (ls) ls.value = "";
+      threadTranslateLang = "";
     });
 
-    document.getElementById("threadLangSelect")?.addEventListener("change", async function() {
-      const lang = this.value;
+    let threadTranslateLang = "";
+
+    async function translateThreadComments() {
+      const lang = threadTranslateLang;
       const bubbles = document.querySelectorAll("#threadComments .comment-bubble");
       if (!lang) {
-        bubbles.forEach(b => {
-          if (b.dataset.original) b.textContent = b.dataset.original;
-        });
+        bubbles.forEach(b => { if (b.dataset.original) b.textContent = b.dataset.original; });
         return;
       }
       for (const b of bubbles) {
@@ -6806,6 +6807,23 @@ const logicalBtn = card.querySelector(".logical-btn");
           b.textContent = data[0].map(c => c[0]).filter(Boolean).join("");
         } catch(_){}
       }
+    }
+
+    const threadLangBtn = document.getElementById("threadLangBtn");
+    const threadLangDropdown = document.getElementById("threadLangDropdown");
+
+    threadLangBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      threadLangDropdown.classList.toggle("open");
+    });
+
+    threadLangDropdown?.querySelectorAll(".lang-option").forEach(opt => {
+      opt.addEventListener("click", (e) => {
+        e.stopPropagation();
+        threadTranslateLang = opt.dataset.lang || "";
+        threadLangDropdown.classList.remove("open");
+        translateThreadComments();
+      });
     });
 
     // Account dropdown interactions
