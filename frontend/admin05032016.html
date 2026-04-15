@@ -1174,11 +1174,11 @@
             }
             <button
               class="action-btn"
-              ${f.complaint_status && f.complaint_status !== 'rejected' ? 'disabled title="Prima respingi il reclamo spam"' : `onclick="dismissSpam('${f.id}')"`}
+              ${f.complaint_status === 'pending' ? 'disabled title="Prima gestisci il reclamo spam"' : `onclick="dismissSpam('${f.id}')"`}
             >Ignora</button>
             <button
               class="action-btn"
-              ${f.complaint_status && f.complaint_status !== 'rejected' ? 'disabled title="Prima respingi il reclamo spam"' : `onclick="unblockSpam('${f.id}')"`}
+              ${f.complaint_status === 'pending' ? 'disabled title="Prima gestisci il reclamo spam"' : `onclick="unblockSpam('${f.id}')"`}
             >Sblocca</button>
           </td>
         </tr>`;
