@@ -8610,6 +8610,14 @@ async function runSearch() {
       }
 
       await loadFeed();
+
+      // Deeplink: ?post=xxx apre il thread di quel post
+      const urlParams = new URLSearchParams(window.location.search);
+      const deepPostId = urlParams.get("post");
+      if (deepPostId && postByKey.has(deepPostId)) {
+        renderThread(deepPostId);
+      }
+
       startNotifPolling();
       startFeedPolling();
     })();
