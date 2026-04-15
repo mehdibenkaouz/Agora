@@ -8870,13 +8870,6 @@ function getNotifComplaintTime() { return document.getElementById("notifComplain
 
     _notifListenersAttached = true;
   }
-    if (_notifListenersAttached) return;
-    getNotifClose()?.addEventListener("click", closeNotifModal);
-    getNotifModal()?.addEventListener("click", (e) => {
-      if (e.target === getNotifModal()) closeNotifModal();
-    });
-    _notifListenersAttached = true;
-  }
   // Polling unread count ogni 30s
   function startNotifPolling() {
     if (NOTIF_POLL) clearInterval(NOTIF_POLL);
