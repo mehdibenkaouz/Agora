@@ -942,20 +942,20 @@
 
 <div class="reject-spam-overlay" id="rejectSpamOverlay">
   <div class="reject-spam-box">
-    <div class="reject-spam-title">Respingi reclamo spam</div>
-    <div class="reject-spam-sub">Scrivi una breve motivazione. Puoi allegare anche immagini di prova: verranno inviate nelle notifiche dell’utente.</div>
+    <div class="reject-spam-title">Reject spam complaint</div>
+    <div class="reject-spam-sub">Write a brief justification. You can also attach proof images: they will be sent in the user's notifications.</div>
 
-    <label class="reject-spam-label">Motivazione</label>
-    <textarea id="rejectSpamReason" class="reject-spam-textarea" placeholder="Es: il pattern mostrava 8 commenti quasi identici in pochi secondi..."></textarea>
+    <label class="reject-spam-label">Justification</label>
+    <textarea id="rejectSpamReason" class="reject-spam-textarea" placeholder="E.g.: the pattern showed 8 almost identical comments in a few seconds..."></textarea>
 
-    <label class="reject-spam-label">Immagini di prova</label>
+    <label class="reject-spam-label">Proof Images</label>
     <input id="rejectSpamFiles" class="reject-spam-file" type="file" accept="image/*" multiple />
 
     <div id="rejectSpamPreview" class="reject-spam-preview"></div>
 
     <div class="reject-spam-actions">
-      <button class="confirm-cancel" type="button" onclick="closeRejectSpamModal()">Annulla</button>
-      <button class="confirm-ok" type="button" id="rejectSpamSendBtn">Invia rifiuto</button>
+      <button class="confirm-cancel" type="button" onclick="closeRejectSpamModal()">Cancel</button>
+      <button class="confirm-ok" type="button" id="rejectSpamSendBtn">Send Rejection</button>
     </div>
   </div>
 </div>
@@ -1353,8 +1353,8 @@
             </td>
             <td>
               ${c.status === 'pending' ? `
-                <button class="action-btn" onclick="resolveSpamComplaint('${c.id}','resolved')">Accogli</button>
-                <button class="action-btn warn" onclick="resolveSpamComplaint('${c.id}','rejected')">Respingi</button>
+                <button class="action-btn" onclick="resolveSpamComplaint('${c.id}','resolved')">Accept</button>
+                <button class="action-btn warn" onclick="resolveSpamComplaint('${c.id}','rejected')">Reject</button>
               ` : '—'}
             </td>
           </tr>
