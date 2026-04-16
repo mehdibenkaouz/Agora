@@ -107,7 +107,10 @@
   // la struttura (img, video, tag) e inserisce censor-token in-place.
   // Idempotente: salta il contenuto già dentro .censor-token.
   function _applyRangesToTextNodes(root, ranges) {
-    if (!root || !Array.isArray(ranges) || !ranges.length) return;
+    if (!root || !Array.isArray(ranges)) return;
+
+    const safeRanges = SharedCensor.sanitizeRanges(root.textContent || "", ranges);
+    if (!safeRanges.length) return;
 
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
       acceptNode(n) {
@@ -120,49 +123,51 @@
     });
 
     const textNodes = [];
-    let n; while ((n = walker.nextNode())) textNodes.push(n);
+    let n;
+    while ((n = walker.nextNode())) textNodes.push(n);
     if (!textNodes.length) return;
 
-    // Mappatura posizione nel concat textContent
     let pos = 0;
-    const nodeRanges = textNodes.map(tn => {
+    const nodeRanges = textNodes.map((tn) => {
       const start = pos;
       const len = tn.nodeValue.length;
       pos += len;
       return { node: tn, start, end: start + len };
     });
 
-    // Dal fondo all'inizio per non alterare indici mentre si modifica il DOM
-    const sorted = [...ranges]
-      .filter(r => r && Number.isFinite(r.start) && Number.isFinite(r.end) && r.end > r.start)
-      .sort((a, b) => b.start - a.start);
+    const sorted = [...safeRanges].sort((a, b) => b.start - a.start);
 
     for (const r of sorted) {
       const affected = nodeRanges.filter(nr => nr.start < r.end && nr.end > r.start);
-      if (affected.length !== 1) continue; // match spezzato fra tag: raro, skip
+      if (!affected.length) continue;
 
-      const nr = affected[0];
-      const val = nr.node.nodeValue;
-      const localStart = Math.max(0, r.start - nr.start);
-      const localEnd = Math.min(val.length, r.end - nr.start);
-      if (localEnd <= localStart) continue;
+      for (let i = affected.length - 1; i >= 0; i--) {
+        const nr = affected[i];
+        const node = nr.node;
+        if (!node || !node.parentNode) continue;
 
-      const before = val.slice(0, localStart);
-      const matched = val.slice(localStart, localEnd);
-      const after = val.slice(localEnd);
+        const val = node.nodeValue || "";
+        const localStart = Math.max(0, r.start - nr.start);
+        const localEnd = Math.min(val.length, r.end - nr.start);
+        if (localEnd <= localStart) continue;
 
-      const tokenHtml = SharedCensor.renderToHtmlString([{ text: matched, category: r.category }]);
-      const tmp = document.createElement("span");
-      tmp.innerHTML = tokenHtml;
-      const tokenEl = tmp.firstChild;
-      if (!tokenEl) continue;
+        const before = val.slice(0, localStart);
+        const matched = val.slice(localStart, localEnd);
+        const after = val.slice(localEnd);
 
-      const parent = nr.node.parentNode;
-      const next = nr.node.nextSibling;
-      if (before) parent.insertBefore(document.createTextNode(before), next);
-      parent.insertBefore(tokenEl, next);
-      if (after) parent.insertBefore(document.createTextNode(after), next);
-      parent.removeChild(nr.node);
+        const frag = document.createDocumentFragment();
+        if (before) frag.appendChild(document.createTextNode(before));
+
+        const tmp = document.createElement("span");
+        tmp.innerHTML = SharedCensor.renderToHtmlString([
+          { text: matched, category: r.category }
+        ]);
+        while (tmp.firstChild) frag.appendChild(tmp.firstChild);
+
+        if (after) frag.appendChild(document.createTextNode(after));
+
+        node.parentNode.replaceChild(frag, node);
+      }
     }
   }
 
@@ -171,6 +176,7 @@
   // Idempotente: può essere richiamata dopo ogni prepend/append.
   window.censorPostBodies = async function (root) {
     if (!root) return;
+
     SharedCensor.ensureStyles();
     window.__censorCache = window.__censorCache || new Map();
 
@@ -182,12 +188,14 @@
     if (!uniqueBodies.length) return;
 
     const targets = [];
+
     for (const body of uniqueBodies) {
       const preview = body.querySelector(".post-preview");
       const full = body.querySelector(".post-full");
 
       if (preview && full) {
         if (preview.dataset.censorDone !== "1") targets.push(preview);
+        if (full.dataset.censorDone !== "1") targets.push(full);
         continue;
       }
 
@@ -196,6 +204,19 @@
 
     if (!targets.length) return;
 
+    function applyToEl(el, ranges) {
+      if (!el) return;
+
+      if (typeof el.__censorOriginalHtml !== "string") {
+        el.__censorOriginalHtml = el.innerHTML;
+      } else {
+        el.innerHTML = el.__censorOriginalHtml;
+      }
+
+      _applyRangesToTextNodes(el, ranges || []);
+      el.dataset.censorDone = "1";
+    }
+
     const pendingTexts = [];
     const pendingEls = [];
 
@@ -203,9 +224,7 @@
       const text = String(el.textContent || "");
 
       if (window.__censorCache.has(text)) {
-        const ranges = window.__censorCache.get(text) || [];
-        SharedCensor.renderTextWithRanges(el, text, ranges);
-        el.dataset.censorDone = "1";
+        applyToEl(el, window.__censorCache.get(text) || []);
         return;
       }
 
@@ -228,10 +247,8 @@
       pendingEls.forEach((el, i) => {
         const text = pendingTexts[i];
         const ranges = Array.isArray(results[i]) ? results[i] : [];
-
         window.__censorCache.set(text, ranges);
-        SharedCensor.renderTextWithRanges(el, text, ranges);
-        el.dataset.censorDone = "1";
+        applyToEl(el, ranges);
       });
     } catch (err) {
       console.warn("censorPostBodies failed:", err);

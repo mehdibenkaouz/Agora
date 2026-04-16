@@ -46,8 +46,10 @@ export default {
     }
 
     try {
+      const WORKER_BUILD = "emoji-hotfix-3";
+
       if (url.pathname === "/api/health") {
-        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+        return json({ ok: true, build: WORKER_BUILD }, 200, ALLOWED_ORIGIN);
       }
       if (url.pathname === "/api/censor" && request.method === "POST") {
               const body = await request.json().catch(() => ({}));
@@ -3384,6 +3386,40 @@ function _pushLiteralCensorMatches(out, src, raw, rawStarts, rawEnds) {
     }
   }
 }
+const _CENSOR_SYMBOLIC_HINT_RE = /[☪☦✝✡†]/u;
+
+function _findLiteralMatchesNormalized(src) {
+  const out = [];
+  for (const item of _CENSOR_LITERAL_MATCHES) {
+    let start = 0;
+    while (true) {
+      const idx = src.indexOf(item.text, start);
+      if (idx === -1) break;
+      out.push({
+        start: idx,
+        end: idx + item.text.length,
+        category: item.category
+      });
+      start = idx + item.text.length;
+    }
+  }
+  out.sort((a, b) => a.start - b.start || a.end - b.end);
+  return out;
+}
+
+function _maskNormalizedRanges(src, ranges) {
+  if (!ranges.length) return src;
+  let out = "";
+  let cursor = 0;
+  for (const r of ranges) {
+    if (r.start > cursor) out += src.slice(cursor, r.start);
+    out += " ".repeat(Math.max(0, r.end - r.start));
+    cursor = r.end;
+  }
+  if (cursor < src.length) out += src.slice(cursor);
+  return out;
+}
+
 
 function safeComputeCensorRanges(text) {
   try {
@@ -3397,42 +3433,80 @@ function safeComputeCensorRanges(text) {
 function computeCensorRanges(text) {
   const { raw, normalized: src, rawStarts, rawEnds } = normalizeCensorTextWithMap(text);
   if (!src || src.length > _CENSOR_MAX_LEN) return [];
-  const re = getCensorSuperRegex();
-  if (!re) return [];
+
   const out = [];
-  re.lastIndex = 0;
-  let m;
-  while ((m = re.exec(src)) !== null) {
-    if (m[0].length === 0) { re.lastIndex++; continue; }
-    // Trova la categoria che ha matchato (unico gruppo non-undefined).
-    let category = null;
-    if (m.groups) {
-      for (const k of Object.keys(m.groups)) {
-        if (m.groups[k] !== undefined) { category = k; break; }
-      }
-    }
-    if (category) {
-      const normStart = m.index;
-      const normEnd = m.index + m[0].length - 1;
 
-      const rawStart = rawStarts[normStart] ?? normStart;
-      const rawEnd = rawEnds[normEnd] ?? raw.length;
+  // 1) Prima gestiamo SEMPRE i match letterali con simboli religiosi
+  let regexSrc = src;
+  if (_CENSOR_SYMBOLIC_HINT_RE.test(src)) {
+    const literalNorm = _findLiteralMatchesNormalized(src);
 
-      out.push({ start: rawStart, end: rawEnd, category });
+    for (const r of literalNorm) {
+      const rawStart = rawStarts[r.start] ?? r.start;
+      const rawEnd = rawEnds[r.end - 1] ?? raw.length;
+      out.push({
+        start: rawStart,
+        end: rawEnd,
+        category: r.category
+      });
     }
-    if (m.index === re.lastIndex) re.lastIndex++;
+
+    // Maschera i literal match prima di passare la super-regex
+    if (literalNorm.length) {
+      regexSrc = _maskNormalizedRanges(src, literalNorm);
+    }
   }
-    for (const word of CJK_CENSOR_WORDS) {
+
+  // 2) Poi regex generale sul testo già mascherato
+  const re = getCensorSuperRegex();
+  if (re) {
+    re.lastIndex = 0;
+    let m;
+    while ((m = re.exec(regexSrc)) !== null) {
+      if (m[0].length === 0) {
+        re.lastIndex++;
+        continue;
+      }
+
+      let category = null;
+      if (m.groups) {
+        for (const k of Object.keys(m.groups)) {
+          if (m.groups[k] !== undefined) {
+            category = k;
+            break;
+          }
+        }
+      }
+
+      if (category) {
+        const normStart = m.index;
+        const normEnd = m.index + m[0].length - 1;
+
+        const rawStart = rawStarts[normStart] ?? normStart;
+        const rawEnd = rawEnds[normEnd] ?? raw.length;
+
+        out.push({ start: rawStart, end: rawEnd, category });
+      }
+
+      if (m.index === re.lastIndex) re.lastIndex++;
+    }
+  }
+
+  // 3) CJK
+  for (const word of CJK_CENSOR_WORDS) {
     let start = 0;
     while (true) {
       const idx = src.indexOf(word, start);
       if (idx === -1) break;
-      out.push({ start: idx, end: idx + word.length, category: "profanity" });
+
+      const rawStart = rawStarts[idx] ?? idx;
+      const rawEnd = rawEnds[idx + word.length - 1] ?? raw.length;
+
+      out.push({ start: rawStart, end: rawEnd, category: "profanity" });
       start = idx + word.length;
     }
   }
 
-  _pushLiteralCensorMatches(out, src, raw, rawStarts, rawEnds);
   out.sort((a, b) => a.start - b.start || a.end - b.end);
 
   const deduped = [];
@@ -3442,6 +3516,7 @@ function computeCensorRanges(text) {
     deduped.push(r);
     lastEnd = r.end;
   }
+
   return deduped;
 }
 // ════════════════════════════════════════════════════════════════════════
