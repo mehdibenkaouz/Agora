@@ -45,88 +45,89 @@
       }
 
       .censor-token {
-        position: relative;
-        display: inline;
-        cursor: pointer;
-        user-select: none;
-        border-radius: 0;
-        padding: 0;
+        appearance: none;
+        -webkit-appearance: none;
+        border: 0 !important;
+        outline: 0 !important;
         background: transparent !important;
         box-shadow: none !important;
-        transition:
-          opacity .35s ease,
-          filter .35s ease,
-          transform .2s ease,
-          color .16s ease;
+        padding: 0 !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        display: inline;
+        position: static;
+        cursor: pointer;
+        user-select: none;
+        color: inherit;
+        font: inherit;
+        letter-spacing: inherit;
+        line-height: inherit;
+        vertical-align: baseline;
+        text-decoration: none !important;
       }
 
-      .censor-token:focus-visible {
-        outline: 2px solid currentColor;
-        outline-offset: 2px;
+      .censor-token:focus,
+      .censor-token:focus-visible,
+      .censor-token:hover,
+      .censor-token:active {
+        outline: none !important;
+        box-shadow: none !important;
+        border: 0 !important;
+        background: transparent !important;
       }
 
       .censor-token.is-hidden {
-        opacity: 1;
-        filter: none;
-        user-select: none;
-        cursor: pointer;
-        text-shadow: none !important;
-        -webkit-text-fill-color: currentColor;
+        color: inherit !important;
+        -webkit-text-fill-color: currentColor !important;
       }
 
-
+      .censor-token.is-hidden .censor-token-text {
+        opacity: .34;
+        filter: blur(8px);
+        -webkit-filter: blur(8px);
+        transition: opacity .35s ease, filter .35s ease, -webkit-filter .35s ease;
+      }
 
       .censor-token.is-shown .censor-token-text {
         opacity: 1;
         filter: none;
         -webkit-filter: none;
+        transition: opacity .2s ease, filter .2s ease, -webkit-filter .2s ease;
       }
 
-      .censor-token--profanity {
-        background: transparent !important;
-        box-shadow: none !important;
-        color: ${cfg.profanityColor};
-      }
-
-      .censor-token--blasphemy {
-        background: transparent !important;
-        box-shadow: none !important;
-        color: ${cfg.blasphemyColor};
-      }
-
+      .censor-token--profanity,
+      .censor-token--blasphemy,
       .censor-token--hate {
         background: transparent !important;
         box-shadow: none !important;
-        color: ${cfg.hateColor};
       }
 
-      .censor-token.is-shown {
-        color: inherit !important;
-        -webkit-text-fill-color: currentColor;
+      .censor-token--profanity {
+        color: ${cfg.profanityColor} !important;
       }
 
-      .censor-token.is-hidden::after {
-        display: none;
-        content: none;
+      .censor-token--blasphemy {
+        color: ${cfg.blasphemyColor} !important;
       }
 
-      .censor-token--profanity.is-hidden::after,
-      .censor-token--blasphemy.is-hidden::after,
-      .censor-token--hate.is-hidden::after {
-        display: none;
-        content: none;
-        background: transparent;
+      .censor-token--hate {
+        color: ${cfg.hateColor} !important;
+      }
+
+      .censor-token::before,
+      .censor-token::after,
+      .censor-token.is-hidden::before,
+      .censor-token.is-hidden::after,
+      .censor-token.is-shown::before,
+      .censor-token.is-shown::after {
+        content: none !important;
+        display: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
       }
 
       .censor-token-text {
-        transition: filter .16s ease;
-      }
-
-      .censor-token.is-hidden .censor-token-text {
-        opacity: .43;
-        filter: blur(7px);
-        -webkit-filter: blur(7px);
-        transition: opacity .35s ease, filter .35s ease, -webkit-filter .35s ease;
+        display: inline;
       }
     `;
     document.head.appendChild(style);
