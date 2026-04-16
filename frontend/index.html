@@ -188,10 +188,10 @@
 
       if (preview && full) {
         if (preview.dataset.censorDone !== "1") targets.push(preview);
-        if (full.dataset.censorDone !== "1") targets.push(full);
-      } else {
-        if (body.dataset.censorDone !== "1") targets.push(body);
+        continue;
       }
+
+      if (body.dataset.censorDone !== "1") targets.push(body);
     }
 
     if (!targets.length) return;
@@ -204,13 +204,7 @@
 
       if (window.__censorCache.has(text)) {
         const ranges = window.__censorCache.get(text) || [];
-
-        if (el.classList.contains("post-preview") || !el.querySelector("*")) {
-          SharedCensor.renderTextWithRanges(el, text, ranges);
-        } else {
-          _applyRangesToTextNodes(el, ranges);
-        }
-
+        SharedCensor.renderTextWithRanges(el, text, ranges);
         el.dataset.censorDone = "1";
         return;
       }
@@ -236,13 +230,7 @@
         const ranges = Array.isArray(results[i]) ? results[i] : [];
 
         window.__censorCache.set(text, ranges);
-
-        if (el.classList.contains("post-preview") || !el.querySelector("*")) {
-          SharedCensor.renderTextWithRanges(el, text, ranges);
-        } else {
-          _applyRangesToTextNodes(el, ranges);
-        }
-
+        SharedCensor.renderTextWithRanges(el, text, ranges);
         el.dataset.censorDone = "1";
       });
     } catch (err) {
@@ -7447,7 +7435,7 @@ const logicalBtn = card.querySelector(".logical-btn");
       hideThreadPanel();
       threadTranslateLang = "";
     });
-    
+
     let threadTranslateLang = "";
 
     async function translateThreadComments() {
