@@ -2,6 +2,38 @@
 <html lang="en" translate="no">
 <head>
 
+<script src="/shared-censor.js"></script>
+<script>
+  // Helper globale: censura e renderizza del testo dentro un container.
+  // Uso: window.censorAndRender(elemento, "testo grezzo")
+  window.censorAndRender = async function (container, text) {
+    if (!container) return;
+    const src = String(text || "");
+    try {
+      SharedCensor.ensureStyles();
+      const res = await fetch("/api/censor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: src }),
+      });
+      const data = await res.json();
+      const ranges = (data && Array.isArray(data.ranges)) ? data.ranges : [];
+      SharedCensor.renderTextWithRanges(container, src, ranges);
+    } catch (_) {
+      // Fallback: nessuna censura (meglio mostrare il testo che niente).
+      container.textContent = src;
+    }
+  };
+
+  // Demo: renderizza #demo se presente, testando tutte le categorie.
+  document.addEventListener("DOMContentLoaded", () => {
+    const demo = document.getElementById("demo");
+    if (demo) {
+      window.censorAndRender(demo, "Testo normale cazzo, testo bestemmia, testo razziale");
+    }
+  });
+</script>
+
   <script>
   
     document.documentElement.lang = navigator.language.slice(0,2) || 'en';

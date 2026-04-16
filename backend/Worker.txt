@@ -2625,7 +2625,65 @@ export default {
         await env.dbagora.prepare("DELETE FROM sessions WHERE user_id = ?1").bind(userId).run();
         await env.dbagora.prepare("DELETE FROM admin_sessions WHERE user_id = ?1").bind(userId).run();
 
-        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+        let emailSent = false;
+        let emailError = "";
+
+        try {
+          const appealEmail = String(env.BAN_APPEAL_EMAIL || "").trim();
+          const fromEmail = String(env.BAN_FROM_EMAIL || env.OTP_FROM_EMAIL || "AGORÀ <noreply@agorapolis.org>").trim();
+
+          if (appealEmail && user.email) {
+            const emailRes = await fetch("https://api.resend.com/emails", {
+              method: "POST",
+              headers: {
+                "Authorization": "Bearer " + env.RESEND_API_KEY,
+                "Content-Type": "application/json"
+              },
+              body: JSON.stringify({
+                from: fromEmail,
+                to: [user.email],
+                subject: "Your AGORÀ account has been suspended",
+                html: `
+                  <div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#f8f7f3;border-radius:16px;color:#111">
+                    <h2 style="margin:0 0 16px;color:#571929;">AGORÀ</h2>
+                    <p style="margin:0 0 12px;">Hello ${String(user.display_name || user.email).replace(/</g,"&lt;").replace(/>/g,"&gt;")},</p>
+                    <p style="margin:0 0 12px;">
+                      your account has been suspended and access has been disabled.
+                    </p>
+                    <p style="margin:0 0 12px;">
+                      Reason:
+                    </p>
+                    <div style="margin:0 0 16px;padding:12px 14px;background:#fff;border:1px solid #d7c8b5;border-radius:10px;color:#571929;white-space:pre-wrap;">
+                      ${reason.replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+                    </div>
+                    <p style="margin:0 0 12px;">
+                      If you believe this decision is incorrect, you can contact us for an appeal at:
+                    </p>
+                    <p style="margin:0 0 16px;font-weight:700;color:#571929;">
+                      ${appealEmail.replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+                    </p>
+                    <p style="margin:0;color:#666;">
+                      Please include the email associated with your account and any useful context for review.
+                    </p>
+                  </div>
+                `
+              })
+            });
+
+            if (!emailRes.ok) {
+              emailError = await emailRes.text().catch(() => `resend_http_${emailRes.status}`);
+            } else {
+              emailSent = true;
+            }
+          } else {
+            emailError = "missing_ban_email_config_or_user_email";
+          }
+        } catch (e) {
+          emailError = String(e?.message || e || "email_send_failed");
+        }
+
+        return json({ ok: true, email_sent: emailSent, email_error: emailError || null }, 200, ALLOWED_ORIGIN);
+      
       }
 
       // DELETE /api/admin/ban — rimuovi ban
