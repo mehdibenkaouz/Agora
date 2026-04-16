@@ -6171,11 +6171,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
           </button>
         </div>
       `;
-      const bubbleEl = div.querySelector(".comment-bubble");
-      const commentRanges = Array.isArray(c?.censor_ranges) ? c.censor_ranges : [];
-      if (bubbleEl && commentRanges.length) {
-        SharedCensor.renderTextWithRanges(bubbleEl, String(c.content || ""), commentRanges);
-      }
+
       div.querySelectorAll(".comment-menu-btn").forEach(btn => {
         btn.addEventListener("click", e => {
           e.stopPropagation();
@@ -9875,4 +9871,5 @@ document.addEventListener("DOMContentLoaded", function () {
   
   
 </body>
+
 </html>
