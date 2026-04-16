@@ -172,6 +172,7 @@
   window.censorPostBodies = async function (root) {
     if (!root) return;
     SharedCensor.ensureStyles();
+    window.__censorCache = window.__censorCache || new Map();
 
     const bodies = [];
     if (root.matches?.(".post-body")) bodies.push(root);
@@ -195,22 +196,53 @@
 
     if (!targets.length) return;
 
-    const texts = targets.map(el => el.textContent || "");
-    console.log("POST CENSOR TEXTS:", texts);
+    const pendingTexts = [];
+    const pendingEls = [];
+
+    targets.forEach((el) => {
+      const text = String(el.textContent || "");
+
+      if (window.__censorCache.has(text)) {
+        const ranges = window.__censorCache.get(text) || [];
+
+        if (el.classList.contains("post-preview") || !el.querySelector("*")) {
+          SharedCensor.renderTextWithRanges(el, text, ranges);
+        } else {
+          _applyRangesToTextNodes(el, ranges);
+        }
+
+        el.dataset.censorDone = "1";
+        return;
+      }
+
+      pendingTexts.push(text);
+      pendingEls.push(el);
+    });
+
+    if (!pendingTexts.length) return;
+
     try {
       const res = await fetch("/api/censor/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texts }),
+        body: JSON.stringify({ texts: pendingTexts }),
       });
 
       const data = await res.json();
-      
-      const results = (data && Array.isArray(data.results)) ? data.results : [];
-      console.log("POST CENSOR RESULTS:", results);
-      targets.forEach((el, i) => {
+      const results = Array.isArray(data?.results) ? data.results : [];
+
+      pendingEls.forEach((el, i) => {
+        const text = pendingTexts[i];
         const ranges = Array.isArray(results[i]) ? results[i] : [];
-        _applyRangesToTextNodes(el, ranges);
+
+        window.__censorCache.set(text, ranges);
+
+        if (el.classList.contains("post-preview") || !el.querySelector("*")) {
+          SharedCensor.renderTextWithRanges(el, text, ranges);
+        } else {
+          _applyRangesToTextNodes(el, ranges);
+        }
+
         el.dataset.censorDone = "1";
       });
     } catch (err) {
@@ -6329,87 +6361,72 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       if (qEl) qEl.textContent = String(getQuoteCount(st));
     }
 
-    async function trySendThreadComment() {
-      if (!activeThreadKey) return;
+  async function trySendThreadComment() {
+    if (!activeThreadKey) return;
 
-      if (!getToken()) {
-        openModal();
-        return;
-      }
-
-      const p = postByKey.get(activeThreadKey);
-      const st = postUI.get(activeThreadKey);
-      const text = (threadInput?.value || "").trim();
-
-      if (!p || !st || !text) return;
-
-      threadSendBtn.disabled = true;
-
-      try {
-        const parentCommentId = threadSendBtn.dataset.parentCommentId || null;
-        const created = await createCommentForPost(p.id, text, parentCommentId);
-        const newComment = created?.comment || null;
-
-        if (threadInput) {
-          threadInput.value = "";
-          threadInput.style.height = "auto";
-        }
-
-        st.commentBase = (Number(st.commentBase) || 0) + 1;
-        bumpFeedCountsForKey(activeThreadKey);
-
-        if (newComment) {
-          appendThreadComment(newComment, p.id);
-
-          if (!THREAD_LAST_TS || new Date(newComment.created_at) > new Date(THREAD_LAST_TS)) {
-            THREAD_LAST_TS = newComment.created_at;
-          }
-
-          if (threadComments) {
-            requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
-          }
-        } else if (parentCommentId && threadNavStack.length) {
-          const current = threadNavStack[threadNavStack.length - 1];
-          const data = await fetchCommentsForPost(p.id, null, current.commentId);
-          const comments = Array.isArray(data.comments) ? data.comments : [];
-          await renderThreadReplies(p.id, current.commentId, comments);
-        } else {
-          await renderThread(activeThreadKey);
-        }
-
-        if (threadInput) {
-          threadInput.value = "";
-          threadInput.style.height = "auto";
-        }
-
-        st.commentBase = (Number(st.commentBase) || 0) + 1;
-        bumpFeedCountsForKey(activeThreadKey);
-
-        // Se siamo in un thread annidato, ricarica il livello corrente
-        if (parentCommentId && threadNavStack.length) {
-          const current = threadNavStack[threadNavStack.length - 1];
-          const data = await fetchCommentsForPost(p.id, null, current.commentId);
-          const comments = Array.isArray(data.comments) ? data.comments : [];
-          await renderThreadReplies(p.id, current.commentId, comments);
-        } else {
-          await renderThread(activeThreadKey);
-        }
-
-      } catch (err) {
-        console.warn("send_comment_failed:", err);
-        if ((err?.data?.error || err?.message) === "spam_detected") {
-          openSpamComplaintModal({
-            actionType: "comment",
-            until: err?.data?.until || null,
-            source: "server"
-          });
-        } else {
-          alert("Comment failed: " + (err?.message || err));
-        }
-      } finally {
-        updateThreadAuthState();
-      }
+    if (!getToken()) {
+      openModal();
+      return;
     }
+
+    const p = postByKey.get(activeThreadKey);
+    const st = postUI.get(activeThreadKey);
+    const text = (threadInput?.value || "").trim();
+
+    if (!p || !st || !text) return;
+
+    threadSendBtn.disabled = true;
+
+    try {
+      const parentCommentId = threadSendBtn.dataset.parentCommentId || null;
+      const created = await createCommentForPost(p.id, text, parentCommentId);
+      const newComment = created?.comment || null;
+
+      if (threadInput) {
+        threadInput.value = "";
+        threadInput.style.height = "auto";
+      }
+
+      st.commentBase = (Number(st.commentBase) || 0) + 1;
+      bumpFeedCountsForKey(activeThreadKey);
+
+      if (newComment) {
+        appendThreadComment(newComment, p.id);
+
+        if (!THREAD_LAST_TS || new Date(newComment.created_at) > new Date(THREAD_LAST_TS)) {
+          THREAD_LAST_TS = newComment.created_at;
+        }
+
+        if (threadComments) {
+          requestAnimationFrame(() => {
+            threadComments.scrollTop = threadComments.scrollHeight;
+          });
+        }
+      } else if (parentCommentId && threadNavStack.length) {
+        const current = threadNavStack[threadNavStack.length - 1];
+        const data = await fetchCommentsForPost(p.id, null, current.commentId);
+        const comments = Array.isArray(data.comments) ? data.comments : [];
+        await renderThreadReplies(p.id, current.commentId, comments);
+      } else {
+        await renderThread(activeThreadKey);
+      }
+
+    } catch (err) {
+      console.warn("send_comment_failed:", err);
+      if ((err?.data?.error || err?.message) === "spam_detected") {
+        openSpamComplaintModal({
+          actionType: "comment",
+          until: err?.data?.until || null,
+          source: "server"
+        });
+      } else {
+        alert("Comment failed: " + (err?.message || err));
+      }
+    } finally {
+      updateThreadAuthState();
+    }
+
+  }
     function openMenu() {
       accountMenu.classList.add("open");
       accountBtn.setAttribute("aria-expanded", "true");
@@ -7433,23 +7450,26 @@ const logicalBtn = card.querySelector(".logical-btn");
 
     let threadTranslateLang = "";
 
-    async function translateThreadComments() {
-      const lang = threadTranslateLang;
-      const bubbles = document.querySelectorAll("#threadComments .comment-bubble");
-      if (!lang) {
-        bubbles.forEach(b => { if (b.dataset.original) b.textContent = b.dataset.original; });
-        return;
-      }
-      for (const b of bubbles) {
-        if (!b.dataset.original) b.dataset.original = b.textContent;
-        const text = b.dataset.original.trim();
-        if (!text) continue;
-        try {
-          const res = await fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" + encodeURIComponent(lang) + "&dt=t&q=" + encodeURIComponent(text));
-          const data = await res.json();
-          b.textContent = data[0].map(c => c[0]).filter(Boolean).join("");
-        } catch(_){}
-      }
+    const bubbles = document.querySelectorAll("#threadComments .comment-bubble");
+
+    if (!lang) {
+      bubbles.forEach(b => {
+        if (b.querySelector(".censor-token")) return;
+        if (b.dataset.original) b.textContent = b.dataset.original;
+      });
+      return;
+    }
+
+    for (const b of bubbles) {
+      if (b.querySelector(".censor-token")) continue;
+      if (!b.dataset.original) b.dataset.original = b.textContent;
+      const text = b.dataset.original.trim();
+      if (!text) continue;
+      try {
+        const res = await fetch("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" + encodeURIComponent(lang) + "&dt=t&q=" + encodeURIComponent(text));
+        const data = await res.json();
+        b.textContent = data[0].map(c => c[0]).filter(Boolean).join("");
+      } catch(_){}
     }
 
     const threadLangBtn = document.getElementById("threadLangBtn");
