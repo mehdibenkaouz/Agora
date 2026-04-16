@@ -290,6 +290,35 @@
       console.warn("censorPostBodies failed:", err);
     }
   };
+    function applyCensorRangesToElement(el, ranges) {
+    if (!el || !Array.isArray(ranges)) return;
+
+    if (typeof el.__censorOriginalHtml !== "string") {
+      el.__censorOriginalHtml = el.innerHTML;
+    } else {
+      el.innerHTML = el.__censorOriginalHtml;
+    }
+
+    _applyRangesToTextNodes(el, ranges || []);
+    el.dataset.censorDone = "1";
+  }
+
+  window.applyCensorRangesToPostBody = function (body, ranges) {
+    if (!body || !Array.isArray(ranges) || !ranges.length) return;
+
+    SharedCensor.ensureStyles();
+
+    const preview = body.querySelector(".post-preview");
+    const full = body.querySelector(".post-full");
+
+    if (preview && full) {
+      applyCensorRangesToElement(preview, ranges);
+      applyCensorRangesToElement(full, ranges);
+      return;
+    }
+
+    applyCensorRangesToElement(body, ranges);
+  };
 
   document.addEventListener("DOMContentLoaded", () => {
     const demo = document.getElementById("demo");
@@ -6986,6 +7015,12 @@ async function uploadAllSelectedImagesAndSwapSrc() {
             </div>
           </div>
         `;
+        const postBodyEl = card.querySelector(".post-body");
+        const postRanges = Array.isArray(p.censor_ranges) ? p.censor_ranges : [];
+
+        if (postBodyEl && postRanges.length) {
+          window.applyCensorRangesToPostBody(postBodyEl, postRanges);
+        }
 
         // Click sulla card => apre thread solo su desktop
         card.addEventListener("click", () => {
@@ -7332,8 +7367,10 @@ const logicalBtn = card.querySelector(".logical-btn");
           feed.appendChild(appendFrag);
         }
         
-        // Censura in un'unica batch request tutti i post appena presenti nel feed.
-        window.censorPostBodies(feed);
+        // Fallback solo per eventuali post vecchi / payload senza censor_ranges
+        if (posts.some(p => !Array.isArray(p.censor_ranges))) {
+          window.censorPostBodies(feed);
+        }
         // If selected thread disappeared after refresh, reset
         if (activeThreadKey && !postByKey.has(activeThreadKey)) clearThread();
     }
@@ -8880,7 +8917,7 @@ async function restoreCreatePostDraft() {
           while (el.firstChild) p.insertBefore(el.firstChild, el);
           p.removeChild(el);
         });
-        const contentHtml = editorClone.innerHTML;
+        const contentHtml = buildCleanPostHtmlFromEditor(editorClone);
         await api("/api/posts", {
           method: "POST",
           body: JSON.stringify({
