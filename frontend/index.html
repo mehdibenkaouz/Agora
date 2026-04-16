@@ -320,6 +320,22 @@
     applyCensorRangesToElement(body, ranges);
   };
 
+  function applyCensorRangesToCommentBubble(bubble, comment) {
+    if (!bubble || !comment) return;
+
+    const src = String(comment.content || "");
+    const ranges = Array.isArray(comment.censor_ranges) ? comment.censor_ranges : [];
+
+    if (!ranges.length) {
+      bubble.textContent = src;
+      bubble.dataset.censorDone = "1";
+      return;
+    }
+
+    SharedCensor.renderTextWithRanges(bubble, src, ranges);
+    bubble.dataset.censorDone = "1";
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     const demo = document.getElementById("demo");
     if (demo) {
@@ -6202,7 +6218,9 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       });
 
       threadComments.appendChild(div);
-      window.censorAllBubbles(div);
+
+      const commentBubbleEl = div.querySelector(".comment-bubble");
+      applyCensorRangesToCommentBubble(commentBubbleEl, c);
     }
     async function pollNewComments(postId, parentCommentId = null) {
       if (!postId || postId !== THREAD_ACTIVE_POST_ID) return;
@@ -6325,7 +6343,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
               </a>
             </div>` : ''}
             <div class="comment-row-wrap">
-              <div class="comment-bubble ${side}" data-censor-text="${text}">${text}</div>
+              <div class="comment-bubble ${side}">${text}</div>
               ${commentMenuHtml}
             </div>
             <div style="display:flex;align-items:center;gap:8px;padding:0 2px;">
@@ -6341,6 +6359,11 @@ async function uploadAllSelectedImagesAndSwapSrc() {
 
       if (threadComments) {
         threadComments.innerHTML = inner;
+              threadComments.querySelectorAll(".comment-row").forEach((row, i) => {
+                const bubble = row.querySelector(".comment-bubble");
+                const comment = comments[i];
+                applyCensorRangesToCommentBubble(bubble, comment);
+              });
                 // ranges già arrivati dal server
         requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
         if (threadTranslateLang) translateThreadComments();

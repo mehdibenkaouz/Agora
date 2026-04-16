@@ -538,10 +538,32 @@ export default {
 
         const postId = crypto.randomUUID();
         const now = new Date().toISOString();
+        let postCensorRanges = [];
+        let postCensorRangesJson = "[]";
+        let postCensorVersion = 1;
+
+        try {
+          postCensorRanges = safeComputeCensorRanges(textLike);
+          postCensorRangesJson = JSON.stringify(postCensorRanges);
+        } catch (e) {
+          console.log("post censor persist error:", String(e?.message || e), String(textLike || "").slice(0, 120));
+        }
         await env.dbagora.prepare(
-          `INSERT INTO posts (id, user_id, content, content_text, created_at, quoted_post_id)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
-        ).bind(postId, session.user_id, contentToStore, textLike, now, quotedPostId).run();
+          `INSERT INTO posts (
+            id, user_id, content, content_text, created_at, quoted_post_id,
+            censor_ranges_json, censor_version
+          )
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
+        ).bind(
+          postId,
+          session.user_id,
+          contentToStore,
+          textLike,
+          now,
+          quotedPostId,
+          postCensorRangesJson,
+          postCensorVersion
+        ).run();
 
         // Salva i segmenti (tag Question/Clarification/Sources)
         const segments = Array.isArray(body.segments) ? body.segments : [];
@@ -581,10 +603,19 @@ export default {
         // Salva timestamp per spam tracking
         await recordAction(env, session.user_id, "post");
 
-        return json({ ok: true, post: { id: postId, created_at: now, quoted_post_id: quotedPostId } }, 200, ALLOWED_ORIGIN);
+        return json({
+          ok: true,
+          post: {
+            id: postId,
+            created_at: now,
+            quoted_post_id: quotedPostId,
+            censor_ranges: postCensorRanges,
+            censor_version: postCensorVersion
+          }
+        }, 200, ALLOWED_ORIGIN);
       }
 
-// ── POSTS: GET ───────────────────────────────────────────────────
+      // ── POSTS: GET ───────────────────────────────────────────────────
       if (url.pathname === "/api/posts" && request.method === "GET") {
         const feedToken = getRequestToken(request);
         const feedSession = feedToken ? await env.dbagora.prepare(
@@ -600,6 +631,9 @@ export default {
               p.id,
               u.id as author_id,
               p.content,
+              COALESCE(p.content_text, '') AS content_text,
+              COALESCE(p.censor_ranges_json, '') AS censor_ranges_json,
+              COALESCE(p.censor_version, 1) AS censor_version,
               p.created_at,
               p.quoted_post_id,
               u.email as author_email,
@@ -638,12 +672,16 @@ export default {
 
         const posts = rows.results || [];
         for (const post of posts) {
-          // Preview del post citato
+          try {
+            post.censor_ranges = post.censor_ranges_json ? JSON.parse(post.censor_ranges_json) : [];
+          } catch (_) {
+            post.censor_ranges = [];
+          }
           if (post.quoted_post_id) {
             const qp = await env.dbagora.prepare(
               `SELECT p.id, p.content, p.content_text,
                 u.id as author_id,
-                COALESCE(NULLIF(TRIM(u.display_name),''),
+                COALESCE(NULLIF(TRIM(u.display_name), ''),
                   CASE WHEN instr(u.email,'@')>1 THEN substr(u.email,1,instr(u.email,'@')-1) ELSE u.email END
                 ) AS author_display_name,
                 COALESCE(u.picture_url,'') AS author_picture_url
@@ -652,7 +690,7 @@ export default {
             ).bind(post.quoted_post_id).first();
             post.quoted_post = qp || null;
           }
-          // Segmenti attivi del post
+
           const segs = await env.dbagora.prepare(
             `SELECT id, start_offset, end_offset, segment_text_snapshot, segment_type, is_active,
               (SELECT COUNT(*) FROM segment_reports sr WHERE sr.segment_id = post_segments.id) as report_count
@@ -661,7 +699,6 @@ export default {
           ).bind(post.id).all();
           post.segments = segs.results || [];
 
-          // Se l'utente è loggato, indica se ha già messo Logical
           if (feedUid) {
             const myVote = await env.dbagora.prepare(
               "SELECT id FROM post_logic_votes WHERE post_id = ?1 AND user_id = ?2"
@@ -672,7 +709,6 @@ export default {
           }
         }
 
-      // Pulizia soft-deleted comments ~1% delle richieste (retention 30 giorni)
         if (Math.random() < 0.01) {
           ctx.waitUntil(
             env.dbagora.prepare(
@@ -726,7 +762,11 @@ export default {
         
         const rows = await env.dbagora.prepare(
           `SELECT
-              c.id, c.content, c.created_at,
+              c.id,
+              c.content,
+              COALESCE(c.censor_ranges_json, '') AS censor_ranges_json,
+              COALESCE(c.censor_version, 1) AS censor_version,
+              c.created_at,
               u.id as author_id,
               u.email as author_email,
               (SELECT COUNT(*) FROM comments r WHERE r.parent_comment_id = c.id AND r.deleted_at IS NULL) as reply_count,
@@ -754,6 +794,13 @@ export default {
         ).bind(postId, feedUidC, since, parentId).all();
 
         const comments = rows.results || [];
+        for (const comment of comments) {
+          try {
+            comment.censor_ranges = comment.censor_ranges_json ? JSON.parse(comment.censor_ranges_json) : [];
+          } catch (_) {
+            comment.censor_ranges = [];
+          }
+        }
         return json({ ok: true, comments, comment_count: comments.length }, 200, ALLOWED_ORIGIN);
       }
 
@@ -801,9 +848,31 @@ export default {
 
         const commentId = crypto.randomUUID();
         const now = new Date().toISOString();
+        let commentCensorRanges = [];
+        let commentCensorRangesJson = "[]";
+        let commentCensorVersion = 1;
+
+        try {
+          commentCensorRanges = safeComputeCensorRanges(content);
+          commentCensorRangesJson = JSON.stringify(commentCensorRanges);
+        } catch (e) {
+          console.log("comment censor persist error:", String(e?.message || e), String(content || "").slice(0, 120));
+        }
         await env.dbagora.prepare(
-          `INSERT INTO comments (id, post_id, user_id, content, parent_comment_id, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)`
-        ).bind(commentId, postId, session.user_id, content, parent_comment_id, now).run();
+          `INSERT INTO comments (
+            id, post_id, user_id, content, parent_comment_id, created_at,
+            censor_ranges_json, censor_version
+          ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)`
+        ).bind(
+          commentId,
+          postId,
+          session.user_id,
+          content,
+          parent_comment_id,
+          now,
+          commentCensorRangesJson,
+          commentCensorVersion
+        ).run();
 
         // Salva timestamp per spam tracking
         await recordAction(env, session.user_id, "comment");
@@ -853,11 +922,17 @@ export default {
         return json({
           ok: true,
           comment: {
-            id: commentId, post_id: postId, content, parent_comment_id, created_at: now,
+            id: commentId,
+            post_id: postId,
+            content,
+            parent_comment_id,
+            created_at: now,
             author_id: author?.id || "",
             author_email: author?.email || "anon",
             author_display_name: author?.display_name || author?.email || "anon",
-            author_picture_url: author?.picture_url || ""
+            author_picture_url: author?.picture_url || "",
+            censor_ranges: commentCensorRanges,
+            censor_version: commentCensorVersion
           }
         }, 200, ALLOWED_ORIGIN);
       }
