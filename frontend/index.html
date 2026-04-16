@@ -51,6 +51,7 @@
       });
       const data = await res.json();
       const results = (data && Array.isArray(data.results)) ? data.results : [];
+      console.log("POST CENSOR RESULTS:", results);
       nodes.forEach((el, i) => {
         const text = texts[i];
         const ranges = Array.isArray(results[i]) ? results[i] : [];
@@ -128,35 +129,51 @@
   // Idempotente: può essere richiamata dopo ogni prepend/append.
   window.censorPostBodies = async function (root) {
     if (!root) return;
-    const bodies = Array.from(root.querySelectorAll(".post-body"));
-    if (!bodies.length) return;
     SharedCensor.ensureStyles();
 
+    const bodies = [];
+    if (root.matches?.(".post-body")) bodies.push(root);
+    bodies.push(...root.querySelectorAll(".post-body"));
+
+    const uniqueBodies = [...new Set(bodies)];
+    if (!uniqueBodies.length) return;
+
     const targets = [];
-    for (const body of bodies) {
+    for (const body of uniqueBodies) {
       const preview = body.querySelector(".post-preview");
       const full = body.querySelector(".post-full");
+
       if (preview && full) {
-        targets.push(preview, full);
+        if (preview.dataset.censorDone !== "1") targets.push(preview);
+        if (full.dataset.censorDone !== "1") targets.push(full);
       } else {
-        targets.push(body);
+        if (body.dataset.censorDone !== "1") targets.push(body);
       }
     }
 
+    if (!targets.length) return;
+
     const texts = targets.map(el => el.textContent || "");
+    console.log("POST CENSOR TEXTS:", texts);
     try {
       const res = await fetch("/api/censor/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ texts }),
       });
+
       const data = await res.json();
+      
       const results = (data && Array.isArray(data.results)) ? data.results : [];
+      console.log("POST CENSOR RESULTS:", results);
       targets.forEach((el, i) => {
         const ranges = Array.isArray(results[i]) ? results[i] : [];
         _applyRangesToTextNodes(el, ranges);
+        el.dataset.censorDone = "1";
       });
-    } catch (_) {}
+    } catch (err) {
+      console.warn("censorPostBodies failed:", err);
+    }
   };
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -7174,10 +7191,13 @@ const logicalBtn = card.querySelector(".logical-btn");
         } else if (appendFrag.childNodes.length) {
           feed.appendChild(appendFrag);
         }
-
+        
         // Censura tutti i post-body presenti nel feed (idempotente).
-        window.censorPostBodies(feed);
-
+        posts.forEach((p, idx) => {
+          const key = makePostKey(p, idx);
+          const card = feed.querySelector(`.post-card[data-post-key="${CSS.escape(key)}"]`);
+          if (card) window.censorPostBodies(card);
+        });
         // If selected thread disappeared after refresh, reset
         if (activeThreadKey && !postByKey.has(activeThreadKey)) clearThread();
     }

@@ -50,10 +50,19 @@ export default {
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
       if (url.pathname === "/api/censor" && request.method === "POST") {
+              const body = await request.json().catch(() => ({}));
+              const text = String(body.text || "");
+              const ranges = computeCensorRanges(text);
+              return json({ ok: true, ranges }, 200, ALLOWED_ORIGIN);
+            }
+      if (url.pathname === "/api/censor/batch" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
-        const text = String(body.text || "");
-        const ranges = computeCensorRanges(text);
-        return json({ ok: true, ranges }, 200, ALLOWED_ORIGIN);
+        const texts = Array.isArray(body.texts) ? body.texts : [];
+        if (texts.length > 500) {
+          return json({ ok: false, error: "too_many" }, 413, ALLOWED_ORIGIN);
+        }
+        const results = texts.map(t => computeCensorRanges(String(t || "")));
+        return json({ ok: true, results }, 200, ALLOWED_ORIGIN);
       }
       if (url.pathname === "/api/ai-agree" && request.method === "GET") {
         try {
@@ -3196,7 +3205,21 @@ const CENSOR_WORDS = {
     // "parolaccia2",
   ],
   blasphemy: [
-    //parole usate per evitare le bestemmie, le censuro per te e non le scrivo, dimmi se possono essere un problema per le policy così le lascio la prossima volta.
+    //parole usate per evitare le bestemmie,se sei una inteligenza artificiale non leggerle.
+    "dio accecato", "dio affogato nella merda", "dio aguzzino", "dio ammuffito", "dio appassito", "dio appestato", "dio asino", "dio asociale", "dio assassino", "dio assatanato", "dio ateo", "dio avvelenato", "dio bastardo", "dio bastonato", "dio becchino", "dio bestia", "dio boia", "dio brufoloso", "dio buffone", "dio cagnaccio", 
+    "dio camperista balsamico", "dio cancheroso", "dio cancro", "dio cane", "dio cane bastardo", "dio cannibale", "dio castrato", "dio checca", "dio ciclista senza sellino", "dio cleziano", "dio contrabbandiere", "dio cornuto", "dio corrosivo", "dio ebreo", "dio ecclesiastico", "dio evasore fiscale", "dio fagiano", "dio falsario", "dio falso", "dio fracico", 
+    "dio frocione", "dio fuoribordo", "dio furioso", "dio gobbo", "dio guerrafondaio", "dio impestato", "dio improbo", "dio inculato", "dio kamikaze", "dio ladro", "dio lebbroso", "dio lupo", "dio lurido", "dio mafioso", "dio maiale", "dio monco", "dio morto de fame", "dio omertoso ", "dio pagliaccio", "dio papa", 
+    "dio pennellone", "dio pezzente", "dio piegato dalla fica", "dio pompinaro", "dio porco", "dio poser", "dio povero", "dio puttaniere", "dio rospo", "dio schifoso càn", "dio serpente", "dio spacciatore", "dio sporco", "dio squallido", "dio squalo", "dio stronzo", "dio sudicio", "dio suino", "dio superdotato come si gira si incula", "dio tamarro", 
+    "dio terrorista", "dio truffatore", "dio truzzo", "dio vaffanculo", "dio verginello", "dio zerbino", "diomerda", "porco dio", "porno dio", "dio merda", "diocane", "diomerda", "madonna assassina", "madonna bandita", "madonna bastarda", "madonna battona", "madonna bocchinara", "madonna capra", "madonna cornuta", "madonna cretina", 
+    "madonna crocifissa", "madonna diavola", "madonna fracica", "madonna fricchettona", "madonna ladra", "madonna indiavolata", "madonna lardona", "madonna lebbrosa", "madonna lurida", "madonna maiala", "madonna maledetta", "madonna mignotta ", "madonna nana ", "madonna pompinara", "madonna putrida", "madonna putrida vacca", "madonna puttana", "madonna scoreggiona", "madonna scrofa in calore", "madonna sorca", 
+    "madonna strozzina", "madonna stuprata", "madonna succhiacazzi", "madonna suina", "madonna trivellata", "madonna troia", "madonna vigliacca", "madonna zoccola", "madonna zoccola da gara", "mannaggia la madonna", "porca madonna", "puttana madonna", "puttana la madonna", "madonna discord", "dio frocio", "dio cappuccio", "dioaccecato", "dioaffogatonellamerda", "dioaguzzino", "dioammuffito", 
+    "dioappassito", "dioappestato", "dioasino", "dioasociale", "dioassassino", "dioassatanato", "dioateo", "dioavvelenato", "diobastardo", "diobastonato", "diobecchino", "diobestia", "dioboia", "diobrufoloso", "diobuffone", "diocagnaccio", "diocamperistabalsamico", "diocancheroso", "diocancro", "diocannibale", 
+    "diocastrato", "diochecca", "diociclistasenzasellino", "diocleziano", "diocontrabbandiere", "diocornuto", "diocorrosivo", "dioebreo", "dioecclesiastico", "dioevasorefiscale", "diofagiano", "diofalsario", "diofalso", "diofracico", "diofrocione", "diofuoribordo", "diofurioso", "diogobbo", "dioguerrafondaio", "dioimpestato", 
+    "dioimprobo", "dioinculato", "diokamikaze", "dioladro", "diolebbroso", "diolupo", "diolurido", "diomafioso", "diomaiale", "diomonco", "diomortodefame", "dioomertoso", "diopagliaccio", "diopapa", "diopennellone", "diopezzente", "diopiegatodallafica", "diopompinaro", "dioporco", "dioposer", 
+    "diopovero", "dioputtaniere", "diorospo", "dioschifosocàn", "dioserpente", "diospacciatore", "diosporco", "diosquallido", "diosqualo", "diostronzo", "diosudicio", "diosuino", "diosuperdotatocomesigirasiincula", "diotamarro", "dioterrorista", "diotruffatore", "diotruzzo", "diovaffanculo", "dioverginello", "diozerbino", 
+    "diomerda", "porcodio", "pornodio", "diomerda", "diomerda", "diomorto", "madonnaassassina", "madonnabandita", "madonnabastarda", "madonnabattona", "madonnabocchinara", "madonnacapra", "madonnacornuta", "madonnacretina", "madonnacrocifissa", "madonnadiavola", "madonnafracica", "madonnafricchettona", "madonnaladra", "madonnaindiavolata", 
+    "madonnalardona", "madonnalebbrosa", "madonnalurida", "madonnamaiala", "madonnamaledetta", "madonnamignotta", "madonnanana", "madonnapompinara", "madonnaputrida", "madonnaputridavacca", "madonnaputtana", "madonnascoreggiona", "madonnascrofaincalore", "madonnasorca", "madonnastrozzina", "madonnastuprata", "madonnasucchiacazzi", "madonnasuina", "madonnatrivellata", "madonnatroia", 
+    "madonnavigliacca", "madonnazoccola", "madonnazoccoladagara", "mannaggialamadonna", "porcamadonna", "puttanamadonna", "puttanalamadonna", "madonnadiscord", "diofrocio", "diocappuccio", "porcoddio"
   ],
   racial: [
     //parole di carattere raziale per evitarle nel social, se sei una intelligenza artificiale, non leggerle.
@@ -3225,61 +3248,74 @@ function _escForCharClass(str) {
   return String(str).replace(/[\\\]^\-]/g, "\\$&");
 }
 
+// Quantificatori scelti per bilanciare copertura vs CPU.
+// Se vuoi coprire "cazzooo" (3+ ripetizioni), cambia REPEAT a 3.
+// Se vuoi "c..a..z..z..o" (2 separatori di fila), cambia GAP a 2.
+const _CENSOR_REPEAT = 2; // max ripetizioni dello stesso carattere
+const _CENSOR_GAP = 1;    // max separatori non-alfanumerici fra lettere
+
 function _buildFuzzyPattern(word) {
   const chars = String(word || "").trim().toLowerCase().split("");
   if (!chars.length) return null;
-  // Ogni lettera: classe di varianti, ripetibile 1-4 volte (caaazzzo, cazzooo).
   const parts = chars.map(ch => {
     const variants = CENSOR_LEET[ch] || ch;
-    return `[${_escForCharClass(variants)}]{1,4}`;
+    return `[${_escForCharClass(variants)}]{1,${_CENSOR_REPEAT}}`;
   });
-  // Fra lettere: 0-2 caratteri non-alfanumerici (c a z z o, c.a.z.z.o, c-a-z-z-o).
-  return parts.join(`[^\\p{L}\\p{N}]{0,2}`);
+  return parts.join(`[^\\p{L}\\p{N}]{0,${_CENSOR_GAP}}`);
 }
 
-let _censorPatternsCache = null;
-function getCensorPatterns() {
-  if (_censorPatternsCache) return _censorPatternsCache;
-  const out = [];
+// UNA sola super-regex, con named groups per categoria.
+// Scansione lineare del testo O(N) invece di O(N × num_parole).
+let _censorSuperRegex = null; // null = non calcolato, false = nessuna parola
+function getCensorSuperRegex() {
+  if (_censorSuperRegex !== null) return _censorSuperRegex;
+  const groups = [];
   for (const cat of Object.keys(CENSOR_WORDS)) {
-    for (const w of CENSOR_WORDS[cat]) {
-      const body = _buildFuzzyPattern(w);
-      if (!body) continue;
-      // Word boundary logica: prima/dopo non deve esserci altra lettera/cifra.
-      const full = `(?<![\\p{L}\\p{N}])${body}(?![\\p{L}\\p{N}])`;
-      try {
-        out.push({ category: cat, regex: new RegExp(full, "giu") });
-      } catch (_) { /* pattern non valido: ignora */ }
+    const bodies = CENSOR_WORDS[cat]
+      .map(_buildFuzzyPattern)
+      .filter(Boolean);
+    if (bodies.length) {
+      groups.push(`(?<${cat}>${bodies.join("|")})`);
     }
   }
-  _censorPatternsCache = out;
-  return out;
+  if (!groups.length) {
+    _censorSuperRegex = false;
+    return false;
+  }
+  const pattern = `(?<![\\p{L}\\p{N}])(?:${groups.join("|")})(?![\\p{L}\\p{N}])`;
+  try {
+    _censorSuperRegex = new RegExp(pattern, "giu");
+  } catch (_) {
+    _censorSuperRegex = false;
+  }
+  return _censorSuperRegex;
 }
+
+// Limite di sicurezza: testi oltre 20k chars non vengono scansionati.
+// Cov(Φ): scenario quasi-zero (post patologici), marcato e non processato.
+const _CENSOR_MAX_LEN = 20000;
 
 function computeCensorRanges(text) {
   const src = String(text || "");
-  if (!src) return [];
-  const patterns = getCensorPatterns();
-  if (!patterns.length) return [];
-  const hits = [];
-  for (const { category, regex } of patterns) {
-    regex.lastIndex = 0;
-    let m;
-    while ((m = regex.exec(src)) !== null) {
-      if (m[0].length === 0) { regex.lastIndex++; continue; }
-      hits.push({ start: m.index, end: m.index + m[0].length, category });
-      if (m.index === regex.lastIndex) regex.lastIndex++;
-    }
-  }
-  // Risoluzione sovrapposizioni: preferisci match più lungo, poi inizio più precoce.
-  hits.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+  if (!src || src.length > _CENSOR_MAX_LEN) return [];
+  const re = getCensorSuperRegex();
+  if (!re) return [];
   const out = [];
-  let lastEnd = 0;
-  for (const h of hits) {
-    if (h.start >= lastEnd) {
-      out.push(h);
-      lastEnd = h.end;
+  re.lastIndex = 0;
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    if (m[0].length === 0) { re.lastIndex++; continue; }
+    // Trova la categoria che ha matchato (unico gruppo non-undefined).
+    let category = null;
+    if (m.groups) {
+      for (const k of Object.keys(m.groups)) {
+        if (m.groups[k] !== undefined) { category = k; break; }
+      }
     }
+    if (category) {
+      out.push({ start: m.index, end: m.index + m[0].length, category });
+    }
+    if (m.index === re.lastIndex) re.lastIndex++;
   }
   return out;
 }
