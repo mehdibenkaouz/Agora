@@ -49,14 +49,14 @@
         display: inline;
         cursor: pointer;
         user-select: none;
-        border-radius: 0.28em;
-        padding: 0 .08em;
+        border-radius: 0;
+        padding: 0;
+        background: transparent !important;
+        box-shadow: none !important;
         transition:
           opacity .35s ease,
           filter .35s ease,
           transform .2s ease,
-          background-color .16s ease,
-          box-shadow .16s ease,
           color .16s ease;
       }
 
@@ -66,33 +66,38 @@
       }
 
       .censor-token.is-hidden {
-        opacity: .28;
-        filter: blur(4px);
+        opacity: 1;
+        filter: none;
         user-select: none;
         cursor: pointer;
+        text-shadow: none !important;
         -webkit-text-fill-color: currentColor;
       }
 
 
 
       .censor-token.is-shown .censor-token-text {
+        opacity: 1;
         filter: none;
         -webkit-filter: none;
       }
 
       .censor-token--profanity {
-        background: color-mix(in srgb, ${cfg.profanityColor} 18%, transparent);
-        box-shadow: inset 0 -1px 0 color-mix(in srgb, ${cfg.profanityColor} 50%, transparent);
+        background: transparent !important;
+        box-shadow: none !important;
+        color: ${cfg.profanityColor};
       }
 
       .censor-token--blasphemy {
-        background: color-mix(in srgb, ${cfg.blasphemyColor} 18%, transparent);
-        box-shadow: inset 0 -1px 0 color-mix(in srgb, ${cfg.blasphemyColor} 58%, transparent);
+        background: transparent !important;
+        box-shadow: none !important;
+        color: ${cfg.blasphemyColor};
       }
 
       .censor-token--hate {
-        background: color-mix(in srgb, ${cfg.hateColor} 18%, transparent);
-        box-shadow: inset 0 -1px 0 color-mix(in srgb, ${cfg.hateColor} 58%, transparent);
+        background: transparent !important;
+        box-shadow: none !important;
+        color: ${cfg.hateColor};
       }
 
       .censor-token.is-shown {
@@ -101,24 +106,16 @@
       }
 
       .censor-token.is-hidden::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        border-radius: 0.28em;
-        pointer-events: none;
-        opacity: .55;
+        display: none;
+        content: none;
       }
 
-      .censor-token--profanity.is-hidden::after {
-        background: color-mix(in srgb, ${cfg.profanityColor} 28%, transparent);
-      }
-
-      .censor-token--blasphemy.is-hidden::after {
-        background: color-mix(in srgb, ${cfg.blasphemyColor} 34%, transparent);
-      }
-
+      .censor-token--profanity.is-hidden::after,
+      .censor-token--blasphemy.is-hidden::after,
       .censor-token--hate.is-hidden::after {
-        background: color-mix(in srgb, ${cfg.hateColor} 34%, transparent);
+        display: none;
+        content: none;
+        background: transparent;
       }
 
       .censor-token-text {
@@ -126,8 +123,10 @@
       }
 
       .censor-token.is-hidden .censor-token-text {
-        filter: none;
-        -webkit-filter: none;
+        opacity: .43;
+        filter: blur(7px);
+        -webkit-filter: blur(7px);
+        transition: opacity .35s ease, filter .35s ease, -webkit-filter .35s ease;
       }
     `;
     document.head.appendChild(style);
