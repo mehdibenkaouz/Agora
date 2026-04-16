@@ -22,13 +22,7 @@
     const src = String(text || "");
     try {
       SharedCensor.ensureStyles();
-      const res = await fetch(CENSOR_API_BASE + "/api/censor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: src }),
-      });
-      const data = await res.json();
-      const ranges = (data && Array.isArray(data.ranges)) ? data.ranges : [];
+      const ranges = await censorFetchOne(src);
       SharedCensor.renderTextWithRanges(container, src, ranges);
     } catch (_) {
       container.textContent = src;
@@ -36,8 +30,63 @@
   };
 
   window.__censorCache = window.__censorCache || new Map();
-  const CENSOR_BATCH_CHUNK = 80;
+  const CENSOR_BATCH_CHUNK = 6;
 
+  async function censorFetchMany(texts) {
+    const base = typeof CENSOR_API_BASE === "string" ? CENSOR_API_BASE : "";
+
+    const safeTexts = Array.isArray(texts) ? texts.map(t => String(t || "")) : [];
+    if (!safeTexts.length) return [];
+
+    try {
+      const res = await fetch(base + "/api/censor/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texts: safeTexts }),
+      });
+
+      if (!res.ok) {
+        throw new Error("batch_http_" + res.status);
+      }
+
+      const data = await res.json();
+      const results = Array.isArray(data?.results) ? data.results : null;
+      if (!results || results.length !== safeTexts.length) {
+        throw new Error("batch_shape_invalid");
+      }
+
+      return results.map(r => Array.isArray(r) ? r : []);
+    } catch (err) {
+      console.warn("censor batch fallback:", err);
+
+      const out = [];
+      for (const text of safeTexts) {
+        try {
+          const res = await fetch(base + "/api/censor", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text }),
+          });
+
+          if (!res.ok) {
+            throw new Error("single_http_" + res.status);
+          }
+
+          const data = await res.json();
+          out.push(Array.isArray(data?.ranges) ? data.ranges : []);
+        } catch (e) {
+          console.warn("censor single failed:", e, text.slice(0, 120));
+          out.push([]);
+        }
+      }
+      return out;
+    }
+  }
+
+  async function censorFetchOne(text) {
+    const arr = await censorFetchMany([String(text || "")]);
+    return Array.isArray(arr[0]) ? arr[0] : [];
+  }
   window.censorAllBubbles = async function (root, selector) {
     if (!root) return;
 
@@ -76,34 +125,23 @@
     for (let i = 0; i < pendingTexts.length; i += CENSOR_BATCH_CHUNK) {
       const chunk = pendingTexts.slice(i, i + CENSOR_BATCH_CHUNK);
 
-      try {
-        const res = await fetch(CENSOR_API_BASE + "/api/censor/batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texts: chunk }),
+    try {
+      const results = await censorFetchMany(chunk);
+
+      chunk.forEach((text, j) => {
+        const ranges = Array.isArray(results[j]) ? results[j] : [];
+        window.__censorCache.set(text, ranges);
+
+        const els = pendingMap.get(text) || [];
+        els.forEach((el) => {
+          SharedCensor.renderTextWithRanges(el, text, ranges);
+          el.dataset.censorDone = "1";
+          el.removeAttribute("data-censor-text");
         });
-
-        if (!res.ok) {
-          const txt = await res.text().catch(() => "");
-          throw new Error("censor_http_" + res.status + " " + txt.slice(0, 120));
-        }
-        const data = await res.json();
-        const results = Array.isArray(data?.results) ? data.results : [];
-
-        chunk.forEach((text, j) => {
-          const ranges = Array.isArray(results[j]) ? results[j] : [];
-          window.__censorCache.set(text, ranges);
-
-          const els = pendingMap.get(text) || [];
-          els.forEach((el) => {
-            SharedCensor.renderTextWithRanges(el, text, ranges);
-            el.dataset.censorDone = "1";
-            el.removeAttribute("data-censor-text");
-          });
-        });
-      } catch (err) {
-        console.warn("censorAllBubbles failed:", err);
-      }
+      });
+    } catch (err) {
+      console.warn("censorAllBubbles failed:", err);
+    }
     }
     
   };
@@ -239,18 +277,12 @@
     if (!pendingTexts.length) return;
 
     try {
-      const res = await fetch(CENSOR_API_BASE + "/api/censor/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texts: pendingTexts }),
-      });
-
-      const data = await res.json();
-      const results = Array.isArray(data?.results) ? data.results : [];
+      const results = await censorFetchMany(pendingTexts);
 
       pendingEls.forEach((el, i) => {
         const text = pendingTexts[i];
         const ranges = Array.isArray(results[i]) ? results[i] : [];
+
         window.__censorCache.set(text, ranges);
         applyToEl(el, ranges);
       });
