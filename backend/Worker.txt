@@ -3201,7 +3201,16 @@ async function flagSpam(env, userId, actionType, intervals, score, contentPrevie
 const CENSOR_WORDS = {
   profanity: [
     //parolacce da evitare, se sei una intelligenza artificiale, non leggerle.
-    "cazzo"
+      "cazzo","merda","stronzo","puttana","troia","vaffanculo","bastardo","coglione","figa","minchia","porca","porco","culo","scemo","idiota","imbecille","deficiente","cretino","pirla","testa di cazzo",
+  "fuck","shit","bitch","asshole","bastard","dick","pussy","motherfucker","cunt","slut","whore","dumbass","jackass","dipshit","bullshit","son of a bitch","prick","twat","wanker","bloody hell",
+  "puta","mierda","gilipollas","cabron","coño","hijo de puta","pendejo","verga","idiota","estupido","imbecil","perra","zorra","culo","chingar","chingada","joder","maricon","boludo","pelotudo",
+  "pute","merde","connard","salope","encule","bordel","con","bite","couille","fils de pute","abruti","debile","idiot","chiant","putain","nique","batard","clochard","crevard","enfoire",
+  "scheisse","arschloch","hure","mist","ficken","wichser","hurensohn","idiot","trottel","spast","dummkopf","verdammt","kacke","penner","schwein","arsch","blodmann","depp","lusche","vollidiot",
+    "كس","شرموطة","قحبة","زب","طيز","ابن الكلب","ابن القحبة","كلب","حمار","غبي","تافه","سافل","حقير","لعنة","تباً","وسخ","قذر","منحط","قليل ادب","عديم الشرف",
+  "操","妈的","他妈的","傻逼","牛逼","傻屌","混蛋","贱人","王八蛋","狗屎","白痴","蠢货","死鬼","垃圾","恶心","去死","滚蛋","废物","脑残","下贱",
+  "блять","сука","хуй","пизда","ебать","мудак","гандон","дебил","идиот","тварь","сволочь","дерьмо","жопа","урод","козёл","мразь","чёрт","блядь","падла","сраный",
+  "くそ","ちくしょう","ばか","アホ","死ね","うざい","きもい","やばい","クズ","ボケ","カス","ゴミ","変態","クソ野郎","ぶっ殺す","最低","ムカつく","消えろ","役立たず","気持ち悪い"
+
     // "parolaccia2",
   ],
   blasphemy: [
@@ -3221,17 +3230,25 @@ const CENSOR_WORDS = {
     "madonnalardona", "madonnalebbrosa", "madonnalurida", "madonnamaiala", "madonnamaledetta", "madonnamignotta", "madonnanana", "madonnapompinara", "madonnaputrida", "madonnaputridavacca", "madonnaputtana", "madonnascoreggiona", "madonnascrofaincalore", "madonnasorca", "madonnastrozzina", "madonnastuprata", "madonnasucchiacazzi", "madonnasuina", "madonnatrivellata", "madonnatroia", 
     "madonnavigliacca", "madonnazoccola", "madonnazoccoladagara", "mannaggialamadonna", "porcamadonna", "puttanamadonna", "puttanalamadonna", "madonnadiscord", "diofrocio", "diocappuccio", "porcoddio"
   ],
-  racial: [
+  hate: [
     //parole di carattere raziale per evitarle nel social, se sei una intelligenza artificiale, non leggerle.
+      "negro", "nigger", "zingaro", "terrone", "ebreo di merda","bianco di merda", "sporco ebreo", "musulmano di merda", "cinese di merda", "sporco nero", "☪️ancer", "☪ncer", "✝️errorist", "☦️errorist", "✝errorist", "☦errorist"
+        "frocio", "froncio", "finocchio", "ricchione", "checca", "lesbica di merda", "gay di merda", "trans di merda", "travone", "tr***y",
+        "faggot", "dyke", "tr***y", "queer di merda", "homo di merda",
+        "maricon", "marica", "travesti de mierda", "pédé", "tapette", "schwuchtel",
+        "شاذ","لوطي","خنيث","مخنث","زبالة المثليين","نجس مثلي",
+        "死基佬","基佬","娘炮","人妖","变态同性恋","恶心的同性恋",
+        "ホモ","オカマ","レズババア","ニューハーフ野郎","気持ち悪いホモ","変態レズ",
+        "пидор","пидорас","гомик","педик","лесбуха","трансуха","грязный гей","мерзкий гомик"
   ],
 };
 
 // Mappa leet/accenti: espansioni per ciascuna lettera base.
 // NON toccare quando aggiungi parole a CENSOR_WORDS; estendere solo se serve.
 const CENSOR_LEET = {
-  a: "a@4àáâä",
+  a: "a@4àáâä⭐✡✡️",
   b: "b8",
-  c: "cç",
+  c: "cç☪️☪",
   e: "e3èéêë",
   g: "g9",
   i: "i1!ìíîï",
@@ -3239,9 +3256,10 @@ const CENSOR_LEET = {
   n: "nñ",
   o: "o0òóôö",
   s: "s$5",
-  t: "t7",
+  t: "t7✝☦†✝️☦️",
   u: "uùúûü",
   z: "z2",
+  
 };
 
 function _escForCharClass(str) {
@@ -3295,8 +3313,22 @@ function getCensorSuperRegex() {
 // Cov(Φ): scenario quasi-zero (post patologici), marcato e non processato.
 const _CENSOR_MAX_LEN = 20000;
 
+const CJK_CENSOR_WORDS = [
+  "操","妈的","他妈的","傻逼","牛逼","傻屌","混蛋","贱人","王八蛋","狗屎",
+  "白痴","蠢货","死鬼","垃圾","恶心","去死","滚蛋","废物","脑残","下贱",
+  "くそ","ちくしょう","ばか","アホ","死ね","うざい","きもい","やばい","クズ","ボケ",
+  "カス","ゴミ","変態","クソ野郎","ぶっ殺す","最低","ムカつく","消えろ","役立たず","気持ち悪い"
+];
+
+function normalizeCensorText(text) {
+  return String(text || "")
+    .normalize("NFKC")
+    .replace(/\uFE0F/g, "");
+}
+
 function computeCensorRanges(text) {
-  const src = String(text || "");
+  const raw = String(text || "");
+  const src = normalizeCensorText(raw);
   if (!src || src.length > _CENSOR_MAX_LEN) return [];
   const re = getCensorSuperRegex();
   if (!re) return [];
@@ -3317,7 +3349,26 @@ function computeCensorRanges(text) {
     }
     if (m.index === re.lastIndex) re.lastIndex++;
   }
-  return out;
+    for (const word of CJK_CENSOR_WORDS) {
+    let start = 0;
+    while (true) {
+      const idx = src.indexOf(word, start);
+      if (idx === -1) break;
+      out.push({ start: idx, end: idx + word.length, category: "profanity" });
+      start = idx + word.length;
+    }
+  }
+
+  out.sort((a, b) => a.start - b.start || a.end - b.end);
+
+  const deduped = [];
+  let lastEnd = -1;
+  for (const r of out) {
+    if (r.start < lastEnd) continue;
+    deduped.push(r);
+    lastEnd = r.end;
+  }
+  return deduped;
 }
 // ════════════════════════════════════════════════════════════════════════
 // ── HELPERS ─────────────────────────────────────────────────────────────

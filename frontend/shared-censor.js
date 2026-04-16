@@ -6,7 +6,7 @@
   const DEFAULTS = {
     profanityColor: "#8a8a8a",
     blasphemyColor: "#b30000",
-    racialColor: "#008000",
+    hateColor: "#008000",
     blurAmount: "0.22em",
     titleHidden: "Click to show",
     titleShown: "Click to hide",
@@ -27,7 +27,8 @@
 
   function normalizeCategory(category) {
     const c = String(category || "").trim().toLowerCase();
-    if (c === "profanity" || c === "blasphemy" || c === "racial") return c;
+    if (c === "racial") return "hate";
+    if (c === "profanity" || c === "blasphemy" || c === "hate") return c;
     return null;
   }
 
@@ -89,9 +90,9 @@
         box-shadow: inset 0 -1px 0 color-mix(in srgb, ${cfg.blasphemyColor} 58%, transparent);
       }
 
-      .censor-token--racial {
-        background: color-mix(in srgb, ${cfg.racialColor} 18%, transparent);
-        box-shadow: inset 0 -1px 0 color-mix(in srgb, ${cfg.racialColor} 58%, transparent);
+      .censor-token--hate {
+        background: color-mix(in srgb, ${cfg.hateColor} 18%, transparent);
+        box-shadow: inset 0 -1px 0 color-mix(in srgb, ${cfg.hateColor} 58%, transparent);
       }
 
       .censor-token.is-shown {
@@ -116,8 +117,8 @@
         background: color-mix(in srgb, ${cfg.blasphemyColor} 34%, transparent);
       }
 
-      .censor-token--racial.is-hidden::after {
-        background: color-mix(in srgb, ${cfg.racialColor} 34%, transparent);
+      .censor-token--hate.is-hidden::after {
+        background: color-mix(in srgb, ${cfg.hateColor} 34%, transparent);
       }
 
       .censor-token-text {
