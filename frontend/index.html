@@ -35,71 +35,73 @@
     }
   };
 
-  // Batch per elementi plain-text marcati con data-censor-text (commenti).
   window.__censorCache = window.__censorCache || new Map();
-  const CENSOR_BATCH_CHUNK = 50;
+  const CENSOR_BATCH_CHUNK = 80;
 
   window.censorAllBubbles = async function (root, selector) {
     if (!root) return;
 
     const sel = selector || "[data-censor-text]";
-    const nodes = Array.from(root.querySelectorAll(sel)).filter(el => el.dataset.censorDone !== "1");
-    if (!nodes.length) return;
+    const nodes = [];
+
+    if (root.matches?.(sel)) nodes.push(root);
+    nodes.push(...root.querySelectorAll(sel));
+
+    const unique = [...new Set(nodes)].filter(el => el.dataset.censorDone !== "1");
+    if (!unique.length) return;
 
     SharedCensor.ensureStyles();
 
-    const groups = new Map();
+    const pendingTexts = [];
+    const pendingMap = new Map();
 
-    nodes.forEach((el) => {
+    unique.forEach((el) => {
       const text = String(el.dataset.censorText || "");
 
       if (window.__censorCache.has(text)) {
-        const cachedRanges = window.__censorCache.get(text) || [];
-        SharedCensor.renderTextWithRanges(el, text, cachedRanges);
+        const ranges = window.__censorCache.get(text) || [];
+        SharedCensor.renderTextWithRanges(el, text, ranges);
         el.dataset.censorDone = "1";
         el.removeAttribute("data-censor-text");
         return;
       }
 
-      if (!groups.has(text)) groups.set(text, []);
-      groups.get(text).push(el);
+      if (!pendingMap.has(text)) pendingMap.set(text, []);
+      pendingMap.get(text).push(el);
     });
 
-    const pendingTexts = Array.from(groups.keys());
+    pendingTexts.push(...pendingMap.keys());
     if (!pendingTexts.length) return;
 
-    try {
-      for (let i = 0; i < pendingTexts.length; i += CENSOR_BATCH_CHUNK) {
-        const chunkTexts = pendingTexts.slice(i, i + CENSOR_BATCH_CHUNK);
+    for (let i = 0; i < pendingTexts.length; i += CENSOR_BATCH_CHUNK) {
+      const chunk = pendingTexts.slice(i, i + CENSOR_BATCH_CHUNK);
 
+      try {
         const res = await fetch("/api/censor/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texts: chunkTexts }),
+          body: JSON.stringify({ texts: chunk }),
         });
 
-        if (!res.ok) {
-          throw new Error("censor_batch_http_" + res.status);
-        }
-
         const data = await res.json();
-        const results = (data && Array.isArray(data.results)) ? data.results : [];
+        const results = Array.isArray(data?.results) ? data.results : [];
 
-        chunkTexts.forEach((text, j) => {
+        chunk.forEach((text, j) => {
           const ranges = Array.isArray(results[j]) ? results[j] : [];
           window.__censorCache.set(text, ranges);
 
-          const els = groups.get(text) || [];
+          const els = pendingMap.get(text) || [];
           els.forEach((el) => {
             SharedCensor.renderTextWithRanges(el, text, ranges);
             el.dataset.censorDone = "1";
             el.removeAttribute("data-censor-text");
           });
         });
+      } catch (err) {
+        console.warn("censorAllBubbles failed:", err);
       }
-    } catch (err) {
-      console.warn("censorAllBubbles failed:", err);
     }
+    
   };
   // Walker per HTML ricco: scorre i text nodes di un elemento, preserva
   // la struttura (img, video, tag) e inserisce censor-token in-place.

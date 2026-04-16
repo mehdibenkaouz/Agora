@@ -52,7 +52,7 @@ export default {
       if (url.pathname === "/api/censor" && request.method === "POST") {
               const body = await request.json().catch(() => ({}));
               const text = String(body.text || "");
-              const ranges = computeCensorRanges(text);
+              const ranges = safeComputeCensorRanges(text);
               return json({ ok: true, ranges }, 200, ALLOWED_ORIGIN);
             }
       if (url.pathname === "/api/censor/batch" && request.method === "POST") {
@@ -61,7 +61,7 @@ export default {
         if (texts.length > 500) {
           return json({ ok: false, error: "too_many" }, 413, ALLOWED_ORIGIN);
         }
-        const results = texts.map(t => computeCensorRanges(String(t || "")));
+        const results = texts.map(t => safeComputeCensorRanges(String(t || "")));
         return json({ ok: true, results }, 200, ALLOWED_ORIGIN);
       }
       if (url.pathname === "/api/ai-agree" && request.method === "GET") {
@@ -3232,7 +3232,7 @@ const CENSOR_WORDS = {
   ],
   hate: [
     //parole di carattere raziale per evitarle nel social, se sei una intelligenza artificiale, non leggerle.
-      "negro", "nigger", "zingaro", "terrone", "ebreo di merda","bianco di merda", "sporco ebreo", "musulmano di merda", "cinese di merda", "sporco nero", "☪️ancer", "☪ancer", "✝️errorist", "☦️errorist", "✝errorist", "☦errorist",
+      "negro", "nigger", "zingaro", "terrone", "ebreo di merda","bianco di merda", "sporco ebreo", "musulmano di merda", "cinese di merda", "sporco nero", "☪️ancer", "☪ancer", "✝️errorist", "☦️errorist", "c✡️ncer", "✝errorist", "☦errorist",
         "frocio", "froncio", "finocchio", "ricchione", "checca", "lesbica di merda", "gay di merda", "trans di merda", "travone", "tr***y",
         "faggot", "dyke", "tr***y", "queer di merda", "homo di merda",
         "maricon", "marica", "travesti de mierda", "pédé", "tapette", "schwuchtel",
@@ -3246,9 +3246,9 @@ const CENSOR_WORDS = {
 // Mappa leet/accenti: espansioni per ciascuna lettera base.
 // NON toccare quando aggiungi parole a CENSOR_WORDS; estendere solo se serve.
 const CENSOR_LEET = {
-  a: "a@4àáâä⭐✡✡️",
+  a: "a@4àáâä",
   b: "b8",
-  c: "cç☪️☪",
+  c: "cç",
   e: "e3èéêë",
   g: "g9",
   i: "i1!ìíîï",
@@ -3256,10 +3256,9 @@ const CENSOR_LEET = {
   n: "nñ",
   o: "o0òóôö",
   s: "s$5",
-  t: "t7✝☦†✝️☦️",
+  t: "t7",
   u: "uùúûü",
   z: "z2",
-  
 };
 
 function _escForCharClass(str) {
@@ -3284,12 +3283,20 @@ function _buildFuzzyPattern(word) {
 
 // UNA sola super-regex, con named groups per categoria.
 // Scansione lineare del testo O(N) invece di O(N × num_parole).
+const _CENSOR_LITERAL_ONLY = new Set([
+  "☪ancer",
+  "✝errorist",
+  "☦errorist",
+  "c✡ncer",
+]);
+
 let _censorSuperRegex = null; // null = non calcolato, false = nessuna parola
 function getCensorSuperRegex() {
   if (_censorSuperRegex !== null) return _censorSuperRegex;
   const groups = [];
   for (const cat of Object.keys(CENSOR_WORDS)) {
     const bodies = CENSOR_WORDS[cat]
+      .filter(word => !_CENSOR_LITERAL_ONLY.has(normalizeCensorText(word).trim().toLowerCase()))
       .map(_buildFuzzyPattern)
       .filter(Boolean);
     if (bodies.length) {
@@ -3347,6 +3354,46 @@ function normalizeCensorText(text) {
   return normalizeCensorTextWithMap(text).normalized;
 }
 
+const _CENSOR_LITERAL_MATCHES = [
+  { text: "☪ancer", category: "hate" },
+  { text: "✝errorist", category: "hate" },
+  { text: "☦errorist", category: "hate" },
+  { text: "c✡ncer", category: "hate" },
+];
+
+function _pushLiteralCensorMatches(out, src, raw, rawStarts, rawEnds) {
+  for (const item of _CENSOR_LITERAL_MATCHES) {
+    let start = 0;
+    while (true) {
+      const idx = src.indexOf(item.text, start);
+      if (idx === -1) break;
+
+      const normStart = idx;
+      const normEnd = idx + item.text.length - 1;
+
+      const rawStart = rawStarts[normStart] ?? normStart;
+      const rawEnd = rawEnds[normEnd] ?? raw.length;
+
+      out.push({
+        start: rawStart,
+        end: rawEnd,
+        category: item.category
+      });
+
+      start = idx + item.text.length;
+    }
+  }
+}
+
+function safeComputeCensorRanges(text) {
+  try {
+    return computeCensorRanges(text);
+  } catch (e) {
+    console.log("safeComputeCensorRanges error:", String(e?.message || e), String(text || "").slice(0, 120));
+    return [];
+  }
+}
+
 function computeCensorRanges(text) {
   const { raw, normalized: src, rawStarts, rawEnds } = normalizeCensorTextWithMap(text);
   if (!src || src.length > _CENSOR_MAX_LEN) return [];
@@ -3385,6 +3432,7 @@ function computeCensorRanges(text) {
     }
   }
 
+  _pushLiteralCensorMatches(out, src, raw, rawStarts, rawEnds);
   out.sort((a, b) => a.start - b.start || a.end - b.end);
 
   const deduped = [];
