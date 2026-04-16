@@ -52,11 +52,12 @@
         border-radius: 0.28em;
         padding: 0 .08em;
         transition:
-          filter .16s ease,
+          opacity .35s ease,
+          filter .35s ease,
+          transform .2s ease,
           background-color .16s ease,
           box-shadow .16s ease,
-          color .16s ease,
-          opacity .16s ease;
+          color .16s ease;
       }
 
       .censor-token:focus-visible {
@@ -69,7 +70,7 @@
         filter: blur(4px);
         user-select: none;
         cursor: pointer;
-        transition: opacity .35s ease, filter .35s ease, transform .2s ease;
+        -webkit-text-fill-color: currentColor;
       }
 
 
@@ -122,6 +123,11 @@
 
       .censor-token-text {
         transition: filter .16s ease;
+      }
+
+      .censor-token.is-hidden .censor-token-text {
+        filter: none;
+        -webkit-filter: none;
       }
     `;
     document.head.appendChild(style);
