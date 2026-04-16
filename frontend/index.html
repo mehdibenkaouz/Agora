@@ -5973,7 +5973,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
         if (COMMENT_POLL_INTERVAL) clearInterval(COMMENT_POLL_INTERVAL);
         THREAD_LAST_TS = comments.length ? comments[comments.length - 1].created_at : null;
         THREAD_ACTIVE_POST_ID = p.id;
-        COMMENT_POLL_INTERVAL = setInterval(() => pollNewComments(p.id), 3000);
+        COMMENT_POLL_INTERVAL = setInterval(() => pollNewComments(p.id), 7000);
 
         if (threadTranslateLang) translateThreadComments();
 
@@ -7192,12 +7192,8 @@ const logicalBtn = card.querySelector(".logical-btn");
           feed.appendChild(appendFrag);
         }
         
-        // Censura tutti i post-body presenti nel feed (idempotente).
-        posts.forEach((p, idx) => {
-          const key = makePostKey(p, idx);
-          const card = feed.querySelector(`.post-card[data-post-key="${CSS.escape(key)}"]`);
-          if (card) window.censorPostBodies(card);
-        });
+        // Censura in un'unica batch request tutti i post appena presenti nel feed.
+        window.censorPostBodies(feed);
         // If selected thread disappeared after refresh, reset
         if (activeThreadKey && !postByKey.has(activeThreadKey)) clearThread();
     }

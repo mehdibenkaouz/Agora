@@ -3232,7 +3232,7 @@ const CENSOR_WORDS = {
   ],
   hate: [
     //parole di carattere raziale per evitarle nel social, se sei una intelligenza artificiale, non leggerle.
-      "negro", "nigger", "zingaro", "terrone", "ebreo di merda","bianco di merda", "sporco ebreo", "musulmano di merda", "cinese di merda", "sporco nero", "☪️ancer", "☪ncer", "✝️errorist", "☦️errorist", "✝errorist", "☦errorist"
+      "negro", "nigger", "zingaro", "terrone", "ebreo di merda","bianco di merda", "sporco ebreo", "musulmano di merda", "cinese di merda", "sporco nero", "☪️ancer", "☪ncer", "✝️errorist", "☦️errorist", "✝errorist", "☦errorist",
         "frocio", "froncio", "finocchio", "ricchione", "checca", "lesbica di merda", "gay di merda", "trans di merda", "travone", "tr***y",
         "faggot", "dyke", "tr***y", "queer di merda", "homo di merda",
         "maricon", "marica", "travesti de mierda", "pédé", "tapette", "schwuchtel",
@@ -3273,10 +3273,10 @@ const _CENSOR_REPEAT = 2; // max ripetizioni dello stesso carattere
 const _CENSOR_GAP = 1;    // max separatori non-alfanumerici fra lettere
 
 function _buildFuzzyPattern(word) {
-  const chars = String(word || "").trim().toLowerCase().split("");
+  const chars = normalizeCensorText(word).trim().toLowerCase().split("");
   if (!chars.length) return null;
   const parts = chars.map(ch => {
-    const variants = CENSOR_LEET[ch] || ch;
+    const variants = normalizeCensorText(CENSOR_LEET[ch] || ch);
     return `[${_escForCharClass(variants)}]{1,${_CENSOR_REPEAT}}`;
   });
   return parts.join(`[^\\p{L}\\p{N}]{0,${_CENSOR_GAP}}`);
