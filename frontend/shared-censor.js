@@ -79,12 +79,13 @@
       .censor-token.is-hidden {
         color: inherit !important;
         -webkit-text-fill-color: currentColor !important;
+        position: relative;
       }
 
       .censor-token.is-hidden .censor-token-text {
-        opacity: .34;
-        filter: blur(8px);
-        -webkit-filter: blur(8px);
+        opacity: .18;
+        filter: blur(7px);
+        -webkit-filter: blur(7px);
         transition: opacity .35s ease, filter .35s ease, -webkit-filter .35s ease;
       }
 
@@ -103,22 +104,50 @@
       }
 
       .censor-token--profanity {
-        color: ${cfg.profanityColor} !important;
+        color: inherit !important;
       }
 
       .censor-token--blasphemy {
-        color: ${cfg.blasphemyColor} !important;
+        color: inherit !important;
       }
 
       .censor-token--hate {
-        color: ${cfg.hateColor} !important;
+        color: inherit !important;
       }
 
+      .censor-token--profanity.is-hidden::after,
+      .censor-token--blasphemy.is-hidden::after,
+      .censor-token--hate.is-hidden::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        border-radius: 0;
+        filter: blur(6px);
+        -webkit-filter: blur(6px);
+        opacity: .75;
+      }
+
+      .censor-token--profanity.is-hidden::after {
+        background: color-mix(in srgb, ${cfg.profanityColor} 70%, transparent);
+      }
+
+      .censor-token--blasphemy.is-hidden::after {
+        background: color-mix(in srgb, ${cfg.blasphemyColor} 72%, transparent);
+      }
+
+      .censor-token--hate.is-hidden::after {
+        background: color-mix(in srgb, ${cfg.hateColor} 72%, transparent);
+      }
+
+
       .censor-token::before,
-      .censor-token::after,
       .censor-token.is-hidden::before,
-      .censor-token.is-hidden::after,
-      .censor-token.is-shown::before,
+      .censor-token.is-shown::before {
+        content: none !important;
+        display: none !important;
+      }
+
       .censor-token.is-shown::after {
         content: none !important;
         display: none !important;
