@@ -4604,49 +4604,13 @@
 </div>
   <script>
     const API_BASE = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
-    const CENSOR_API_BASE = "https://agora-api.convergegame.workers.dev";
+    const CENSOR_API_BASE = API_BASE;
     const TOKEN_KEY = "agora_logged_in";
 
     const TERMS_ACCEPT_KEY = "agora_terms_accepted_v3";
     const TERMS_VERSION = "2026-03-20-v3";
 
-    // function applyTheme(theme){
-    //   const root = document.documentElement;
-    //   const logo = document.getElementById("mainLogo");
 
-    //   if (!logo) return;
-
-    //   const lightSrc = logo.dataset.light;
-    //   const darkSrc  = logo.dataset.dark;
-
-    //   if (theme === "dark"){
-    //     root.setAttribute("data-theme", "dark");
-    //     logo.src = darkSrc;
-    //   } else {
-    //     root.removeAttribute("data-theme");
-    //     logo.src = lightSrc;
-    //   }
-    // }
-    // function getPreferredTheme(){
-    //   const saved = localStorage.getItem(THEME_KEY);
-    //   if (saved === "dark" || saved === "light") return saved;
-    //   // fallback: sistema
-    //   return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    // }
-
-    // function toggleTheme(){
-    //   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-    //   const next = isDark ? "light" : "dark";
-    //   localStorage.setItem(THEME_KEY, next);
-    //   applyTheme(next);
-    //   syncThemeUi();
-    // }
-
-    // function syncThemeUi(){
-    //   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-    //   const btn = document.getElementById("themeToggleBtn");
-    //   if (btn) btn.textContent = isDark ? "Light mode" : "Dark mode";
-    // }
     // --- Auth state (do NOT rely on UI text) ---
     let CURRENT_USER = null; // lowercase, empty if not logged in
     function getCurrentUserEmail() {
@@ -6041,7 +6005,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
                 </a>
               </div>` : ''}
               <div class="comment-row-wrap">
-                <div class="comment-bubble ${side}" data-censor-text="${text}">${text}</div>
+                <div class="comment-bubble ${side}">${text}</div>
                 ${commentMenuHtml}
               </div>
               <div style="display:flex;align-items:center;gap:8px;padding:0 2px;">
@@ -6057,6 +6021,13 @@ async function uploadAllSelectedImagesAndSwapSrc() {
 
           if (threadComments) {
             threadComments.innerHTML = inner;
+            threadComments.querySelectorAll(".comment-bubble").forEach((bubble, i) => {
+              const c = comments[i];
+              const ranges = Array.isArray(c?.censor_ranges) ? c.censor_ranges : [];
+              if (ranges.length) {
+                SharedCensor.renderTextWithRanges(bubble, String(c.content || ""), ranges);
+              }
+            });
             window.censorAllBubbles(threadComments);
             requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
 
@@ -6173,7 +6144,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
           </a>
         </div>` : ''}
         <div class="comment-row-wrap">
-          <div class="comment-bubble ${side}" data-censor-text="${text}">${text}</div>
+          <div class="comment-bubble ${side}">${text}</div>
           ${commentMenuHtml}
         </div>
         <div style="display:flex;align-items:center;gap:8px;padding:0 2px;">
@@ -6184,7 +6155,11 @@ async function uploadAllSelectedImagesAndSwapSrc() {
           </button>
         </div>
       `;
-
+      const bubbleEl = div.querySelector(".comment-bubble");
+      const commentRanges = Array.isArray(c?.censor_ranges) ? c.censor_ranges : [];
+      if (bubbleEl && commentRanges.length) {
+        SharedCensor.renderTextWithRanges(bubbleEl, String(c.content || ""), commentRanges);
+      }
       div.querySelectorAll(".comment-menu-btn").forEach(btn => {
         btn.addEventListener("click", e => {
           e.stopPropagation();
@@ -6366,7 +6341,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
 
       if (threadComments) {
         threadComments.innerHTML = inner;
-        window.censorAllBubbles(threadComments);
+                // ranges già arrivati dal server
         requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
         if (threadTranslateLang) translateThreadComments();
 
