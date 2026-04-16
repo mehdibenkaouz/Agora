@@ -22,7 +22,7 @@
     const src = String(text || "");
     try {
       SharedCensor.ensureStyles();
-      const res = await fetch("/api/censor", {
+      const res = await fetch(CENSOR_API_BASE + "/api/censor", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: src }),
@@ -77,12 +77,16 @@
       const chunk = pendingTexts.slice(i, i + CENSOR_BATCH_CHUNK);
 
       try {
-        const res = await fetch("/api/censor/batch", {
+        const res = await fetch(CENSOR_API_BASE + "/api/censor/batch", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ texts: chunk }),
         });
 
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error("censor_http_" + res.status + " " + txt.slice(0, 120));
+        }
         const data = await res.json();
         const results = Array.isArray(data?.results) ? data.results : [];
 
@@ -4539,6 +4543,7 @@
 </div>
   <script>
     const API_BASE = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
+    const CENSOR_API_BASE = "https://agora-api.convergegame.workers.dev";
     const TOKEN_KEY = "agora_logged_in";
 
     const TERMS_ACCEPT_KEY = "agora_terms_accepted_v3";
