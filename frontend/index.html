@@ -239,7 +239,7 @@
     if (!pendingTexts.length) return;
 
     try {
-      const res = await fetch("/api/censor/batch", {
+      const res = await fetch(CENSOR_API_BASE + "/api/censor/batch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ texts: pendingTexts }),
