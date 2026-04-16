@@ -65,15 +65,14 @@
       }
 
       .censor-token.is-hidden {
-        color: transparent !important;
-        text-shadow: none !important;
-        -webkit-text-fill-color: transparent;
+        opacity: .28;
+        filter: blur(4px);
+        user-select: none;
+        cursor: pointer;
+        transition: opacity .35s ease, filter .35s ease, transform .2s ease;
       }
 
-      .censor-token.is-hidden .censor-token-text {
-        filter: blur(${cfg.blurAmount});
-        -webkit-filter: blur(${cfg.blurAmount});
-      }
+
 
       .censor-token.is-shown .censor-token-text {
         filter: none;
