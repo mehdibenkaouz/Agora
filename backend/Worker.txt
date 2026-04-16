@@ -3461,9 +3461,11 @@ function _pushLiteralCensorMatches(out, src, raw, rawStarts, rawEnds) {
     }
   }
 }
+
 const _CENSOR_SYMBOLIC_HINT_RE = /[☪☦✝✡†]/u;
 
 function _findLiteralMatchesNormalized(src) {
+
   const out = [];
   for (const item of _CENSOR_LITERAL_MATCHES) {
     let start = 0;
@@ -3495,6 +3497,22 @@ function _maskNormalizedRanges(src, ranges) {
   return out;
 }
 
+function _toRegexSafeShadow(src) {
+  let out = "";
+  for (const ch of src) {
+    // Teniamo:
+    // - lettere/numeri latini (anche accentati)
+    // - spazi e punteggiatura comuni
+    // - simboli religiosi già gestiti dai literal matches
+    const keep =
+      /[A-Za-z0-9À-ÖØ-öø-ÿĀ-ɏḀ-ỿ]/u.test(ch) ||
+      /[\s!"#$%&'()*+,\-./:;<=>?@[\\\]^_`{|}~]/.test(ch) ||
+      _CENSOR_SYMBOLIC_HINT_RE.test(ch);
+
+    out += keep ? ch : " ".repeat(ch.length);
+  }
+  return out;
+}
 
 function safeComputeCensorRanges(text) {
   try {
@@ -3532,12 +3550,14 @@ function computeCensorRanges(text) {
     }
   }
 
-  // 2) Poi regex generale sul testo già mascherato
+  // 2) Poi regex generale SOLO su una shadow latin-safe
+  // così testi CJK / giapponesi / unicode non-latini non mandano in crisi il Worker
+  const regexShadow = _toRegexSafeShadow(regexSrc);
   const re = getCensorSuperRegex();
   if (re) {
     re.lastIndex = 0;
     let m;
-    while ((m = re.exec(regexSrc)) !== null) {
+    while ((m = re.exec(regexShadow)) !== null) {
       if (m[0].length === 0) {
         re.lastIndex++;
         continue;

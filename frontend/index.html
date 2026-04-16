@@ -5945,11 +5945,23 @@ async function uploadAllSelectedImagesAndSwapSrc() {
     function updateThreadAuthState() {
       const can = !!getToken();
       const hasThread = !!activeThreadKey;
+      const isReplyMode = !!threadSendBtn?.dataset.parentCommentId;
+
       if (threadInput) {
         threadInput.disabled = !(can && hasThread);
-        threadInput.placeholder = can ? (hasThread ? "Write a comment..." : "Select a post first...") : "Login to comment...";
+
+        if (!can) {
+          threadInput.placeholder = "Login to comment...";
+        } else if (!hasThread) {
+          threadInput.placeholder = "Select a post first...";
+        } else {
+          threadInput.placeholder = isReplyMode ? "Write a reply..." : "Write a comment...";
+        }
       }
-      if (threadSendBtn) threadSendBtn.disabled = !(can && hasThread);
+
+      if (threadSendBtn) {
+        threadSendBtn.disabled = !(can && hasThread);
+      }
     }
 
 
@@ -6504,9 +6516,12 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       } else {
         alert("Comment failed: " + (err?.message || err));
       }
-    } finally {
-      updateThreadAuthState();
-    }
+      } finally {
+        if (!threadNavStack.length) {
+          resetThreadReplyMode();
+        }
+        updateThreadAuthState();
+      }
 
   }
     function openMenu() {
