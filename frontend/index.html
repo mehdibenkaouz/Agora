@@ -4,8 +4,19 @@
 
 <script src="/shared-censor.js"></script>
 <script>
-  // Helper globale: censura e renderizza del testo dentro un container.
-  // Uso: window.censorAndRender(elemento, "testo grezzo")
+  // Event delegation globale: gestisce il click-to-reveal per TUTTI i
+  // .censor-token, inclusi quelli inseriti via innerHTML (walker sui post).
+  // I token creati via SharedCensor.createToken() fanno stopPropagation,
+  // quindi niente doppio toggle.
+  document.addEventListener("click", function (e) {
+    const btn = e.target.closest(".censor-token");
+    if (!btn) return;
+    if (!btn.hasAttribute("data-censor-category")) return;
+    e.preventDefault();
+    SharedCensor.toggleToken(btn);
+  });
+
+  // Helper globale per elementi singoli plain-text.
   window.censorAndRender = async function (container, text) {
     if (!container) return;
     const src = String(text || "");
@@ -24,8 +35,7 @@
     }
   };
 
-  // Batch: trova tutti gli elementi [data-censor-text] dentro root e li censura
-  // con UNA sola chiamata all'API. Pensato per liste (thread commenti, feed).
+  // Batch per elementi plain-text marcati con data-censor-text (commenti).
   window.censorAllBubbles = async function (root, selector) {
     if (!root) return;
     const sel = selector || "[data-censor-text]";
@@ -47,9 +57,106 @@
         SharedCensor.renderTextWithRanges(el, text, ranges);
         el.removeAttribute("data-censor-text");
       });
-    } catch (_) {
-      // Fallback: lascia il testo come mostrato (già escapato dal template).
+    } catch (_) {}
+  };
+
+  // Walker per HTML ricco: scorre i text nodes di un elemento, preserva
+  // la struttura (img, video, tag) e inserisce censor-token in-place.
+  // Idempotente: salta il contenuto già dentro .censor-token.
+  function _applyRangesToTextNodes(root, ranges) {
+    if (!root || !Array.isArray(ranges) || !ranges.length) return;
+
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(n) {
+        if (!n.nodeValue) return NodeFilter.FILTER_REJECT;
+        const pe = n.parentElement;
+        if (!pe) return NodeFilter.FILTER_REJECT;
+        if (pe.closest(".censor-token, script, style")) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+
+    const textNodes = [];
+    let n; while ((n = walker.nextNode())) textNodes.push(n);
+    if (!textNodes.length) return;
+
+    // Mappatura posizione nel concat textContent
+    let pos = 0;
+    const nodeRanges = textNodes.map(tn => {
+      const start = pos;
+      const len = tn.nodeValue.length;
+      pos += len;
+      return { node: tn, start, end: start + len };
+    });
+
+    // Dal fondo all'inizio per non alterare indici mentre si modifica il DOM
+    const sorted = [...ranges]
+      .filter(r => r && Number.isFinite(r.start) && Number.isFinite(r.end) && r.end > r.start)
+      .sort((a, b) => b.start - a.start);
+
+    for (const r of sorted) {
+      const affected = nodeRanges.filter(nr => nr.start < r.end && nr.end > r.start);
+      if (affected.length !== 1) continue; // match spezzato fra tag: raro, skip
+
+      const nr = affected[0];
+      const val = nr.node.nodeValue;
+      const localStart = Math.max(0, r.start - nr.start);
+      const localEnd = Math.min(val.length, r.end - nr.start);
+      if (localEnd <= localStart) continue;
+
+      const before = val.slice(0, localStart);
+      const matched = val.slice(localStart, localEnd);
+      const after = val.slice(localEnd);
+
+      const tokenHtml = SharedCensor.renderToHtmlString([{ text: matched, category: r.category }]);
+      const tmp = document.createElement("span");
+      tmp.innerHTML = tokenHtml;
+      const tokenEl = tmp.firstChild;
+      if (!tokenEl) continue;
+
+      const parent = nr.node.parentNode;
+      const next = nr.node.nextSibling;
+      if (before) parent.insertBefore(document.createTextNode(before), next);
+      parent.insertBefore(tokenEl, next);
+      if (after) parent.insertBefore(document.createTextNode(after), next);
+      parent.removeChild(nr.node);
     }
+  }
+
+  // Censura tutti i .post-body presenti in root. Gestisce sia post corti
+  // (HTML diretto nel body) sia post lunghi (.post-preview + .post-full).
+  // Idempotente: può essere richiamata dopo ogni prepend/append.
+  window.censorPostBodies = async function (root) {
+    if (!root) return;
+    const bodies = Array.from(root.querySelectorAll(".post-body"));
+    if (!bodies.length) return;
+    SharedCensor.ensureStyles();
+
+    const targets = [];
+    for (const body of bodies) {
+      const preview = body.querySelector(".post-preview");
+      const full = body.querySelector(".post-full");
+      if (preview && full) {
+        targets.push(preview, full);
+      } else {
+        targets.push(body);
+      }
+    }
+
+    const texts = targets.map(el => el.textContent || "");
+    try {
+      const res = await fetch("/api/censor/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texts }),
+      });
+      const data = await res.json();
+      const results = (data && Array.isArray(data.results)) ? data.results : [];
+      targets.forEach((el, i) => {
+        const ranges = Array.isArray(results[i]) ? results[i] : [];
+        _applyRangesToTextNodes(el, ranges);
+      });
+    } catch (_) {}
   };
 
   document.addEventListener("DOMContentLoaded", () => {
@@ -7067,6 +7174,9 @@ const logicalBtn = card.querySelector(".logical-btn");
         } else if (appendFrag.childNodes.length) {
           feed.appendChild(appendFrag);
         }
+
+        // Censura tutti i post-body presenti nel feed (idempotente).
+        window.censorPostBodies(feed);
 
         // If selected thread disappeared after refresh, reset
         if (activeThreadKey && !postByKey.has(activeThreadKey)) clearThread();
