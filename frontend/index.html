@@ -20,12 +20,38 @@
       const ranges = (data && Array.isArray(data.ranges)) ? data.ranges : [];
       SharedCensor.renderTextWithRanges(container, src, ranges);
     } catch (_) {
-      // Fallback: nessuna censura (meglio mostrare il testo che niente).
       container.textContent = src;
     }
   };
 
-  // Demo: renderizza #demo se presente, testando tutte le categorie.
+  // Batch: trova tutti gli elementi [data-censor-text] dentro root e li censura
+  // con UNA sola chiamata all'API. Pensato per liste (thread commenti, feed).
+  window.censorAllBubbles = async function (root, selector) {
+    if (!root) return;
+    const sel = selector || "[data-censor-text]";
+    const nodes = Array.from(root.querySelectorAll(sel));
+    if (!nodes.length) return;
+    SharedCensor.ensureStyles();
+    const texts = nodes.map(el => el.dataset.censorText || "");
+    try {
+      const res = await fetch("/api/censor/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texts }),
+      });
+      const data = await res.json();
+      const results = (data && Array.isArray(data.results)) ? data.results : [];
+      nodes.forEach((el, i) => {
+        const text = texts[i];
+        const ranges = Array.isArray(results[i]) ? results[i] : [];
+        SharedCensor.renderTextWithRanges(el, text, ranges);
+        el.removeAttribute("data-censor-text");
+      });
+    } catch (_) {
+      // Fallback: lascia il testo come mostrato (già escapato dal template).
+    }
+  };
+
   document.addEventListener("DOMContentLoaded", () => {
     const demo = document.getElementById("demo");
     if (demo) {
@@ -5746,7 +5772,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
                 </a>
               </div>` : ''}
               <div class="comment-row-wrap">
-                <div class="comment-bubble ${side}">${text}</div>
+                <div class="comment-bubble ${side}" data-censor-text="${text}">${text}</div>
                 ${commentMenuHtml}
               </div>
               <div style="display:flex;align-items:center;gap:8px;padding:0 2px;">
@@ -5762,6 +5788,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
 
           if (threadComments) {
             threadComments.innerHTML = inner;
+            window.censorAllBubbles(threadComments);
             requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
 
           threadComments.querySelectorAll(".c-open-btn").forEach(btn => {
@@ -5931,7 +5958,10 @@ async function uploadAllSelectedImagesAndSwapSrc() {
               await drillIntoComment(btn.dataset.postId, btn.dataset.commentId, btn.dataset.author);
             });
           });
-          if (threadComments) threadComments.appendChild(div);
+          if (threadComments) {
+            threadComments.appendChild(div);
+            window.censorAllBubbles(div);
+          }
         });
 
         if (threadComments) requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
@@ -6056,6 +6086,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
 
       if (threadComments) {
         threadComments.innerHTML = inner;
+        window.censorAllBubbles(threadComments);
         requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
         if (threadTranslateLang) translateThreadComments();
 

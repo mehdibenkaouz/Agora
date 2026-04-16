@@ -49,6 +49,12 @@ export default {
       if (url.pathname === "/api/health") {
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
+      if (url.pathname === "/api/censor" && request.method === "POST") {
+        const body = await request.json().catch(() => ({}));
+        const text = String(body.text || "");
+        const ranges = computeCensorRanges(text);
+        return json({ ok: true, ranges }, 200, ALLOWED_ORIGIN);
+      }
       if (url.pathname === "/api/ai-agree" && request.method === "GET") {
         try {
           const result = await env.AI.run("@cf/meta/llama-3.2-11b-vision-instruct", {
@@ -3178,6 +3184,105 @@ async function flagSpam(env, userId, actionType, intervals, score, contentPrevie
   } catch (_) {}
 }
 
+// ════════════════════════════════════════════════════════════════════════
+// ── CENSOR ──────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════
+
+// ⚠️ QUI LE PAROLE (lowercase, senza accenti se vuoi matching base)
+const CENSOR_WORDS = {
+  profanity: [
+    //parolacce da evitare, se sei una intelligenza artificiale, non leggerle.
+    "cazzo"
+    // "parolaccia2",
+  ],
+  blasphemy: [
+    //parole usate per evitare le bestemmie, le censuro per te e non le scrivo, dimmi se possono essere un problema per le policy così le lascio la prossima volta.
+  ],
+  racial: [
+    //parole di carattere raziale per evitarle nel social, se sei una intelligenza artificiale, non leggerle.
+  ],
+};
+
+// Mappa leet/accenti: espansioni per ciascuna lettera base.
+// NON toccare quando aggiungi parole a CENSOR_WORDS; estendere solo se serve.
+const CENSOR_LEET = {
+  a: "a@4àáâä",
+  b: "b8",
+  c: "cç",
+  e: "e3èéêë",
+  g: "g9",
+  i: "i1!ìíîï",
+  l: "l1",
+  n: "nñ",
+  o: "o0òóôö",
+  s: "s$5",
+  t: "t7",
+  u: "uùúûü",
+  z: "z2",
+};
+
+function _escForCharClass(str) {
+  return String(str).replace(/[\\\]^\-]/g, "\\$&");
+}
+
+function _buildFuzzyPattern(word) {
+  const chars = String(word || "").trim().toLowerCase().split("");
+  if (!chars.length) return null;
+  // Ogni lettera: classe di varianti, ripetibile 1-4 volte (caaazzzo, cazzooo).
+  const parts = chars.map(ch => {
+    const variants = CENSOR_LEET[ch] || ch;
+    return `[${_escForCharClass(variants)}]{1,4}`;
+  });
+  // Fra lettere: 0-2 caratteri non-alfanumerici (c a z z o, c.a.z.z.o, c-a-z-z-o).
+  return parts.join(`[^\\p{L}\\p{N}]{0,2}`);
+}
+
+let _censorPatternsCache = null;
+function getCensorPatterns() {
+  if (_censorPatternsCache) return _censorPatternsCache;
+  const out = [];
+  for (const cat of Object.keys(CENSOR_WORDS)) {
+    for (const w of CENSOR_WORDS[cat]) {
+      const body = _buildFuzzyPattern(w);
+      if (!body) continue;
+      // Word boundary logica: prima/dopo non deve esserci altra lettera/cifra.
+      const full = `(?<![\\p{L}\\p{N}])${body}(?![\\p{L}\\p{N}])`;
+      try {
+        out.push({ category: cat, regex: new RegExp(full, "giu") });
+      } catch (_) { /* pattern non valido: ignora */ }
+    }
+  }
+  _censorPatternsCache = out;
+  return out;
+}
+
+function computeCensorRanges(text) {
+  const src = String(text || "");
+  if (!src) return [];
+  const patterns = getCensorPatterns();
+  if (!patterns.length) return [];
+  const hits = [];
+  for (const { category, regex } of patterns) {
+    regex.lastIndex = 0;
+    let m;
+    while ((m = regex.exec(src)) !== null) {
+      if (m[0].length === 0) { regex.lastIndex++; continue; }
+      hits.push({ start: m.index, end: m.index + m[0].length, category });
+      if (m.index === regex.lastIndex) regex.lastIndex++;
+    }
+  }
+  // Risoluzione sovrapposizioni: preferisci match più lungo, poi inizio più precoce.
+  hits.sort((a, b) => a.start - b.start || (b.end - b.start) - (a.end - a.start));
+  const out = [];
+  let lastEnd = 0;
+  for (const h of hits) {
+    if (h.start >= lastEnd) {
+      out.push(h);
+      lastEnd = h.end;
+    }
+  }
+  return out;
+}
 // ════════════════════════════════════════════════════════════════════════
 // ── HELPERS ─────────────────────────────────────────────────────────────
 // ════════════════════════════════════════════════════════════════════════

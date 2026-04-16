@@ -35,12 +35,38 @@
       const ranges = (data && Array.isArray(data.ranges)) ? data.ranges : [];
       SharedCensor.renderTextWithRanges(container, src, ranges);
     } catch (_) {
-      // Fallback: nessuna censura (meglio mostrare il testo che niente).
       container.textContent = src;
     }
   };
 
-  // Demo: renderizza #demo se presente, testando tutte le categorie.
+  // Batch: trova tutti gli elementi [data-censor-text] dentro root e li censura
+  // con UNA sola chiamata all'API. Pensato per liste (thread commenti, feed).
+  window.censorAllBubbles = async function (root, selector) {
+    if (!root) return;
+    const sel = selector || "[data-censor-text]";
+    const nodes = Array.from(root.querySelectorAll(sel));
+    if (!nodes.length) return;
+    SharedCensor.ensureStyles();
+    const texts = nodes.map(el => el.dataset.censorText || "");
+    try {
+      const res = await fetch("/api/censor/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texts }),
+      });
+      const data = await res.json();
+      const results = (data && Array.isArray(data.results)) ? data.results : [];
+      nodes.forEach((el, i) => {
+        const text = texts[i];
+        const ranges = Array.isArray(results[i]) ? results[i] : [];
+        SharedCensor.renderTextWithRanges(el, text, ranges);
+        el.removeAttribute("data-censor-text");
+      });
+    } catch (_) {
+      // Fallback: lascia il testo come mostrato (già escapato dal template).
+    }
+  };
+
   document.addEventListener("DOMContentLoaded", () => {
     const demo = document.getElementById("demo");
     if (demo) {
