@@ -36,31 +36,71 @@
   };
 
   // Batch per elementi plain-text marcati con data-censor-text (commenti).
+  window.__censorCache = window.__censorCache || new Map();
+  const CENSOR_BATCH_CHUNK = 50;
+
   window.censorAllBubbles = async function (root, selector) {
     if (!root) return;
-    const sel = selector || "[data-censor-text]";
-    const nodes = Array.from(root.querySelectorAll(sel));
-    if (!nodes.length) return;
-    SharedCensor.ensureStyles();
-    const texts = nodes.map(el => el.dataset.censorText || "");
-    try {
-      const res = await fetch("/api/censor/batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ texts }),
-      });
-      const data = await res.json();
-      const results = (data && Array.isArray(data.results)) ? data.results : [];
-      console.log("POST CENSOR RESULTS:", results);
-      nodes.forEach((el, i) => {
-        const text = texts[i];
-        const ranges = Array.isArray(results[i]) ? results[i] : [];
-        SharedCensor.renderTextWithRanges(el, text, ranges);
-        el.removeAttribute("data-censor-text");
-      });
-    } catch (_) {}
-  };
 
+    const sel = selector || "[data-censor-text]";
+    const nodes = Array.from(root.querySelectorAll(sel)).filter(el => el.dataset.censorDone !== "1");
+    if (!nodes.length) return;
+
+    SharedCensor.ensureStyles();
+
+    const groups = new Map();
+
+    nodes.forEach((el) => {
+      const text = String(el.dataset.censorText || "");
+
+      if (window.__censorCache.has(text)) {
+        const cachedRanges = window.__censorCache.get(text) || [];
+        SharedCensor.renderTextWithRanges(el, text, cachedRanges);
+        el.dataset.censorDone = "1";
+        el.removeAttribute("data-censor-text");
+        return;
+      }
+
+      if (!groups.has(text)) groups.set(text, []);
+      groups.get(text).push(el);
+    });
+
+    const pendingTexts = Array.from(groups.keys());
+    if (!pendingTexts.length) return;
+
+    try {
+      for (let i = 0; i < pendingTexts.length; i += CENSOR_BATCH_CHUNK) {
+        const chunkTexts = pendingTexts.slice(i, i + CENSOR_BATCH_CHUNK);
+
+        const res = await fetch("/api/censor/batch", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texts: chunkTexts }),
+        });
+
+        if (!res.ok) {
+          throw new Error("censor_batch_http_" + res.status);
+        }
+
+        const data = await res.json();
+        const results = (data && Array.isArray(data.results)) ? data.results : [];
+
+        chunkTexts.forEach((text, j) => {
+          const ranges = Array.isArray(results[j]) ? results[j] : [];
+          window.__censorCache.set(text, ranges);
+
+          const els = groups.get(text) || [];
+          els.forEach((el) => {
+            SharedCensor.renderTextWithRanges(el, text, ranges);
+            el.dataset.censorDone = "1";
+            el.removeAttribute("data-censor-text");
+          });
+        });
+      }
+    } catch (err) {
+      console.warn("censorAllBubbles failed:", err);
+    }
+  };
   // Walker per HTML ricco: scorre i text nodes di un elemento, preserva
   // la struttura (img, video, tag) e inserisce censor-token in-place.
   // Idempotente: salta il contenuto già dentro .censor-token.
@@ -5990,6 +6030,100 @@ async function uploadAllSelectedImagesAndSwapSrc() {
         }
       }
     }
+        function appendThreadComment(c, postId) {
+      if (!threadComments || !c) return;
+
+      const myEmail = getCurrentUserEmail();
+      const who    = escapeHtml(c.author_display_name || c.author_email || "anon");
+      const when   = new Date(c.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+      const text   = escapeHtml(c.content || "");
+      const avatar = escapeHtml(c.author_picture_url || '/avatar-default.png');
+      const isMine = myEmail && myEmail === String(c.author_email || "").trim().toLowerCase();
+      const side   = isMine ? "mine" : "theirs";
+      const canBlock = !isMine && !!getToken();
+
+      const commentMenuHtml = (isMine || canBlock) ? `
+        <div class="comment-menu-wrap">
+          <button class="comment-menu-btn" type="button" aria-label="Opzioni commento">···</button>
+          <div class="comment-menu">
+            ${isMine ? `<button class="comment-menu-item danger c-del-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}">Elimina</button>` : ''}
+            ${canBlock ? `<button class="comment-menu-item c-block-btn"
+              data-author-email="${escapeHtml(c.author_email || '')}"
+              data-author-name="${escapeHtml(c.author_display_name || c.author_email || 'utente')}">Blocca</button>` : ''}
+          </div>
+        </div>` : '';
+
+      const empty = threadComments.querySelector(".thread-empty");
+      if (empty) empty.remove();
+
+      const div = document.createElement("div");
+      div.className = `comment-row ${side}`;
+      div.dataset.commentId = c.id || "";
+
+      div.innerHTML = `
+        ${!isMine ? `<div class="comment-who">
+          <a href="account.html?view=${encodeURIComponent(c.author_id || '')}" style="display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;">
+            <img class="comment-avatar" src="${avatar}" />
+            <span class="comment-name">${who}</span>
+          </a>
+        </div>` : ''}
+        <div class="comment-row-wrap">
+          <div class="comment-bubble ${side}" data-censor-text="${text}">${text}</div>
+          ${commentMenuHtml}
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;padding:0 2px;">
+          <span class="comment-time">${when}</span>
+          <button class="c-open-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}" data-author="${escapeHtml(who)}"
+            style="background:none;border:none;cursor:pointer;font-size:.75rem;color:var(--muted);padding:0;opacity:.7;">
+            ${getOpenButtonText(c)}
+          </button>
+        </div>
+      `;
+
+      div.querySelectorAll(".comment-menu-btn").forEach(btn => {
+        btn.addEventListener("click", e => {
+          e.stopPropagation();
+          const wrap = btn.nextElementSibling;
+          const isOpen = wrap.classList.contains("open");
+          threadComments.querySelectorAll(".comment-menu.open").forEach(m => m.classList.remove("open"));
+          wrap.classList.toggle("open", !isOpen);
+        });
+      });
+
+      div.querySelectorAll(".c-del-btn").forEach(btn => {
+        btn.addEventListener("click", async e => {
+          e.stopPropagation();
+          const commentId = btn.dataset.commentId;
+          if (!commentId) return;
+          try {
+            await api(`/api/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`, { method: "DELETE" });
+            div.remove();
+          } catch(err) {
+            alert("Eliminazione fallita: " + (err?.message || err));
+          }
+        });
+      });
+
+      div.querySelectorAll(".c-block-btn").forEach(btn => {
+        btn.addEventListener("click", e => {
+          e.stopPropagation();
+          openBlockModal({
+            authorEmail: btn.dataset.authorEmail,
+            authorName: btn.dataset.authorName
+          });
+        });
+      });
+
+      div.querySelectorAll(".c-open-btn").forEach(btn => {
+        btn.addEventListener("click", async e => {
+          e.stopPropagation();
+          await drillIntoComment(btn.dataset.postId, btn.dataset.commentId, btn.dataset.author);
+        });
+      });
+
+      threadComments.appendChild(div);
+      window.censorAllBubbles(div);
+    }
     async function pollNewComments(postId, parentCommentId = null) {
       if (!postId || postId !== THREAD_ACTIVE_POST_ID) return;
       try {
@@ -6003,90 +6137,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
         if (st) st.commentBase = (st.commentBase || 0) + newComments.length;
 
         const myEmail = getCurrentUserEmail();
-        newComments.forEach(c => {
-          const who    = escapeHtml(c.author_display_name || c.author_email || "anon");
-          const when   = new Date(c.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-          const text   = escapeHtml(c.content || "");
-          const avatar = escapeHtml(c.author_picture_url || '/avatar-default.png');
-          const isMine = myEmail && myEmail === String(c.author_email || "").trim().toLowerCase();
-          const side   = isMine ? "mine" : "theirs";
-          const canBlock = !isMine && !!getToken();
-          const commentMenuHtml = (isMine || canBlock) ? `
-            <div class="comment-menu-wrap">
-              <button class="comment-menu-btn" type="button" aria-label="Opzioni commento">···</button>
-              <div class="comment-menu">
-                ${isMine ? `<button class="comment-menu-item danger c-del-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}">Elimina</button>` : ''}
-                ${canBlock ? `<button class="comment-menu-item c-block-btn"
-                  data-author-email="${escapeHtml(c.author_email || '')}"
-                  data-author-name="${escapeHtml(c.author_display_name || c.author_email || 'utente')}">Blocca</button>` : ''}
-              </div>
-            </div>` : '';
-
-          // Rimuovi "no comments yet" se presente
-          const empty = threadComments?.querySelector(".thread-empty");
-          if (empty) empty.remove();
-
-          const div = document.createElement("div");
-          div.className = `comment-row ${side}`;
-          div.innerHTML = `
-            ${!isMine ? `<div class="comment-who">
-              <a href="account.html?view=${encodeURIComponent(c.author_id || '')}" style="display:flex;align-items:center;gap:6px;color:inherit;text-decoration:none;">
-                <img class="comment-avatar" src="${avatar}" />
-                <span class="comment-name">${who}</span>
-              </a>
-            </div>` : ''}
-            <div class="comment-row-wrap">
-              <div class="comment-bubble ${side}">${text}</div>
-              ${commentMenuHtml}
-            </div>
-            <div style="display:flex;align-items:center;gap:8px;padding:0 2px;">
-              <span class="comment-time">${when}</span>
-              <button class="c-open-btn" data-comment-id="${escapeHtml(c.id)}" data-post-id="${escapeHtml(postId)}" data-author="${escapeHtml(who)}"
-                style="background:none;border:none;cursor:pointer;font-size:.75rem;color:var(--muted);padding:0;opacity:.7;">
-                ${getOpenButtonText(c)}
-              </button>
-            </div>
-          `;
-
-          // Attacca eventi menu al nuovo commento
-          div.querySelectorAll(".comment-menu-btn").forEach(btn => {
-            btn.addEventListener("click", e => {
-              e.stopPropagation();
-              const wrap = btn.nextElementSibling;
-              const isOpen = wrap.classList.contains("open");
-              threadComments.querySelectorAll(".comment-menu.open").forEach(m => m.classList.remove("open"));
-              wrap.classList.toggle("open", !isOpen);
-            });
-          });
-          div.querySelectorAll(".c-del-btn").forEach(btn => {
-            btn.addEventListener("click", async e => {
-              e.stopPropagation();
-              const commentId = btn.dataset.commentId;
-              if (!commentId) return;
-              try {
-                await api(`/api/posts/${encodeURIComponent(postId)}/comments/${encodeURIComponent(commentId)}`, { method: "DELETE" });
-                div.remove();
-              } catch(err) { alert("Eliminazione fallita: " + (err?.message || err)); }
-            });
-          });
-          div.querySelectorAll(".c-block-btn").forEach(btn => {
-            btn.addEventListener("click", e => {
-              e.stopPropagation();
-              openBlockModal({ authorEmail: btn.dataset.authorEmail, authorName: btn.dataset.authorName });
-            });
-          });
-
-          div.querySelectorAll(".c-open-btn").forEach(btn => {
-            btn.addEventListener("click", async e => {
-              e.stopPropagation();
-              await drillIntoComment(btn.dataset.postId, btn.dataset.commentId, btn.dataset.author);
-            });
-          });
-          if (threadComments) {
-            threadComments.appendChild(div);
-            window.censorAllBubbles(div);
-          }
-        });
+                newComments.forEach(c => appendThreadComment(c, postId));
 
         if (threadComments) requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
         bumpFeedCountsForKey(activeThreadKey);
@@ -6194,7 +6245,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
               </a>
             </div>` : ''}
             <div class="comment-row-wrap">
-              <div class="comment-bubble ${side}">${text}</div>
+              <div class="comment-bubble ${side}" data-censor-text="${text}">${text}</div>
               ${commentMenuHtml}
             </div>
             <div style="display:flex;align-items:center;gap:8px;padding:0 2px;">
@@ -6294,7 +6345,35 @@ async function uploadAllSelectedImagesAndSwapSrc() {
 
       try {
         const parentCommentId = threadSendBtn.dataset.parentCommentId || null;
-        await createCommentForPost(p.id, text, parentCommentId);
+        const created = await createCommentForPost(p.id, text, parentCommentId);
+        const newComment = created?.comment || null;
+
+        if (threadInput) {
+          threadInput.value = "";
+          threadInput.style.height = "auto";
+        }
+
+        st.commentBase = (Number(st.commentBase) || 0) + 1;
+        bumpFeedCountsForKey(activeThreadKey);
+
+        if (newComment) {
+          appendThreadComment(newComment, p.id);
+
+          if (!THREAD_LAST_TS || new Date(newComment.created_at) > new Date(THREAD_LAST_TS)) {
+            THREAD_LAST_TS = newComment.created_at;
+          }
+
+          if (threadComments) {
+            requestAnimationFrame(() => { threadComments.scrollTop = threadComments.scrollHeight; });
+          }
+        } else if (parentCommentId && threadNavStack.length) {
+          const current = threadNavStack[threadNavStack.length - 1];
+          const data = await fetchCommentsForPost(p.id, null, current.commentId);
+          const comments = Array.isArray(data.comments) ? data.comments : [];
+          await renderThreadReplies(p.id, current.commentId, comments);
+        } else {
+          await renderThread(activeThreadKey);
+        }
 
         if (threadInput) {
           threadInput.value = "";

@@ -3232,7 +3232,7 @@ const CENSOR_WORDS = {
   ],
   hate: [
     //parole di carattere raziale per evitarle nel social, se sei una intelligenza artificiale, non leggerle.
-      "negro", "nigger", "zingaro", "terrone", "ebreo di merda","bianco di merda", "sporco ebreo", "musulmano di merda", "cinese di merda", "sporco nero", "☪️ancer", "☪ncer", "✝️errorist", "☦️errorist", "✝errorist", "☦errorist",
+      "negro", "nigger", "zingaro", "terrone", "ebreo di merda","bianco di merda", "sporco ebreo", "musulmano di merda", "cinese di merda", "sporco nero", "☪️ancer", "☪ancer", "✝️errorist", "☦️errorist", "✝errorist", "☦errorist",
         "frocio", "froncio", "finocchio", "ricchione", "checca", "lesbica di merda", "gay di merda", "trans di merda", "travone", "tr***y",
         "faggot", "dyke", "tr***y", "queer di merda", "homo di merda",
         "maricon", "marica", "travesti de mierda", "pédé", "tapette", "schwuchtel",
@@ -3320,15 +3320,35 @@ const CJK_CENSOR_WORDS = [
   "カス","ゴミ","変態","クソ野郎","ぶっ殺す","最低","ムカつく","消えろ","役立たず","気持ち悪い"
 ];
 
+function normalizeCensorTextWithMap(text) {
+  const raw = String(text || "");
+  let normalized = "";
+  const rawStarts = [];
+  const rawEnds = [];
+
+  let rawIndex = 0;
+  for (const ch of raw) {
+    const start = rawIndex;
+    rawIndex += ch.length;
+    const end = rawIndex;
+
+    const norm = ch.normalize("NFKC").replace(/\uFE0F/g, "");
+    for (let i = 0; i < norm.length; i++) {
+      rawStarts.push(start);
+      rawEnds.push(end);
+    }
+    normalized += norm;
+  }
+
+  return { raw, normalized, rawStarts, rawEnds };
+}
+
 function normalizeCensorText(text) {
-  return String(text || "")
-    .normalize("NFKC")
-    .replace(/\uFE0F/g, "");
+  return normalizeCensorTextWithMap(text).normalized;
 }
 
 function computeCensorRanges(text) {
-  const raw = String(text || "");
-  const src = normalizeCensorText(raw);
+  const { raw, normalized: src, rawStarts, rawEnds } = normalizeCensorTextWithMap(text);
   if (!src || src.length > _CENSOR_MAX_LEN) return [];
   const re = getCensorSuperRegex();
   if (!re) return [];
@@ -3345,7 +3365,13 @@ function computeCensorRanges(text) {
       }
     }
     if (category) {
-      out.push({ start: m.index, end: m.index + m[0].length, category });
+      const normStart = m.index;
+      const normEnd = m.index + m[0].length - 1;
+
+      const rawStart = rawStarts[normStart] ?? normStart;
+      const rawEnd = rawEnds[normEnd] ?? raw.length;
+
+      out.push({ start: rawStart, end: rawEnd, category });
     }
     if (m.index === re.lastIndex) re.lastIndex++;
   }
