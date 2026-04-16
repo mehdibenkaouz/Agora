@@ -5362,6 +5362,15 @@
     const threadFootnote = document.getElementById("threadFootnote");
 
 
+    function resetThreadReplyMode() {
+      if (threadSendBtn) {
+        threadSendBtn.removeAttribute("data-parent-comment-id");
+      }
+      if (threadInput) {
+        threadInput.placeholder = "Write a comment...";
+      }
+    }
+
     function hideThreadPanel(){
       threadPanel?.classList.add("is-hidden");
     }
@@ -5963,6 +5972,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       updateThreadAuthState();
     }
     async function renderThread(key) {
+      resetThreadReplyMode();
       showThreadPanel();
       activeThreadKey = key || null;
 
@@ -6285,7 +6295,10 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       
       el.style.display = "block";
       el.innerHTML = `← Back`;
-      el.onclick = () => popThreadNav();
+      el.onclick = async () => {
+        resetThreadReplyMode();
+        await popThreadNav();
+      };
     }
 
     async function popThreadNav() {
@@ -6295,6 +6308,7 @@ async function uploadAllSelectedImagesAndSwapSrc() {
       
       if (!threadNavStack.length) {
         // Torna al thread del post originale
+        resetThreadReplyMode();
         await renderThread(activeThreadKey);
         const el = document.getElementById("threadBreadcrumb");
         if (el) el.style.display = "none";
