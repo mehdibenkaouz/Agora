@@ -8205,25 +8205,6 @@ const logicalBtn = card.querySelector(".logical-btn");
       }
     }
     
-      const zoom = getEditorZoom();
-      const editorRect = createPostContent.getBoundingClientRect();
-      const mediaRect = mediaEl.getBoundingClientRect();
-    
-      const desiredLeft = Math.round(((clientX - editorRect.left) / zoom) - 16);
-      const maxLeft = Math.max(0, Math.round((editorRect.width / zoom) - (mediaRect.width / zoom) - 16));
-      const nextLeft = Math.max(0, Math.min(maxLeft, desiredLeft));
-    
-      node.dataset.align = "left";
-      node.style.display = "block";
-      node.style.float = "none";
-      node.style.clear = "both";
-      node.style.marginTop = "14px";
-      node.style.marginBottom = "14px";
-      node.style.marginLeft = nextLeft + "px";
-      node.style.marginRight = "auto";
-      node.style.transform = "none";
-    
-    
     function clampMediaWidth(raw) {
       const zoom = getEditorZoom();
       const editorRect = createPostContent.getBoundingClientRect();
