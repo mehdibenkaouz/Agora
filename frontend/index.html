@@ -290,6 +290,20 @@
       console.warn("censorPostBodies failed:", err);
     }
   };
+  function applyCensorRangesToElement(el, ranges) {
+    
+  if (!el || !Array.isArray(ranges)) return;
+
+  if (typeof el.__censorOriginalHtml !== "string") {
+    el.__censorOriginalHtml = el.innerHTML;
+  } else {
+    el.innerHTML = el.__censorOriginalHtml;
+  }
+
+  _applyRangesToTextNodes(el, ranges || []);
+  el.dataset.censorDone = "1";
+}
+  
   function normalizeCensorComparableText(text) {
     return String(text || "")
       .replace(/\r\n/g, "\n")
