@@ -8132,7 +8132,7 @@ const logicalBtn = card.querySelector(".logical-btn");
     
       node.style.transform = `translate(${x}px, ${y}px) rotate(${rotate}deg)`;
     }
-    function moveMediaNodeInFlow(node, clientX, clientY) {
+    function moveMediaNodeInFlow(node, clientX, clientY, dragState = null) {
       if (!node) return;
     
       const mediaEl = node.querySelector("img, video");
@@ -8141,20 +8141,26 @@ const logicalBtn = card.querySelector(".logical-btn");
       const editorRect = createPostContent.getBoundingClientRect();
       const zoom = getEditorZoom();
     
-      // =========================================================
-      // 1) POSIZIONE VERTICALE — PRIMA DELLA LOGICA ORIZZONTALE
-      // =========================================================
-      // Il bug nasceva dal fatto che prima cambiavi float/margini,
-      // poi cercavi il target verticale su un layout già alterato.
-      let movedVertically = false;
+      const flowState = node.__flowDrag || (node.__flowDrag = {
+        lastTextNode: null,
+        lastTextOffset: -1,
+        lastPlacementKey: ""
+      });
     
+      let movedVertically = false;
+      const hysteresis = 16;
+    
+      // =========================================================
+      // 1) POSIZIONE VERTICALE — STABILIZZATA
+      // =========================================================
       const prevPointerEvents = node.style.pointerEvents;
       node.style.pointerEvents = "none";
       const range = getRangeFromPoint(clientX, clientY);
       node.style.pointerEvents = prevPointerEvents;
     
-      // Caso migliore: caret affidabile dentro un text node
-      if (range && range.startContainer) {
+      // Usa splitText SOLO quando il drag è davvero attivo
+      // e SOLO se il target è cambiato davvero.
+      if (dragState?.active && range && range.startContainer) {
         const startContainer = range.startContainer;
     
         if (!node.contains(startContainer) && createPostContent.contains(startContainer)) {
@@ -8165,26 +8171,44 @@ const logicalBtn = card.querySelector(".logical-btn");
             const textNode = r.startContainer;
             const safeOffset = Math.max(0, Math.min(r.startOffset, textNode.nodeValue.length));
     
-            // Evita split inutili ai bordi immediati del nodo
+            const sameTarget =
+              flowState.lastTextNode === textNode &&
+              Math.abs(flowState.lastTextOffset - safeOffset) < 2;
+    
             if (
+              !sameTarget &&
               !(node.previousSibling === textNode && safeOffset === textNode.nodeValue.length) &&
               !(node.nextSibling === textNode && safeOffset === 0)
             ) {
               const tail = textNode.splitText(safeOffset);
               tail.parentNode.insertBefore(node, tail);
+    
+              flowState.lastTextNode = tail.previousSibling || textNode;
+              flowState.lastTextOffset = safeOffset;
+              flowState.lastPlacementKey = `text:${safeOffset}`;
               movedVertically = true;
             }
           }
         }
       }
     
-      // Fallback robusto: scegli il figlio più vicino in verticale
-      if (!movedVertically) {
+      // Fallback più prudente:
+      // niente snap continuo su text-node enormi e niente cambio lato
+      // se siamo troppo vicini al midpoint.
+      if (dragState?.active && !movedVertically) {
         const children = Array.from(createPostContent.childNodes).filter((child) => {
           if (child === node) return false;
     
           if (child.nodeType === 3) {
-            return !!child.nodeValue?.trim();
+            const value = child.nodeValue || "";
+            if (!value.trim()) return false;
+    
+            const tr = document.createRange();
+            tr.selectNodeContents(child);
+            const rect = tr.getBoundingClientRect();
+    
+            // Ignora text node "giganti" che rappresentano mezzo editor
+            return rect && rect.width > 0 && rect.height > 0 && rect.height < 60;
           }
     
           if (child.nodeType === 1) {
@@ -8195,7 +8219,7 @@ const logicalBtn = card.querySelector(".logical-btn");
           return false;
         });
     
-        const measured = children.map((child) => {
+        const measured = children.map((child, index) => {
           let rect = null;
     
           if (child.nodeType === 3) {
@@ -8206,7 +8230,7 @@ const logicalBtn = card.querySelector(".logical-btn");
             rect = child.getBoundingClientRect();
           }
     
-          return { child, rect };
+          return { child, rect, index };
         }).filter((item) => item.rect && (item.rect.width > 0 || item.rect.height > 0));
     
         if (measured.length) {
@@ -8223,16 +8247,28 @@ const logicalBtn = card.querySelector(".logical-btn");
           }
     
           const midY = nearest.rect.top + (nearest.rect.height / 2);
+          const placeBefore = clientY < midY;
+          const placementKey = `${nearest.index}:${placeBefore ? "before" : "after"}`;
     
-          if (clientY < midY) {
-            createPostContent.insertBefore(node, nearest.child);
-          } else if (nearest.child.nextSibling) {
-            createPostContent.insertBefore(node, nearest.child.nextSibling);
-          } else {
-            createPostContent.appendChild(node);
+          // Se siamo troppo vicini alla soglia, NON cambiare lato.
+          const switchingSides =
+            flowState.lastPlacementKey &&
+            flowState.lastPlacementKey !== placementKey;
+    
+          if (!(switchingSides && nearestDist < hysteresis)) {
+            if (placeBefore) {
+              createPostContent.insertBefore(node, nearest.child);
+            } else if (nearest.child.nextSibling) {
+              createPostContent.insertBefore(node, nearest.child.nextSibling);
+            } else {
+              createPostContent.appendChild(node);
+            }
+    
+            flowState.lastPlacementKey = placementKey;
+            flowState.lastTextNode = null;
+            flowState.lastTextOffset = -1;
+            movedVertically = true;
           }
-    
-          movedVertically = true;
         }
       }
     
@@ -8267,6 +8303,7 @@ const logicalBtn = card.querySelector(".logical-btn");
         node.style.marginLeft = nextLeft + "px";
         node.style.marginRight = "14px";
       }
+      
     }
     
     
