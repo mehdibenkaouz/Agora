@@ -8141,10 +8141,110 @@ const logicalBtn = card.querySelector(".logical-btn");
       const editorRect = createPostContent.getBoundingClientRect();
       const zoom = getEditorZoom();
     
-      // ===== 1) POSIZIONE ORIZZONTALE =====
+      // =========================================================
+      // 1) POSIZIONE VERTICALE — PRIMA DELLA LOGICA ORIZZONTALE
+      // =========================================================
+      // Il bug nasceva dal fatto che prima cambiavi float/margini,
+      // poi cercavi il target verticale su un layout già alterato.
+      let movedVertically = false;
+    
+      const prevPointerEvents = node.style.pointerEvents;
+      node.style.pointerEvents = "none";
+      const range = getRangeFromPoint(clientX, clientY);
+      node.style.pointerEvents = prevPointerEvents;
+    
+      // Caso migliore: caret affidabile dentro un text node
+      if (range && range.startContainer) {
+        const startContainer = range.startContainer;
+    
+        if (!node.contains(startContainer) && createPostContent.contains(startContainer)) {
+          const r = range.cloneRange();
+          r.collapse(true);
+    
+          if (r.startContainer.nodeType === 3) {
+            const textNode = r.startContainer;
+            const safeOffset = Math.max(0, Math.min(r.startOffset, textNode.nodeValue.length));
+    
+            // Evita split inutili ai bordi immediati del nodo
+            if (
+              !(node.previousSibling === textNode && safeOffset === textNode.nodeValue.length) &&
+              !(node.nextSibling === textNode && safeOffset === 0)
+            ) {
+              const tail = textNode.splitText(safeOffset);
+              tail.parentNode.insertBefore(node, tail);
+              movedVertically = true;
+            }
+          }
+        }
+      }
+    
+      // Fallback robusto: scegli il figlio più vicino in verticale
+      if (!movedVertically) {
+        const children = Array.from(createPostContent.childNodes).filter((child) => {
+          if (child === node) return false;
+    
+          if (child.nodeType === 3) {
+            return !!child.nodeValue?.trim();
+          }
+    
+          if (child.nodeType === 1) {
+            const rect = child.getBoundingClientRect();
+            return rect.width > 0 || rect.height > 0;
+          }
+    
+          return false;
+        });
+    
+        const measured = children.map((child) => {
+          let rect = null;
+    
+          if (child.nodeType === 3) {
+            const tr = document.createRange();
+            tr.selectNodeContents(child);
+            rect = tr.getBoundingClientRect();
+          } else {
+            rect = child.getBoundingClientRect();
+          }
+    
+          return { child, rect };
+        }).filter((item) => item.rect && (item.rect.width > 0 || item.rect.height > 0));
+    
+        if (measured.length) {
+          let nearest = measured[0];
+          let nearestDist = Math.abs(clientY - (nearest.rect.top + nearest.rect.height / 2));
+    
+          for (let i = 1; i < measured.length; i++) {
+            const item = measured[i];
+            const dist = Math.abs(clientY - (item.rect.top + item.rect.height / 2));
+            if (dist < nearestDist) {
+              nearest = item;
+              nearestDist = dist;
+            }
+          }
+    
+          const midY = nearest.rect.top + (nearest.rect.height / 2);
+    
+          if (clientY < midY) {
+            createPostContent.insertBefore(node, nearest.child);
+          } else if (nearest.child.nextSibling) {
+            createPostContent.insertBefore(node, nearest.child.nextSibling);
+          } else {
+            createPostContent.appendChild(node);
+          }
+    
+          movedVertically = true;
+        }
+      }
+    
+      // =========================================================
+      // 2) POSIZIONE ORIZZONTALE — DOPO IL RIORDINO VERTICALE
+      // =========================================================
       const mediaRect = mediaEl.getBoundingClientRect();
       const desiredLeft = Math.round(((clientX - editorRect.left) / zoom) - 16);
-      const maxLeft = Math.max(0, Math.round((editorRect.width / zoom) - (mediaRect.width / zoom) - 16));
+      const maxLeft = Math.max(
+        0,
+        Math.round((editorRect.width / zoom) - (mediaRect.width / zoom) - 16)
+      );
       const nextLeft = Math.max(0, Math.min(maxLeft, desiredLeft));
     
       const offsetFromRight = Math.max(0, maxLeft - nextLeft);
@@ -8166,84 +8266,6 @@ const logicalBtn = card.querySelector(".logical-btn");
         node.style.float = "left";
         node.style.marginLeft = nextLeft + "px";
         node.style.marginRight = "14px";
-      }
-    
-      // ===== 2) POSIZIONE VERTICALE =====
-      const prevPointerEvents = node.style.pointerEvents;
-      node.style.pointerEvents = "none";
-      const range = getRangeFromPoint(clientX, clientY);
-      node.style.pointerEvents = prevPointerEvents;
-    
-      // Caso migliore: il browser ci dà un text node affidabile dentro il testo
-      if (range && range.startContainer) {
-        const startContainer = range.startContainer;
-    
-        if (!node.contains(startContainer) && createPostContent.contains(startContainer)) {
-          const r = range.cloneRange();
-          r.collapse(true);
-    
-          if (r.startContainer.nodeType === 3) {
-            const textNode = r.startContainer;
-            const safeOffset = Math.max(0, Math.min(r.startOffset, textNode.nodeValue.length));
-    
-            // evita split inutili sul bordo immediato del nodo
-            if (!(node.previousSibling === textNode && safeOffset === textNode.nodeValue.length) &&
-                !(node.nextSibling === textNode && safeOffset === 0)) {
-              const tail = textNode.splitText(safeOffset);
-              tail.parentNode.insertBefore(node, tail);
-              return;
-            }
-          }
-        }
-      }
-    
-      // ===== FALLBACK SOLIDO PER SU/GIÙ =====
-      // Se la caret non basta, ordiniamo il nodo rispetto ai figli visibili dell’editor
-      const children = Array.from(createPostContent.childNodes).filter((child) => {
-        if (child === node) return false;
-    
-        // scarta text node vuoti
-        if (child.nodeType === 3) {
-          return !!child.nodeValue.trim();
-        }
-    
-        // scarta nodi invisibili
-        if (child.nodeType === 1) {
-          const rect = child.getBoundingClientRect();
-          return rect.height > 0 || rect.width > 0;
-        }
-    
-        return false;
-      });
-    
-      if (!children.length) return;
-    
-      let inserted = false;
-    
-      for (const child of children) {
-        let rect = null;
-    
-        if (child.nodeType === 3) {
-          const tr = document.createRange();
-          tr.selectNodeContents(child);
-          rect = tr.getBoundingClientRect();
-        } else {
-          rect = child.getBoundingClientRect();
-        }
-    
-        if (!rect) continue;
-    
-        const midY = rect.top + (rect.height / 2);
-    
-        if (clientY < midY) {
-          createPostContent.insertBefore(node, child);
-          inserted = true;
-          break;
-        }
-      }
-    
-      if (!inserted) {
-        createPostContent.appendChild(node);
       }
     }
     
