@@ -3,6 +3,7 @@
 <head>
 
 <script src="/shared-censor.js?v=spoiler-blur-3"></script>
+  
 <script>
   // Event delegation globale: gestisce il click-to-reveal per TUTTI i
   // .censor-token, inclusi quelli inseriti via innerHTML (walker sui post).
@@ -1362,6 +1363,7 @@
     /* --- Image node (true editor feel) --- */
     .img-node{
       position: relative;
+      touch-action: none;
       display: block;
       width: fit-content;
       max-width: 100%;
@@ -8752,40 +8754,24 @@ async function restoreCreatePostDraft() {
     
       mediaEl.addEventListener("pointerdown", (e) => {
         if (e.button !== 0) return;
-    
+      
+        e.preventDefault();
         selectNode(e);
-    
-        pendingPress = {
-          x: e.clientX,
-          y: e.clientY,
-          pointerId: e.pointerId
-        };
-    
-        clearTimeout(pressTimer);
-        pressTimer = setTimeout(() => {
-          pressTimer = null;
-          if (!pendingPress) return;
-          startMove(e);
-        }, e.pointerType === "touch" ? 180 : 140);
+        clearPressTimer();
+        startMove(e);
       });
     
       mediaEl.addEventListener("pointermove", (e) => {
-        if (moveState && e.pointerId === moveState.pointerId) {
-          e.preventDefault();
-    
-          const dx = Math.round((e.clientX - moveState.startX) / moveState.zoom);
-          const dy = Math.round((e.clientY - moveState.startY) / moveState.zoom);
-    
-          node.dataset.tx = String(moveState.startTx + dx);
-          node.dataset.ty = String(moveState.startTy + dy);
-          applyMediaNodeTransform(node);
-          return;
-        }
-    
-        if (pendingPress && pendingPress.pointerId === e.pointerId) {
-          const dist = Math.hypot(e.clientX - pendingPress.x, e.clientY - pendingPress.y);
-          if (dist > 8) clearPressTimer();
-        }
+        if (!moveState || e.pointerId !== moveState.pointerId) return;
+      
+        e.preventDefault();
+      
+        const dx = Math.round((e.clientX - moveState.startX) / moveState.zoom);
+        const dy = Math.round((e.clientY - moveState.startY) / moveState.zoom);
+      
+        node.dataset.tx = String(moveState.startTx + dx);
+        node.dataset.ty = String(moveState.startTy + dy);
+        applyMediaNodeTransform(node);
       });
     
       mediaEl.addEventListener("pointerup", () => {
