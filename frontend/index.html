@@ -8068,32 +8068,51 @@ const logicalBtn = card.querySelector(".logical-btn");
     function getSelectedMediaNode() {
       return createPostContent.querySelector(".img-node.is-selected");
     }
+    function getMediaTranslate(node) {
+      return {
+        x: parseInt(node?.dataset?.tx || "0", 10) || 0,
+        y: parseInt(node?.dataset?.ty || "0", 10) || 0
+      };
+    }
+    
+    function applyMediaNodeTransform(node) {
+      if (!node) return;
+      const { x, y } = getMediaTranslate(node);
+      node.style.transform = (x || y) ? `translate(${x}px, ${y}px)` : "none";
+    }
+    
+    function clampMediaWidth(raw) {
+      const zoom = getEditorZoom();
+      const editorRect = createPostContent.getBoundingClientRect();
+      const maxW = Math.max(220, (editorRect.width - 24) / zoom);
+      const minW = 120;
+      return Math.max(minW, Math.min(maxW, raw));
+    }
 
     function applyEditorMediaAlign(node, align) {
       if (!node) return;
     
-      const mediaEl = node.querySelector("img, video");
       const safeAlign = ["left", "center", "right"].includes(align) ? align : "left";
-    
-      if (!node.dataset.offsetX) node.dataset.offsetX = "0";
-      if (!node.dataset.rotate) node.dataset.rotate = "0";
-    
-      const offsetX = Math.max(0, parseInt(node.dataset.offsetX || "0", 10) || 0);
-      const rotate = Math.max(-25, Math.min(25, parseInt(node.dataset.rotate || "0", 10) || 0));
-    
       node.dataset.align = safeAlign;
+    
       node.style.display = "block";
       node.style.float = "none";
       node.style.clear = "both";
       node.style.marginTop = "14px";
       node.style.marginBottom = "14px";
-      node.style.marginLeft = `${offsetX}px`;
-      node.style.marginRight = "auto";
     
-      if (mediaEl) {
-        mediaEl.style.transform = rotate ? `rotate(${rotate}deg)` : "none";
-        mediaEl.style.transformOrigin = "center center";
+      if (safeAlign === "left") {
+        node.style.marginLeft = "0";
+        node.style.marginRight = "auto";
+      } else if (safeAlign === "center") {
+        node.style.marginLeft = "auto";
+        node.style.marginRight = "auto";
+      } else {
+        node.style.marginLeft = "auto";
+        node.style.marginRight = "0";
       }
+    
+      applyMediaNodeTransform(node);
     }
 
 
@@ -8565,122 +8584,127 @@ async function restoreCreatePostDraft() {
 
     function bindImageNode(node) {
       const mediaEl = node.querySelector("img, video");
-      const move = node.querySelector(".img-handle.move");
       const resize = node.querySelector(".img-handle.resize");
       const del = node.querySelector(".img-handle.delete");
-
+    
+      if (!mediaEl) return;
+    
+      mediaEl.setAttribute("draggable", "false");
+    
+      let pressTimer = null;
+      let pendingPress = null;
+      let moveState = null;
+    
+      function selectNode(e) {
+        document.querySelectorAll(".img-node.is-selected").forEach(n => n.classList.remove("is-selected"));
+        node.classList.add("is-selected");
+        e?.stopPropagation?.();
+      }
+    
+      function clearPressTimer() {
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+        pendingPress = null;
+      }
+    
+      function startMove(e) {
+        const zoom = getEditorZoom();
+        const { x, y } = getMediaTranslate(node);
+    
+        moveState = {
+          pointerId: e.pointerId,
+          startX: e.clientX,
+          startY: e.clientY,
+          startTx: x,
+          startTy: y,
+          zoom
+        };
+    
+        node.classList.add("is-moving");
+        mediaEl.setPointerCapture?.(e.pointerId);
+      }
+    
+      function stopMove() {
+        if (!moveState) return;
+        try { mediaEl.releasePointerCapture?.(moveState.pointerId); } catch {}
+        moveState = null;
+        node.classList.remove("is-moving");
+        scheduleDraftSave();
+      }
+    
       node.addEventListener("click", (e) => {
-        document.querySelectorAll(".img-node.is-selected").forEach(n => n.classList.remove("is-selected"));
-        node.classList.add("is-selected");
-        e.stopPropagation();
+        selectNode(e);
       });
-            node.setAttribute("draggable", "true");
-
-      mediaEl?.addEventListener("pointerdown", (e) => {
-        document.querySelectorAll(".img-node.is-selected").forEach(n => n.classList.remove("is-selected"));
-        node.classList.add("is-selected");
-
-        // Alt + drag = spostamento orizzontale fluido
-        if (!e.altKey || e.button !== 0) {
-          e.stopPropagation();
+    
+      mediaEl.addEventListener("dragstart", (e) => {
+        e.preventDefault();
+      });
+    
+      mediaEl.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+    
+        selectNode(e);
+    
+        pendingPress = {
+          x: e.clientX,
+          y: e.clientY,
+          pointerId: e.pointerId
+        };
+    
+        clearTimeout(pressTimer);
+        pressTimer = setTimeout(() => {
+          pressTimer = null;
+          if (!pendingPress) return;
+          startMove(e);
+        }, e.pointerType === "touch" ? 180 : 140);
+      });
+    
+      mediaEl.addEventListener("pointermove", (e) => {
+        if (moveState && e.pointerId === moveState.pointerId) {
+          e.preventDefault();
+    
+          const dx = Math.round((e.clientX - moveState.startX) / moveState.zoom);
+          const dy = Math.round((e.clientY - moveState.startY) / moveState.zoom);
+    
+          node.dataset.tx = String(moveState.startTx + dx);
+          node.dataset.ty = String(moveState.startTy + dy);
+          applyMediaNodeTransform(node);
           return;
         }
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        const zoom = getEditorZoom();
-        const startX = e.clientX;
-        const startOffset = parseInt(node.dataset.offsetX || "0", 10) || 0;
-
-        const editorRect = createPostContent.getBoundingClientRect();
-        const mediaRect = mediaEl.getBoundingClientRect();
-        const maxOffset = Math.max(0, Math.round((editorRect.width - mediaRect.width) / zoom));
-
-        mediaEl.setPointerCapture(e.pointerId);
-
-        function onMove(ev) {
-          const dx = Math.round((ev.clientX - startX) / zoom);
-          const next = Math.max(0, Math.min(maxOffset, startOffset + dx));
-          node.dataset.offsetX = String(next);
-          node.dataset.align = "left";
-          applyEditorMediaAlign(node, "left");
+    
+        if (pendingPress && pendingPress.pointerId === e.pointerId) {
+          const dist = Math.hypot(e.clientX - pendingPress.x, e.clientY - pendingPress.y);
+          if (dist > 8) clearPressTimer();
         }
-
-        function onUp(ev) {
-          mediaEl.releasePointerCapture(ev.pointerId);
-          mediaEl.removeEventListener("pointermove", onMove);
-          mediaEl.removeEventListener("pointerup", onUp);
-          mediaEl.removeEventListener("pointercancel", onUp);
-          scheduleDraftSave();
-        }
-
-        mediaEl.addEventListener("pointermove", onMove);
-        mediaEl.addEventListener("pointerup", onUp);
-        mediaEl.addEventListener("pointercancel", onUp);
       });
-
-      mediaEl?.addEventListener("wheel", (e) => {
-        if (!node.classList.contains("is-selected") || !e.altKey) return;
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        const current = parseInt(node.dataset.rotate || "0", 10) || 0;
-        const next = Math.max(-25, Math.min(25, current + (e.deltaY > 0 ? 2 : -2)));
-
-        node.dataset.rotate = String(next);
-        applyEditorMediaAlign(node, node.dataset.align || "left");
-        scheduleDraftSave();
-      }, { passive: false });
-
-      mediaEl?.addEventListener("dblclick", (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        node.dataset.offsetX = "0";
-        node.dataset.rotate = "0";
-        node.dataset.align = "left";
-        applyEditorMediaAlign(node, "left");
-        scheduleDraftSave();
+    
+      mediaEl.addEventListener("pointerup", () => {
+        clearPressTimer();
+        stopMove();
       });
-
-      move?.addEventListener("pointerdown", (e) => {
-        document.querySelectorAll(".img-node.is-selected").forEach(n => n.classList.remove("is-selected"));
-        node.classList.add("is-selected");
-        e.stopPropagation();
+    
+      mediaEl.addEventListener("pointercancel", () => {
+        clearPressTimer();
+        stopMove();
       });
-
-      node.addEventListener("dragstart", (e) => {
-        draggingMediaId = node.dataset.imgId || null;
-        e.dataTransfer.setData("text/agora-img-id", draggingMediaId || "");
-        e.dataTransfer.effectAllowed = "move";
-        node.classList.add("is-dragging");
-        clearMediaDropTargets();
-      });
-      
-      node.addEventListener("dragend", () => {
-        draggingMediaId = null;
-        node.classList.remove("is-dragging");
-        clearMediaDropTargets();
-        scheduleDraftSave();
-      });
-
+    
       del?.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
-
+    
         const key = node.dataset.r2Key || "";
         const id = node.dataset.imgId || "";
-
+    
         node.remove();
         if (id) removeImageFromStateOnly(id);
-
+    
         scheduleDraftSave();
         updatePostCounterAndPublish();
-
+    
         if (!key) return;
-
+    
         try {
           await fetch("/api/media/delete", {
             method: "DELETE",
@@ -8692,42 +8716,40 @@ async function restoreCreatePostDraft() {
           console.warn("media delete failed:", err);
         }
       });
-
-      if (!resize || !mediaEl || mediaEl.tagName !== "IMG") return;
-
+    
+      if (!resize) return;
+    
       resize.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         e.stopPropagation();
-
+    
+        selectNode(e);
         node.classList.add("is-resizing");
-
+    
         const zoom = getEditorZoom();
         const startX = e.clientX;
+        const startY = e.clientY;
         const startW = mediaEl.getBoundingClientRect().width / zoom;
-
-        const editorRect = createPostContent.getBoundingClientRect();
-        const maxW = Math.max(220, (editorRect.width - 32) / zoom);
-        const minW = 160;
-
-        resize.setPointerCapture(e.pointerId);
-
+    
+        resize.setPointerCapture?.(e.pointerId);
+    
         function onMove(ev) {
           const dx = (ev.clientX - startX) / zoom;
-          let w = startW + dx;
-          w = Math.max(minW, Math.min(maxW, w));
-          mediaEl.style.width = Math.round(w) + "px";
+          const dy = (ev.clientY - startY) / zoom;
+          const nextW = clampMediaWidth(startW + ((dx + dy) * 0.85));
+          mediaEl.style.width = Math.round(nextW) + "px";
           mediaEl.style.height = "auto";
         }
-
+    
         function onUp(ev) {
-          resize.releasePointerCapture(ev.pointerId);
+          try { resize.releasePointerCapture?.(ev.pointerId); } catch {}
           node.classList.remove("is-resizing");
           resize.removeEventListener("pointermove", onMove);
           resize.removeEventListener("pointerup", onUp);
           resize.removeEventListener("pointercancel", onUp);
           scheduleDraftSave();
         }
-
+    
         resize.addEventListener("pointermove", onMove);
         resize.addEventListener("pointerup", onUp);
         resize.addEventListener("pointercancel", onUp);
