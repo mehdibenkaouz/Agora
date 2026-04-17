@@ -8141,11 +8141,6 @@ const logicalBtn = card.querySelector(".logical-btn");
       const editorRect = createPostContent.getBoundingClientRect();
       const zoom = getEditorZoom();
     
-      const prevPointerEvents = node.style.pointerEvents;
-      node.style.pointerEvents = "none";
-      const range = getRangeFromPoint(clientX, clientY);
-      node.style.pointerEvents = prevPointerEvents;
-    
       // ===== 1) POSIZIONE ORIZZONTALE =====
       const mediaRect = mediaEl.getBoundingClientRect();
       const desiredLeft = Math.round(((clientX - editorRect.left) / zoom) - 16);
@@ -8174,57 +8169,84 @@ const logicalBtn = card.querySelector(".logical-btn");
       }
     
       // ===== 2) POSIZIONE VERTICALE =====
-      // Se il browser non riesce a dare una caret affidabile, NON appendere in fondo.
-      if (!range) return;
+      const prevPointerEvents = node.style.pointerEvents;
+      node.style.pointerEvents = "none";
+      const range = getRangeFromPoint(clientX, clientY);
+      node.style.pointerEvents = prevPointerEvents;
     
-      const startContainer = range.startContainer;
-      const host = startContainer?.nodeType === 3 ? startContainer.parentNode : startContainer;
-      if (!host || !createPostContent.contains(host)) return;
+      // Caso migliore: il browser ci dà un text node affidabile dentro il testo
+      if (range && range.startContainer) {
+        const startContainer = range.startContainer;
     
-      // Se il punto cade ancora dentro il nodo stesso, non spostare nel DOM.
-      if (node.contains(startContainer)) return;
+        if (!node.contains(startContainer) && createPostContent.contains(startContainer)) {
+          const r = range.cloneRange();
+          r.collapse(true);
     
-      // Se la caret cade sul contenitore root, spesso il browser sta mentendo
-      // e punta alla fine dell'editor: evitiamo di mandare l'immagine in basso.
-      if (host === createPostContent) return;
+          if (r.startContainer.nodeType === 3) {
+            const textNode = r.startContainer;
+            const safeOffset = Math.max(0, Math.min(r.startOffset, textNode.nodeValue.length));
     
-      const otherMedia = host.closest?.(".img-node");
-      if (otherMedia && otherMedia !== node) {
-        const rect = otherMedia.getBoundingClientRect();
-        if (clientY < rect.top + rect.height / 2) {
-          otherMedia.before(node);
-        } else {
-          otherMedia.after(node);
+            // evita split inutili sul bordo immediato del nodo
+            if (!(node.previousSibling === textNode && safeOffset === textNode.nodeValue.length) &&
+                !(node.nextSibling === textNode && safeOffset === 0)) {
+              const tail = textNode.splitText(safeOffset);
+              tail.parentNode.insertBefore(node, tail);
+              return;
+            }
+          }
         }
-        return;
       }
     
-      const r = range.cloneRange();
-      r.collapse(true);
+      // ===== FALLBACK SOLIDO PER SU/GIÙ =====
+      // Se la caret non basta, ordiniamo il nodo rispetto ai figli visibili dell’editor
+      const children = Array.from(createPostContent.childNodes).filter((child) => {
+        if (child === node) return false;
     
-      if (r.startContainer.nodeType === 3) {
-        const textNode = r.startContainer;
-        const safeOffset = Math.max(0, Math.min(r.startOffset, textNode.nodeValue.length));
+        // scarta text node vuoti
+        if (child.nodeType === 3) {
+          return !!child.nodeValue.trim();
+        }
     
-        // Evita split inutili sullo stesso bordo del nodo corrente
-        if (node.previousSibling === textNode && safeOffset === textNode.nodeValue.length) return;
-        if (node.nextSibling === textNode && safeOffset === 0) return;
+        // scarta nodi invisibili
+        if (child.nodeType === 1) {
+          const rect = child.getBoundingClientRect();
+          return rect.height > 0 || rect.width > 0;
+        }
     
-        const tail = textNode.splitText(safeOffset);
-        tail.parentNode.insertBefore(node, tail);
-        return;
+        return false;
+      });
+    
+      if (!children.length) return;
+    
+      let inserted = false;
+    
+      for (const child of children) {
+        let rect = null;
+    
+        if (child.nodeType === 3) {
+          const tr = document.createRange();
+          tr.selectNodeContents(child);
+          rect = tr.getBoundingClientRect();
+        } else {
+          rect = child.getBoundingClientRect();
+        }
+    
+        if (!rect) continue;
+    
+        const midY = rect.top + (rect.height / 2);
+    
+        if (clientY < midY) {
+          createPostContent.insertBefore(node, child);
+          inserted = true;
+          break;
+        }
       }
     
-      // Se siamo in un elemento "normale", inseriamo solo se il ref è reale.
-      const parent = r.startContainer;
-      const ref = parent.childNodes[r.startOffset] || null;
-    
-      // ref=null qui spesso significa "fine editor" finta: meglio non muovere.
-      if (!ref) return;
-    
-      parent.insertBefore(node, ref);
-      
+      if (!inserted) {
+        createPostContent.appendChild(node);
+      }
     }
+    
     
       
     
