@@ -8526,7 +8526,7 @@ async function restoreCreatePostDraft() {
     
     function getDefaultMediaWidth() {
       const editorRect = createPostContent.getBoundingClientRect();
-      return Math.max(220, Math.min(720, Math.round(editorRect.width - 32)));
+      return Math.max(220, Math.min(640, Math.round(editorRect.width * 0.68)));
     }
 
     function placeCaretAfterNode(node) {
