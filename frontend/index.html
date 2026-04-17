@@ -8226,35 +8226,7 @@ const logicalBtn = card.querySelector(".logical-btn");
       
     }
     
-      const zoom = getEditorZoom();
-      const editorRect = createPostContent.getBoundingClientRect();
-      const mediaRect = mediaEl.getBoundingClientRect();
-    
-      const desiredLeft = Math.round(((clientX - editorRect.left) / zoom) - 16);
-      const maxLeft = Math.max(0, Math.round((editorRect.width / zoom) - (mediaRect.width / zoom) - 16));
-      const nextLeft = Math.max(0, Math.min(maxLeft, desiredLeft));
-    
-      const offsetFromRight = Math.max(0, maxLeft - nextLeft);
-      const useRight = nextLeft > (maxLeft / 2);
-    
-      node.style.transform = "none";
-      node.style.display = "block";
-      node.style.clear = "none";
-      node.style.marginTop = "10px";
-      node.style.marginBottom = "10px";
-    
-      if (useRight) {
-        node.dataset.align = "right";
-        node.style.float = "right";
-        node.style.marginLeft = "14px";
-        node.style.marginRight = offsetFromRight + "px";
-      } else {
-        node.dataset.align = "left";
-        node.style.float = "left";
-        node.style.marginLeft = nextLeft + "px";
-        node.style.marginRight = "14px";
-      }
-    }
+      
     
     function clampMediaWidth(raw) {
       const zoom = getEditorZoom();
