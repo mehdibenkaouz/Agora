@@ -1309,29 +1309,67 @@
     /* --- Image node (true editor feel) --- */
     .img-node{
       position: relative;
-      float: left;               /* wrap testo a destra */
-      margin: 2px 3px 5px 0;   /* spazio elegante tra img e testo */
-      user-select: none;
+      display: block;
+      width: fit-content;
       max-width: 100%;
+      margin: 14px auto;
+      user-select: none;
       line-height: 0;
-      
+      clear: both;
+      transition: transform .18s ease, opacity .18s ease, box-shadow .18s ease;
     }
 
-    .img-node img{
+    .img-node img,
+    .video-node video{
       display: block;
-      max-width: min(100%, 280px);
-      max-height: 200px;
-      width: auto;
+      width: 100%;
+      max-width: 100%;
       height: auto;
       object-fit: contain;
-      border-radius: 14px;
+      border-radius: 16px;
       border: 1px solid rgba(0,0,0,0.10);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+      background: rgba(0,0,0,0.02);
+      transition: width .18s ease, transform .18s ease, box-shadow .18s ease;
+    }
+
+    .video-node video{
+      max-height: min(72vh, 560px);
     }
 
     .img-node:focus-within img,
-    .img-node.is-selected img{
+    .img-node.is-selected img,
+    .img-node:focus-within video,
+    .img-node.is-selected video{
       border-color: rgba(87,25,41,0.35);
+      box-shadow: 0 0 0 4px rgba(87,25,41,0.10), 0 12px 28px rgba(0,0,0,0.14);
+    }
+
+    .img-node.is-dragging{
+      opacity: .58;
+      transform: scale(.985);
+    }
+
+    .img-node.drag-target-before::before,
+    .img-node.drag-target-after::after{
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 3px;
+      border-radius: 999px;
+      background: var(--brand);
       box-shadow: 0 0 0 4px rgba(87,25,41,0.10);
+      pointer-events: none;
+      animation: mediaDropPulse .18s ease-out;
+    }
+
+    .img-node.drag-target-before::before{ top: -10px; }
+    .img-node.drag-target-after::after{ bottom: -10px; }
+
+    @keyframes mediaDropPulse{
+      from{ transform: scaleX(.78); opacity: .45; }
+      to{ transform: scaleX(1); opacity: 1; }
     }
 
     .img-handle{
@@ -1347,6 +1385,7 @@
       opacity: 0;
       transform: translateY(-2px);
       transition: opacity .12s ease, transform .12s ease;
+      z-index: 5;
     }
 
     .img-node:hover .img-handle,
@@ -1371,14 +1410,14 @@
       cursor: grab;
     }
 
+    .img-node.is-dragging .img-handle.move{
+      cursor: grabbing;
+    }
+
     .img-handle.resize{
       right: 8px;
       bottom: 8px;
       cursor: nwse-resize;
-    }
-
-    .img-handle{ 
-      z-index: 5; /* assicura che i pulsanti stiano sopra l’immagine */
     }
 
     .img-handle.delete{
@@ -1387,13 +1426,15 @@
       cursor: pointer;
     }
 
-    /* quando ridimensioni */
     .img-node.is-resizing .img-handle{
       opacity: 1;
     }
-    .img-node.is-resizing img{
+
+    .img-node.is-resizing img,
+    .img-node.is-resizing video{
       cursor: nwse-resize;
     }
+
     .rt-editor p,
     .rt-editor div{
       margin: 0;
@@ -3058,15 +3099,27 @@
   color: #000;
   box-shadow: 0 4px 12px rgba(0,0,0,0.40);
 }
+.post-body img,
 .post-body video {
-  max-width: 100%;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.10);
   display: block;
-  margin: 8px 0;
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  border: 1px solid rgba(0,0,0,0.10);
+  margin: 10px auto;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.10);
+}
+
+.post-body video {
   resize: both;
   overflow: hidden;
   cursor: nwse-resize;
+}
+
+:root[data-theme="dark"] .post-body img,
+:root[data-theme="dark"] .post-body video{
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.32);
 }
 
 .mobile-menu-btn {
@@ -8189,36 +8242,96 @@ async function restoreCreatePostDraft() {
       return null;
     }
 
+
+
+    let draggingMediaId = null;
+
+    
+    function getDefaultMediaWidth() {
+      const editorRect = createPostContent.getBoundingClientRect();
+      return Math.max(220, Math.min(720, Math.round(editorRect.width - 32)));
+    }
+
+    function placeCaretAfterNode(node) {
+      const spacer = document.createTextNode(" ");
+      if (!node.nextSibling || node.nextSibling.nodeType !== 3) {
+        node.after(spacer);
+      }
+      const target = node.nextSibling && node.nextSibling.nodeType === 3 ? node.nextSibling : spacer;
+      const sel = window.getSelection();
+      if (!sel) return;
+      const range = document.createRange();
+      range.setStart(target, Math.min(1, target.nodeValue?.length || 0));
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+
+    function clearMediaDropTargets() {
+      createPostContent
+        .querySelectorAll(".img-node.drag-target-before, .img-node.drag-target-after")
+        .forEach(n => n.classList.remove("drag-target-before", "drag-target-after"));
+    }
+
+    function getMediaDropTarget(clientX, clientY, draggingId) {
+      const hit = document.elementFromPoint(clientX, clientY);
+      const target = hit?.closest?.(".img-node");
+      if (!target || target.dataset.imgId === draggingId) return null;
+
+      const rect = target.getBoundingClientRect();
+      return {
+        target,
+        pos: clientY < rect.top + rect.height / 2 ? "before" : "after"
+      };
+
+    }
+
     function bindImageNode(node) {
-      const img = node.querySelector("img");
+      const mediaEl = node.querySelector("img, video");
       const move = node.querySelector(".img-handle.move");
       const resize = node.querySelector(".img-handle.resize");
       const del = node.querySelector(".img-handle.delete");
-      
-      // selezione visuale
+
       node.addEventListener("click", (e) => {
         document.querySelectorAll(".img-node.is-selected").forEach(n => n.classList.remove("is-selected"));
         node.classList.add("is-selected");
         e.stopPropagation();
       });
 
-      // DRAG (solo dal handle move)
-      move.addEventListener("dragstart", (e) => {
-        e.dataTransfer.setData("text/agora-img-id", node.dataset.imgId);
-        e.dataTransfer.effectAllowed = "move";
+      move?.addEventListener("pointerdown", (e) => {
+        document.querySelectorAll(".img-node.is-selected").forEach(n => n.classList.remove("is-selected"));
+        node.classList.add("is-selected");
+        e.stopPropagation();
       });
 
+      move?.addEventListener("dragstart", (e) => {
+        draggingMediaId = node.dataset.imgId || null;
+        e.dataTransfer.setData("text/agora-img-id", draggingMediaId || "");
+        e.dataTransfer.effectAllowed = "move";
+        node.classList.add("is-dragging");
+        clearMediaDropTargets();
+      });
 
-      // DELETE (remove from editor + optional delete from R2)
+      move?.addEventListener("dragend", () => {
+        draggingMediaId = null;
+        node.classList.remove("is-dragging");
+        clearMediaDropTargets();
+        scheduleDraftSave();
+      });
+
       del?.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
 
         const key = node.dataset.r2Key || "";
-        // 1) rimuovi subito dal DOM (UX veloce)
-        node.remove();
+        const id = node.dataset.imgId || "";
 
-        // 2) se hai la key, cancella anche su R2
+        node.remove();
+        if (id) removeImageFromStateOnly(id);
+
+        scheduleDraftSave();
+        updatePostCounterAndPublish();
+
         if (!key) return;
 
         try {
@@ -8233,7 +8346,8 @@ async function restoreCreatePostDraft() {
         }
       });
 
-      // RESIZE (drag handle bottom-right)
+      if (!resize || !mediaEl || mediaEl.tagName !== "IMG") return;
+
       resize.addEventListener("pointerdown", (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -8242,11 +8356,11 @@ async function restoreCreatePostDraft() {
 
         const zoom = getEditorZoom();
         const startX = e.clientX;
-        const startW = img.getBoundingClientRect().width / zoom;
+        const startW = mediaEl.getBoundingClientRect().width / zoom;
 
         const editorRect = createPostContent.getBoundingClientRect();
-        const maxW = Math.max(180, (editorRect.width - 24) / zoom);
-        const minW = 140;
+        const maxW = Math.max(220, (editorRect.width - 32) / zoom);
+        const minW = 160;
 
         resize.setPointerCapture(e.pointerId);
 
@@ -8254,8 +8368,8 @@ async function restoreCreatePostDraft() {
           const dx = (ev.clientX - startX) / zoom;
           let w = startW + dx;
           w = Math.max(minW, Math.min(maxW, w));
-          img.style.width = Math.round(w) + "px";
-          img.style.height = "auto";
+          mediaEl.style.width = Math.round(w) + "px";
+          mediaEl.style.height = "auto";
         }
 
         function onUp(ev) {
@@ -8264,17 +8378,19 @@ async function restoreCreatePostDraft() {
           resize.removeEventListener("pointermove", onMove);
           resize.removeEventListener("pointerup", onUp);
           resize.removeEventListener("pointercancel", onUp);
+          scheduleDraftSave();
         }
 
         resize.addEventListener("pointermove", onMove);
         resize.addEventListener("pointerup", onUp);
         resize.addEventListener("pointercancel", onUp);
-        
       });
     }
 
     function insertImageAtCursor(url, id, key) {
       createPostContent.focus();
+
+      const defaultW = getDefaultMediaWidth();
 
       const node = document.createElement("span");
       node.className = "img-node";
@@ -8283,7 +8399,7 @@ async function restoreCreatePostDraft() {
       if (key) node.dataset.r2Key = key;
 
       node.innerHTML = `
-        <img src="${url}" alt="Image" />
+        <img src="${url}" alt="Image" style="width:${defaultW}px;height:auto;" />
         <span class="img-handle move" draggable="true" title="Move">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M9 6h6"></path>
@@ -8311,8 +8427,10 @@ async function restoreCreatePostDraft() {
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) {
         createPostContent.appendChild(node);
-        createPostContent.appendChild(document.createTextNode(" "));
         bindImageNode(node);
+        placeCaretAfterNode(node);
+        scheduleDraftSave();
+        updatePostCounterAndPublish();
         return;
       }
 
@@ -8320,75 +8438,62 @@ async function restoreCreatePostDraft() {
       range.deleteContents();
       range.insertNode(node);
 
-      // Rimuove eventuali <br> “di servizio” lasciati da versioni precedenti
       while (node.nextSibling && node.nextSibling.nodeType === 1 && node.nextSibling.tagName === "BR") {
         node.nextSibling.remove();
       }
 
-      // Spacer: permette di scrivere subito accanto all’immagine (wrap stile Word)
-      const spacer = document.createTextNode(" ");
-      node.after(spacer);
-
-      range.setStartAfter(spacer);
-      range.setEndAfter(spacer);
-      sel.removeAllRanges();
-      sel.addRange(range);
-
       bindImageNode(node);
+      placeCaretAfterNode(node);
+      scheduleDraftSave();
+      updatePostCounterAndPublish();
     }
 
     function insertVideoAtCursor(url, id, key) {
       createPostContent.focus();
-    
+
+      const defaultW = Math.max(260, Math.min(760, getDefaultMediaWidth()));
+
       const node = document.createElement("span");
       node.className = "img-node video-node";
       node.contentEditable = "false";
       node.dataset.imgId = id;
       if (key) node.dataset.r2Key = key;
-    
+
       node.innerHTML = `
-        <video src="${url}" controls muted playsinline
-          style="max-width:100%;border-radius:14px;border:1px solid rgba(0,0,0,0.10);display:block;"></video>
+        <video src="${url}" controls muted playsinline style="width:${defaultW}px;height:auto;"></video>
+        <span class="img-handle move" draggable="true" title="Move">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M9 6h6"></path>
+            <path d="M9 12h6"></path>
+            <path d="M9 18h6"></path>
+          </svg>
+        </span>
         <span class="img-handle delete" title="Delete">
           <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 7h12"/><path d="M9 7V5h6v2"/>
-            <path d="M9 10v9"/><path d="M12 10v9"/><path d="M15 10v9"/>
+            <path d="M6 7h12"></path>
+            <path d="M9 7V5h6v2"></path>
+            <path d="M9 10v9"></path>
+            <path d="M12 10v9"></path>
+            <path d="M15 10v9"></path>
           </svg>
         </span>
       `;
-    
+
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) {
         createPostContent.appendChild(node);
-        createPostContent.appendChild(document.createTextNode(" "));
       } else {
         const range = sel.getRangeAt(0);
         range.deleteContents();
         range.insertNode(node);
-        const spacer = document.createTextNode(" ");
-        node.after(spacer);
-        range.setStartAfter(spacer);
-        sel.removeAllRanges();
-        sel.addRange(range);
       }
-    
-      // attacca solo il delete (no move/resize per i video)
-      const del = node.querySelector(".img-handle.delete");
-      del?.addEventListener("click", async (e) => {
-        e.preventDefault(); e.stopPropagation();
-        const key = node.dataset.r2Key || "";
-        node.remove();
-        if (!key) return;
-        try {
-          await fetch("/api/media/delete", {
-            method: "DELETE",
-            headers: { "Content-Type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({ key })
-          });
-        } catch(err) { console.warn("media delete failed:", err); }
-      });
+
+      bindImageNode(node);
+      placeCaretAfterNode(node);
+      scheduleDraftSave();
+      updatePostCounterAndPublish();
     }
+
     function isImageFile(file) {
       return file && file.type && file.type.startsWith("image/");
     }
@@ -8620,7 +8725,7 @@ async function restoreCreatePostDraft() {
       clone.querySelectorAll(".img-handle, svg").forEach(n => n.remove());
 
       // 2) trasforma .img-node -> <img ...> “puro”
-      clone.querySelectorAll(".img-node").forEach(node => {
+      clone.querySelectorAll(".img-node:not(.video-node)").forEach(node => {
         const img = node.querySelector("img");
         if (!img) { node.remove(); return; }
 
@@ -8828,38 +8933,51 @@ async function restoreCreatePostDraft() {
       }
     });
 
-    // Drag-drop reinsert for image nodes (from move handle)
+    // Drag-drop reinsert for media nodes (smooth + visual target)
     createPostContent.addEventListener("dragover", (e) => {
-      if (e.dataTransfer?.types?.includes("text/agora-img-id")) e.preventDefault();
-    });
-
-    createPostContent.addEventListener("drop", (e) => {
-      const id = e.dataTransfer?.getData("text/agora-img-id");
-      if (!id) return;
+      if (!draggingMediaId) return;
 
       e.preventDefault();
 
-      const node = createPostContent.querySelector(`.img-node[data-img-id="${id}"]`);
-      if (!node) return;
+      const hit = getMediaDropTarget(e.clientX, e.clientY, draggingMediaId);
+      clearMediaDropTargets();
 
-      const r = getRangeFromPoint(e.clientX, e.clientY);
-      if (!r) return;
-
-      // sposta nodo nel punto di drop
-      r.insertNode(node);
-
-      // mette un <br> dopo per riprendere a scrivere
-      while (node.nextSibling && node.nextSibling.nodeType === 1 && node.nextSibling.tagName === "BR") {
-        node.nextSibling.remove();
+      if (hit) {
+        hit.target.classList.add(hit.pos === "before" ? "drag-target-before" : "drag-target-after");
       }
-      const spacer = document.createTextNode(" ");
-      node.after(spacer);
+    });
 
-      const sel = window.getSelection();
-      sel.removeAllRanges();
-      r.setStartAfter(spacer);
-      r.setEndAfter(spacer);
-      sel.addRange(r);
+    createPostContent.addEventListener("drop", (e) => {
+      if (!draggingMediaId) return;
+
+      e.preventDefault();
+
+      const node = createPostContent.querySelector(`.img-node[data-img-id="${draggingMediaId}"]`);
+      if (!node) {
+        clearMediaDropTargets();
+        draggingMediaId = null;
+        return;
+      }
+
+      const hit = getMediaDropTarget(e.clientX, e.clientY, draggingMediaId);
+      clearMediaDropTargets();
+
+      if (hit) {
+        if (hit.pos === "before") hit.target.before(node);
+        else hit.target.after(node);
+      } else {
+        const r = getRangeFromPoint(e.clientX, e.clientY);
+        if (r) {
+          r.deleteContents();
+          r.insertNode(node);
+        } else {
+          createPostContent.appendChild(node);
+        }
+      }
+
+      placeCaretAfterNode(node);
+      draggingMediaId = null;
+      scheduleDraftSave();
     });
     // ── Anti-spam engine (8-cycle) ──────────────────────────
     const SPAM_TS_KEY       = "agora_post_ts";
