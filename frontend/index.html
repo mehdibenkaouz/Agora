@@ -1312,7 +1312,7 @@
       display: block;
       width: fit-content;
       max-width: 100%;
-      margin: 14px auto;
+      margin: 14px 0;
       user-select: none;
       line-height: 0;
       clear: both;
@@ -4305,7 +4305,89 @@
       outline-offset: -4px;
       background: rgba(var(--brand-rgb), 0.05);
     }
-    
+    .post-preview-backdrop{
+      position: fixed;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(0,0,0,0.52);
+      backdrop-filter: blur(8px);
+      z-index: 1600;
+    }
+
+    .post-preview-backdrop.open{
+      display: flex;
+    }
+
+    .post-preview-modal{
+      width: min(760px, 100%);
+      max-height: calc(100vh - 40px);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .post-preview-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:16px 18px;
+      border-bottom:1px solid var(--line);
+    }
+
+    .post-preview-title{
+      font-size:1.05rem;
+      font-weight:800;
+    }
+
+    .post-preview-body{
+      padding:18px;
+      overflow:auto;
+      background: var(--bg);
+    }
+
+    .preview-card{
+      margin: 0 auto;
+      width: min(100%, 620px);
+    }
+
+    /* immagini published + preview */
+    .post-body img.media-align-left{
+      display:block;
+      margin: 10px auto 10px 0;
+    }
+
+    .post-body img.media-align-center{
+      display:block;
+      margin: 10px auto;
+    }
+
+    .post-body img.media-align-right{
+      display:block;
+      margin: 10px 0 10px auto;
+    }
+
+    .post-body video.media-align-left{
+      display:block;
+      margin: 10px auto 10px 0;
+    }
+
+    .post-body video.media-align-center{
+      display:block;
+      margin: 10px auto;
+    }
+
+    .post-body video.media-align-right{
+      display:block;
+      margin: 10px 0 10px auto;
+    }
   </style>
 </head>
 
@@ -4607,8 +4689,19 @@
                   <button type="button" class="rt-tag-option" data-tag="sources">📚 Sources</button>
                 </div>
               </div>
-              <button type="button" id="rtUploadBtn" class="rt-btn rt-upload-btn" title="Upload images" style="display:none;">📎 Upload</button>
-              <button type="button" id="createPostExpand" class="rt-btn rt-expand-btn" aria-label="Fullscreen" title="Fullscreen">
+                <button type="button" id="rtAlignLeft" class="rt-btn" title="Image left">⟸</button>
+                <button type="button" id="rtAlignCenter" class="rt-btn" title="Image center">≡</button>
+                <button type="button" id="rtAlignRight" class="rt-btn" title="Image right">⟹</button>
+
+                <button type="button" id="rtPreviewBtn" class="rt-btn" aria-label="Preview post" title="Preview post">
+                  <svg viewBox="0 0 24 24" width="16" height="16" style="stroke:currentColor;stroke-width:2.2;fill:none;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;">
+                    <path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+
+                <button type="button" id="rtUploadBtn" class="rt-btn rt-upload-btn" title="Upload images" style="display:none;">📎 Upload</button>
+                <button type="button" id="createPostExpand" class="rt-btn rt-expand-btn" aria-label="Fullscreen" title="Fullscreen">
                 <svg viewBox="0 0 24 24" width="16" height="16" class="expand-icon" style="stroke:currentColor;stroke-width:2.4;fill:none;stroke-linecap:round;stroke-linejoin:round;vertical-align:middle;">
                   <path d="M8 3H5a2 2 0 00-2 2v3"/>
                   <path d="M21 8V5a2 2 0 00-2-2h-3"/>
@@ -4646,6 +4739,32 @@
     </div>
   </div>
   
+
+
+  <div id="postPreviewModal" class="post-preview-backdrop" aria-hidden="true">
+    <div class="post-preview-modal" role="dialog" aria-modal="true" aria-labelledby="postPreviewTitle">
+      <div class="post-preview-head">
+        <div class="post-preview-title" id="postPreviewTitle">Post preview</div>
+        <button id="postPreviewClose" class="icon-x" aria-label="Close preview">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 6l12 12" />
+            <path d="M18 6L6 18" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="post-preview-body">
+        <article class="post-card preview-card">
+          <div class="post-head">
+            <div class="post-author" id="previewAuthor">You</div>
+            <div class="post-date">Now</div>
+          </div>
+          <div id="postPreviewContent" class="post-body"></div>
+        </article>
+      </div>
+    </div>
+  </div>
+
 
   <div id="searchOverlay" class="search-overlay" aria-hidden="true">
   <div class="search-box">
@@ -7809,6 +7928,48 @@ const logicalBtn = card.querySelector(".logical-btn");
     // ── FULLSCREEN TOGGLE ────────────────────────────────────────────
     const expandBtn = document.getElementById("createPostExpand");
     const rtUploadBtn = document.getElementById("rtUploadBtn");
+    const rtPreviewBtn = document.getElementById("rtPreviewBtn");
+    const rtAlignLeft = document.getElementById("rtAlignLeft");
+    const rtAlignCenter = document.getElementById("rtAlignCenter");
+    const rtAlignRight = document.getElementById("rtAlignRight");
+
+    const postPreviewModal = document.getElementById("postPreviewModal");
+    const postPreviewClose = document.getElementById("postPreviewClose");
+    const postPreviewContent = document.getElementById("postPreviewContent");
+
+    function buildPreviewHtmlFromEditor() {
+      return buildCleanPostHtmlFromEditor(createPostContent);
+    }
+
+    function openPostPreview() {
+      if (!postPreviewModal || !postPreviewContent) return;
+
+      const html = buildPreviewHtmlFromEditor();
+      postPreviewContent.innerHTML = html || `<div style="color:var(--muted);">Nothing to preview yet.</div>`;
+
+      postPreviewModal.classList.add("open");
+      postPreviewModal.setAttribute("aria-hidden", "false");
+    }
+
+    function closePostPreview() {
+      if (!postPreviewModal) return;
+      postPreviewModal.classList.remove("open");
+      postPreviewModal.setAttribute("aria-hidden", "true");
+    }
+
+    rtPreviewBtn?.addEventListener("click", () => {
+      openPostPreview();
+    });
+
+    postPreviewClose?.addEventListener("click", () => {
+      closePostPreview();
+    });
+
+    postPreviewModal?.addEventListener("click", (e) => {
+      if (e.target === postPreviewModal) {
+        closePostPreview();
+      }
+    });
 
     expandBtn?.addEventListener("click", () => {
       const modal = expandBtn.closest(".modal");
@@ -7819,6 +7980,56 @@ const logicalBtn = card.querySelector(".logical-btn");
     rtUploadBtn?.addEventListener("click", () => {
       const fileInput = document.getElementById("imageFileInput");
       if (fileInput) fileInput.click();
+    });
+
+
+    function getSelectedMediaNode() {
+      return createPostContent.querySelector(".img-node.is-selected");
+    }
+
+    function applyEditorMediaAlign(node, align) {
+      if (!node) return;
+
+      const safeAlign = ["left", "center", "right"].includes(align) ? align : "left";
+      node.dataset.align = safeAlign;
+
+      node.style.display = "block";
+      node.style.float = "none";
+      node.style.clear = "both";
+      node.style.marginTop = "14px";
+      node.style.marginBottom = "14px";
+
+      if (safeAlign === "left") {
+        node.style.marginLeft = "0";
+        node.style.marginRight = "auto";
+      } else if (safeAlign === "center") {
+        node.style.marginLeft = "auto";
+        node.style.marginRight = "auto";
+      } else {
+        node.style.marginLeft = "auto";
+        node.style.marginRight = "0";
+      }
+    }
+
+    rtAlignLeft?.addEventListener("click", () => {
+      const node = getSelectedMediaNode();
+      if (!node) return;
+      applyEditorMediaAlign(node, "left");
+      scheduleDraftSave();
+    });
+
+    rtAlignCenter?.addEventListener("click", () => {
+      const node = getSelectedMediaNode();
+      if (!node) return;
+      applyEditorMediaAlign(node, "center");
+      scheduleDraftSave();
+    });
+
+    rtAlignRight?.addEventListener("click", () => {
+      const node = getSelectedMediaNode();
+      if (!node) return;
+      applyEditorMediaAlign(node, "right");
+      scheduleDraftSave();
     });
 
     // Funzione per estrarre i segmenti taggati dall'editor prima del publish
@@ -8397,6 +8608,7 @@ async function restoreCreatePostDraft() {
       node.contentEditable = "false";
       node.dataset.imgId = id;
       if (key) node.dataset.r2Key = key;
+      node.dataset.align = "left";
 
       node.innerHTML = `
         <img src="${url}" alt="Image" style="width:${defaultW}px;height:auto;" />
@@ -8441,7 +8653,7 @@ async function restoreCreatePostDraft() {
       while (node.nextSibling && node.nextSibling.nodeType === 1 && node.nextSibling.tagName === "BR") {
         node.nextSibling.remove();
       }
-
+      applyEditorMediaAlign(node, node.dataset.align || "left");
       bindImageNode(node);
       placeCaretAfterNode(node);
       scheduleDraftSave();
@@ -8457,8 +8669,10 @@ async function restoreCreatePostDraft() {
       node.className = "img-node video-node";
       node.contentEditable = "false";
       node.dataset.imgId = id;
-      if (key) node.dataset.r2Key = key;
 
+      if (key) node.dataset.r2Key = key;
+      
+      node.dataset.align = "left";
       node.innerHTML = `
         <video src="${url}" controls muted playsinline style="width:${defaultW}px;height:auto;"></video>
         <span class="img-handle move" draggable="true" title="Move">
@@ -8488,6 +8702,7 @@ async function restoreCreatePostDraft() {
         range.insertNode(node);
       }
 
+      applyEditorMediaAlign(node, node.dataset.align || "left");
       bindImageNode(node);
       placeCaretAfterNode(node);
       scheduleDraftSave();
@@ -8721,57 +8936,85 @@ async function restoreCreatePostDraft() {
     function buildCleanPostHtmlFromEditor(editorEl) {
       const clone = editorEl.cloneNode(true);
 
-      // 1) rimuovi UI dell’editor immagini
-      clone.querySelectorAll(".img-handle, svg").forEach(n => n.remove());
+      // 1) Rimuovi UI editor media
+      clone.querySelectorAll(".img-handle, .tag-remove").forEach(n => n.remove());
 
-      // 2) trasforma .img-node -> <img ...> “puro”
-      clone.querySelectorAll(".img-node:not(.video-node)").forEach(node => {
-        const img = node.querySelector("img");
-        if (!img) { node.remove(); return; }
-
-        const cleanImg = document.createElement("img");
-        cleanImg.setAttribute("src", img.getAttribute("src") || "");
-        cleanImg.setAttribute("alt", img.getAttribute("alt") || "Image");
-
-        // preserva width se l’utente ha ridimensionato
-        // width può stare sull'img O sul wrapper .img-node
-        const wImg = (img.style && img.style.width) ? img.style.width : "";
-        const wWrap = (node.style && node.style.width) ? node.style.width : "";
-        const w = wImg || wWrap;
-
-        if (w) cleanImg.style.width = w;
-
-        // height: di default auto
-        const hImg = (img.style && img.style.height) ? img.style.height : "";
-        if (hImg) cleanImg.style.height = hImg;
-        else cleanImg.style.height = "auto";
-
-        node.replaceWith(cleanImg);
-      });
-      // AGGIUNGI prima del blocco .img-node esistente:
+      // 2) Trasforma prima i video-node
       clone.querySelectorAll(".video-node").forEach(node => {
         const vid = node.querySelector("video");
-        if (!vid) { node.remove(); return; }
+        if (!vid) {
+          node.remove();
+          return;
+        }
+
         const cleanVid = document.createElement("video");
         cleanVid.setAttribute("src", vid.getAttribute("src") || "");
         cleanVid.setAttribute("controls", "");
         cleanVid.setAttribute("muted", "");
         cleanVid.setAttribute("playsinline", "");
+
+        const align = node.dataset.align || "left";
+        cleanVid.classList.add(`media-align-${align}`);
+
+        const wVid = (vid.style && vid.style.width) ? vid.style.width : "";
+        const wWrap = (node.style && node.style.width) ? node.style.width : "";
+        const w = wVid || wWrap;
+        if (w) cleanVid.style.width = w;
+
         cleanVid.style.maxWidth = "100%";
+        cleanVid.style.height = "auto";
         cleanVid.style.borderRadius = "14px";
+
         node.replaceWith(cleanVid);
       });
 
-      // 3) rimuovi div vuoti inutili
-      clone.querySelectorAll("div").forEach(d => {
-        const hasImg = d.querySelector("img");
-        if (!hasImg && !d.textContent.trim()) d.remove();
+      // 3) Trasforma gli img-node normali
+      clone.querySelectorAll(".img-node:not(.video-node)").forEach(node => {
+        const img = node.querySelector("img");
+        if (!img) {
+          node.remove();
+          return;
+        }
+
+        const cleanImg = document.createElement("img");
+        cleanImg.setAttribute("src", img.getAttribute("src") || "");
+        cleanImg.setAttribute("alt", img.getAttribute("alt") || "Image");
+
+        const align = node.dataset.align || "left";
+        cleanImg.classList.add(`media-align-${align}`);
+
+        const wImg = (img.style && img.style.width) ? img.style.width : "";
+        const wWrap = (node.style && node.style.width) ? node.style.width : "";
+        const w = wImg || wWrap;
+        if (w) cleanImg.style.width = w;
+
+        const hImg = (img.style && img.style.height) ? img.style.height : "";
+        cleanImg.style.height = hImg || "auto";
+        cleanImg.style.maxWidth = "100%";
+
+        node.replaceWith(cleanImg);
       });
 
-      // 4) allowlist finale (anti XSS + anti “spazzatura”)
+      // 4) Rimuovi stati visivi temporanei dell’editor
+      clone.querySelectorAll(".is-selected, .is-dragging, .is-resizing, .drag-target-before, .drag-target-after")
+        .forEach(el => {
+          el.classList.remove("is-selected", "is-dragging", "is-resizing", "drag-target-before", "drag-target-after");
+        });
+
+      // 5) Rimuovi div vuoti inutili
+      clone.querySelectorAll("div").forEach(d => {
+        const hasMedia = d.querySelector("img,video");
+        const txt = (d.textContent || "").replace(/\u200B/g, "").trim();
+        if (!hasMedia && !txt && !d.querySelector("br")) d.remove();
+      });
+
+      // 6) Sanitizza
       sanitizeHtmlAllowlist(clone);
 
-      return clone.innerHTML.trim();
+      // 7) Normalizza HTML finale
+      return clone.innerHTML
+        .replace(/(<div><br><\/div>)+/g, "<div><br></div>")
+        .replace(/^\s+|\s+$/g, "");
     }
 
     function flushRemovedImgIds() {
@@ -8928,7 +9171,14 @@ async function restoreCreatePostDraft() {
       if (id) removeImage(id);
     });
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") {
+      if (e.key !== "Escape") return;
+
+      if (postPreviewModal?.classList.contains("open")) {
+        closePostPreview();
+        return;
+      }
+
+      if (createPostModal?.classList.contains("open")) {
         closeCreatePostModal();
       }
     });
