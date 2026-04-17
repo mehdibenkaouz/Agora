@@ -290,34 +290,73 @@
       console.warn("censorPostBodies failed:", err);
     }
   };
-    function applyCensorRangesToElement(el, ranges) {
-    if (!el || !Array.isArray(ranges)) return;
-
-    if (typeof el.__censorOriginalHtml !== "string") {
-      el.__censorOriginalHtml = el.innerHTML;
-    } else {
-      el.innerHTML = el.__censorOriginalHtml;
-    }
-
-    _applyRangesToTextNodes(el, ranges || []);
-    el.dataset.censorDone = "1";
+  function normalizeCensorComparableText(text) {
+    return String(text || "")
+      .replace(/\r\n/g, "\n")
+      .replace(/[\u200B\u200C\u200D\uFEFF]/g, "")
+      .replace(/\u00A0/g, " ")
+      .replace(/[ \t\f\v]+/g, " ")
+      .replace(/ *\n+ */g, "\n")
+      .trim();
+  }
+  
+  function tryApplySavedRangesToElement(el, ranges, sourceText) {
+    if (!el || !Array.isArray(ranges) || !ranges.length) return false;
+  
+    const realText = normalizeCensorComparableText(el.textContent || "");
+    const savedText = normalizeCensorComparableText(sourceText || "");
+  
+    if (!realText || !savedText) return false;
+    if (realText !== savedText) return false;
+  
+    applyCensorRangesToElement(el, ranges);
+    return true;
   }
 
-  window.applyCensorRangesToPostBody = function (body, ranges) {
-    if (!body || !Array.isArray(ranges) || !ranges.length) return;
-
+  window.applyCensorRangesToPostBody = function (body, ranges, sourceText) {
+    if (!body || !Array.isArray(ranges) || !ranges.length) return false;
+  
     SharedCensor.ensureStyles();
-
+  
     const preview = body.querySelector(".post-preview");
     const full = body.querySelector(".post-full");
-
+  
+    // Post lungo: full e preview NON sono lo stesso testo.
     if (preview && full) {
-      applyCensorRangesToElement(preview, ranges);
-      applyCensorRangesToElement(full, ranges);
-      return;
+      let allGood = true;
+  
+      // 1) Fast path sul FULL solo se combacia col content_text salvato
+      const fullApplied = tryApplySavedRangesToElement(full, ranges, sourceText);
+      if (!fullApplied) allGood = false;
+  
+      // 2) Fast path sulla preview solo se la preview è prefisso raw del sourceText
+      const previewText = String(preview.textContent || "");
+      const rawSourceText = String(sourceText || "");
+  
+      if (previewText && rawSourceText.startsWith(previewText)) {
+        const previewRanges = ranges
+          .filter(r => r && Number.isFinite(r.start) && Number.isFinite(r.end) && r.start < previewText.length)
+          .map(r => ({
+            start: r.start,
+            end: Math.min(r.end, previewText.length),
+            category: r.category
+          }))
+          .filter(r => r.end > r.start);
+  
+        if (previewRanges.length) {
+          applyCensorRangesToElement(preview, previewRanges);
+        } else {
+          preview.dataset.censorDone = "1";
+        }
+      } else {
+        allGood = false;
+      }
+  
+      return allGood;
     }
-
-    applyCensorRangesToElement(body, ranges);
+  
+    // Post corto: body intero
+    return tryApplySavedRangesToElement(body, ranges, sourceText);
   };
 
   function applyCensorRangesToCommentBubble(bubble, comment) {
@@ -7215,9 +7254,18 @@ async function uploadAllSelectedImagesAndSwapSrc() {
         `;
         const postBodyEl = card.querySelector(".post-body");
         const postRanges = Array.isArray(p.censor_ranges) ? p.censor_ranges : [];
-
+        
+        let usedSavedRanges = false;
         if (postBodyEl && postRanges.length) {
-          window.applyCensorRangesToPostBody(postBodyEl, postRanges);
+          usedSavedRanges = window.applyCensorRangesToPostBody(
+            postBodyEl,
+            postRanges,
+            String(p.content_text || "")
+          );
+        }
+        
+        if (postBodyEl && !usedSavedRanges) {
+          window.censorPostBodies(postBodyEl);
         }
 
         // Click sulla card => apre thread solo su desktop
@@ -7565,8 +7613,8 @@ const logicalBtn = card.querySelector(".logical-btn");
           feed.appendChild(appendFrag);
         }
         
-        // Fallback solo per eventuali post vecchi / payload senza censor_ranges
-        if (posts.some(p => !Array.isArray(p.censor_ranges))) {
+        // Fallback solo per post vecchi / casi non coperti dal fast path
+        if (posts.some(p => !Array.isArray(p.censor_ranges) || !p.censor_ranges.length)) {
           window.censorPostBodies(feed);
         }
         // If selected thread disappeared after refresh, reset
