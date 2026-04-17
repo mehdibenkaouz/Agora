@@ -8663,7 +8663,7 @@ const logicalBtn = card.querySelector(".logical-btn");
 
       SafeStorage.sessionSet(DRAFT_KEY, JSON.stringify(payload));
     }
-async function restoreCreatePostDraft() {
+    async function restoreCreatePostDraft() {
       const raw = SafeStorage.sessionGet(DRAFT_KEY);
       if (!raw) return false;
 
@@ -8825,91 +8825,109 @@ async function restoreCreatePostDraft() {
     
       mediaEl.setAttribute("draggable", "false");
     
-      let pressTimer = null;
-      let pendingPress = null;
       let moveState = null;
-    
-      function selectNode(e) {
-        document.querySelectorAll(".img-node.is-selected").forEach(n => n.classList.remove("is-selected"));
-        node.classList.add("is-selected");
-        e?.stopPropagation?.();
-      }
-    
 
-    
-      function clearPressTimer() {
-        if (pressTimer) {
-          clearTimeout(pressTimer);
-          pressTimer = null;
-        }
-        pendingPress = null;
-      }
-    
       function startMove(e) {
         const zoom = getEditorZoom();
         const { x, y } = getMediaTranslate(node);
-      
+
         moveState = {
           pointerId: e.pointerId,
           startX: e.clientX,
           startY: e.clientY,
           startTx: x,
           startTy: y,
-          zoom
+          zoom,
+          active: false,
+          latestX: e.clientX,
+          latestY: e.clientY,
+          rafId: 0
         };
-      
+
         node.classList.add("is-moving");
         node.style.transition = "none";
         mediaEl.setPointerCapture?.(e.pointerId);
       }
-    
+
+      function flushMove() {
+        if (!moveState) return;
+        moveState.rafId = 0;
+
+        node.dataset.tx = "0";
+        node.dataset.ty = "0";
+        moveMediaNodeInFlow(node, moveState.latestX, moveState.latestY, moveState);
+      }
+
+      function queueMove() {
+        if (!moveState || moveState.rafId) return;
+        moveState.rafId = requestAnimationFrame(flushMove);
+      }
+
       function stopMove() {
         if (!moveState) return;
+
+        if (moveState.rafId) {
+          cancelAnimationFrame(moveState.rafId);
+          moveState.rafId = 0;
+        }
+
         try { mediaEl.releasePointerCapture?.(moveState.pointerId); } catch {}
+
         moveState = null;
+        delete node.__flowDrag;
         node.classList.remove("is-moving");
         node.style.transition = "";
         scheduleDraftSave();
       }
-    
+
       node.addEventListener("click", (e) => {
         selectNode(e);
       });
-    
+
       mediaEl.addEventListener("dragstart", (e) => {
         e.preventDefault();
       });
-    
+
       mediaEl.addEventListener("pointerdown", (e) => {
         if (e.button !== 0) return;
-      
+
         e.preventDefault();
         selectNode(e);
-        clearPressTimer();
         startMove(e);
       });
 
-      
       mediaEl.addEventListener("pointermove", (e) => {
         if (!moveState || e.pointerId !== moveState.pointerId) return;
-      
+
         e.preventDefault();
-      
-        node.dataset.tx = "0";
-        node.dataset.ty = "0";
-        moveMediaNodeInFlow(node, e.clientX, e.clientY);
+
+        moveState.latestX = e.clientX;
+        moveState.latestY = e.clientY;
+
+        const dx = (e.clientX - moveState.startX) / moveState.zoom;
+        const dy = (e.clientY - moveState.startY) / moveState.zoom;
+        const dist = Math.hypot(dx, dy);
+
+        // Threshold anti-micro-drift dopo pressione lunga
+        if (!moveState.active) {
+          if (dist < 8) return;
+          moveState.active = true;
+        }
+
+        queueMove();
       });
-    
-      mediaEl.addEventListener("pointerup", () => {
-        clearPressTimer();
+
+      mediaEl.addEventListener("pointerup", (e) => {
+        if (moveState && e.pointerId === moveState.pointerId && moveState.rafId) {
+          flushMove();
+        }
         stopMove();
       });
-    
+
       mediaEl.addEventListener("pointercancel", () => {
-        clearPressTimer();
         stopMove();
       });
-    
+      
       del?.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
