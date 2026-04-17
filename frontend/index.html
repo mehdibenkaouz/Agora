@@ -4872,6 +4872,51 @@
 
     const TERMS_ACCEPT_KEY = "agora_terms_accepted_v3";
     const TERMS_VERSION = "2026-03-20-v3";
+    const SafeStorage = (() => {
+  function probe(kind) {
+    try {
+      const s = window[kind];
+      if (!s) return null;
+      const k = "__agora_storage_probe__";
+      s.setItem(k, "1");
+      s.removeItem(k);
+      return s;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  const local = probe("localStorage");
+  const session = probe("sessionStorage");
+
+  return {
+    localGet(key, fallback = "") {
+      try { return local ? (local.getItem(key) ?? fallback) : fallback; }
+      catch (_) { return fallback; }
+    },
+    localSet(key, value) {
+      try { if (local) local.setItem(key, String(value)); }
+      catch (_) {}
+    },
+    localRemove(key) {
+      try { if (local) local.removeItem(key); }
+      catch (_) {}
+    },
+
+    sessionGet(key, fallback = null) {
+      try { return session ? (session.getItem(key) ?? fallback) : fallback; }
+      catch (_) { return fallback; }
+    },
+    sessionSet(key, value) {
+      try { if (session) session.setItem(key, String(value)); }
+      catch (_) {}
+    },
+    sessionRemove(key) {
+      try { if (session) session.removeItem(key); }
+      catch (_) {}
+    }
+  };
+})();
 
 
     // --- Auth state (do NOT rely on UI text) ---
@@ -5639,15 +5684,16 @@
     const passwordInput = document.getElementById("passwordInput");
 
     function getAdminToken() {
-        return localStorage.getItem("agora_admin_token") || "";
-      }
-      
-    function getToken() {
-      return localStorage.getItem(TOKEN_KEY) || "";
+      return SafeStorage.localGet("agora_admin_token", "");
     }
+    
+    function getToken() {
+      return SafeStorage.localGet(TOKEN_KEY, "");
+    }
+    
     function setToken(t) {
-      if (t) localStorage.setItem(TOKEN_KEY, "1");
-      else localStorage.removeItem(TOKEN_KEY);
+      if (t) SafeStorage.localSet(TOKEN_KEY, "1");
+      else SafeStorage.localRemove(TOKEN_KEY);
     }
     async function api(path, opts = {}) {
       const headers = Object.assign({}, opts.headers || {});
@@ -8487,17 +8533,17 @@ const logicalBtn = card.querySelector(".logical-btn");
         savedAt: Date.now()
       };
 
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(payload));
+      SafeStorage.sessionSet(DRAFT_KEY, JSON.stringify(payload));
     }
 async function restoreCreatePostDraft() {
-      const raw = sessionStorage.getItem(DRAFT_KEY);
+      const raw = SafeStorage.sessionGet(DRAFT_KEY);
       if (!raw) return false;
 
       let draft;
       try {
         draft = JSON.parse(raw);
       } catch {
-        sessionStorage.removeItem(DRAFT_KEY);
+        SafeStorage.sessionRemove(DRAFT_KEY);
         return false;
       }
 
@@ -10311,7 +10357,7 @@ async function runSearch() {
         }
       } else {
         // Utente non loggato: usa localStorage come fallback per il primo accesso
-        const accepted = localStorage.getItem(TERMS_ACCEPT_KEY);
+        const accepted = SafeStorage.localGet(TERMS_ACCEPT_KEY, "");
         if (!accepted) {
           window.location.href = "terms.html";
           return;
@@ -10359,7 +10405,7 @@ async function runSearch() {
         return w;
       }
 
-      const saved = parseInt(localStorage.getItem(STORE));
+      const saved = parseInt(SafeStorage.localGet(STORE, ""), 10);
       if (!isNaN(saved)) applyWidth(saved);
 
       let dragging = false, startX = 0, startW = 0;
@@ -10384,7 +10430,7 @@ async function runSearch() {
         divider.classList.remove("dragging");
         document.body.style.userSelect = "";
         document.body.style.cursor = "";
-        localStorage.setItem(STORE, getW());
+        SafeStorage.localSet(STORE, getW());
       });
 
       // Touch
