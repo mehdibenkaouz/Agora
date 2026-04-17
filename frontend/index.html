@@ -8138,16 +8138,55 @@ const logicalBtn = card.querySelector(".logical-btn");
       const mediaEl = node.querySelector("img, video");
       if (!mediaEl) return;
     
+      const editorRect = createPostContent.getBoundingClientRect();
+      const zoom = getEditorZoom();
+    
       const prevPointerEvents = node.style.pointerEvents;
       node.style.pointerEvents = "none";
       const range = getRangeFromPoint(clientX, clientY);
       node.style.pointerEvents = prevPointerEvents;
     
+      // ===== 1) POSIZIONE ORIZZONTALE =====
+      const mediaRect = mediaEl.getBoundingClientRect();
+      const desiredLeft = Math.round(((clientX - editorRect.left) / zoom) - 16);
+      const maxLeft = Math.max(0, Math.round((editorRect.width / zoom) - (mediaRect.width / zoom) - 16));
+      const nextLeft = Math.max(0, Math.min(maxLeft, desiredLeft));
+    
+      const offsetFromRight = Math.max(0, maxLeft - nextLeft);
+      const useRight = nextLeft > (maxLeft / 2);
+    
+      node.style.transform = "none";
+      node.style.display = "block";
+      node.style.clear = "none";
+      node.style.marginTop = "10px";
+      node.style.marginBottom = "10px";
+    
+      if (useRight) {
+        node.dataset.align = "right";
+        node.style.float = "right";
+        node.style.marginLeft = "14px";
+        node.style.marginRight = offsetFromRight + "px";
+      } else {
+        node.dataset.align = "left";
+        node.style.float = "left";
+        node.style.marginLeft = nextLeft + "px";
+        node.style.marginRight = "14px";
+      }
+    
+      // ===== 2) POSIZIONE VERTICALE =====
+      // Se il browser non riesce a dare una caret affidabile, NON appendere in fondo.
       if (!range) return;
     
       const startContainer = range.startContainer;
-      const host = startContainer.nodeType === 3 ? startContainer.parentNode : startContainer;
+      const host = startContainer?.nodeType === 3 ? startContainer.parentNode : startContainer;
       if (!host || !createPostContent.contains(host)) return;
+    
+      // Se il punto cade ancora dentro il nodo stesso, non spostare nel DOM.
+      if (node.contains(startContainer)) return;
+    
+      // Se la caret cade sul contenitore root, spesso il browser sta mentendo
+      // e punta alla fine dell'editor: evitiamo di mandare l'immagine in basso.
+      if (host === createPostContent) return;
     
       const otherMedia = host.closest?.(".img-node");
       if (otherMedia && otherMedia !== node) {
@@ -8157,23 +8196,35 @@ const logicalBtn = card.querySelector(".logical-btn");
         } else {
           otherMedia.after(node);
         }
-      } else {
-        const r = range.cloneRange();
-        r.collapse(true);
-    
-        if (node.contains(r.startContainer)) return;
-    
-        if (r.startContainer.nodeType === 3) {
-          const textNode = r.startContainer;
-          const safeOffset = Math.max(0, Math.min(r.startOffset, textNode.nodeValue.length));
-          const tail = textNode.splitText(safeOffset);
-          tail.parentNode.insertBefore(node, tail);
-        } else {
-          const parent = r.startContainer;
-          const ref = parent.childNodes[r.startOffset] || null;
-          parent.insertBefore(node, ref);
-        }
+        return;
       }
+    
+      const r = range.cloneRange();
+      r.collapse(true);
+    
+      if (r.startContainer.nodeType === 3) {
+        const textNode = r.startContainer;
+        const safeOffset = Math.max(0, Math.min(r.startOffset, textNode.nodeValue.length));
+    
+        // Evita split inutili sullo stesso bordo del nodo corrente
+        if (node.previousSibling === textNode && safeOffset === textNode.nodeValue.length) return;
+        if (node.nextSibling === textNode && safeOffset === 0) return;
+    
+        const tail = textNode.splitText(safeOffset);
+        tail.parentNode.insertBefore(node, tail);
+        return;
+      }
+    
+      // Se siamo in un elemento "normale", inseriamo solo se il ref è reale.
+      const parent = r.startContainer;
+      const ref = parent.childNodes[r.startOffset] || null;
+    
+      // ref=null qui spesso significa "fine editor" finta: meglio non muovere.
+      if (!ref) return;
+    
+      parent.insertBefore(node, ref);
+      
+    }
     
       const zoom = getEditorZoom();
       const editorRect = createPostContent.getBoundingClientRect();
