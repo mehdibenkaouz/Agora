@@ -8125,7 +8125,12 @@ const logicalBtn = card.querySelector(".logical-btn");
     
     function applyMediaNodeTransform(node) {
       if (!node) return;
-      node.style.transform = "none";
+    
+      const x = parseInt(node?.dataset?.tx || "0", 10) || 0;
+      const y = parseInt(node?.dataset?.ty || "0", 10) || 0;
+      const rotate = parseFloat(node?.dataset?.rotate || "0") || 0;
+    
+      node.style.transform = `translate(${x}px, ${y}px) rotate(${rotate}deg)`;
     }
     function moveMediaNodeInFlow(node, clientX, clientY) {
       if (!node) return;
@@ -8722,7 +8727,7 @@ async function restoreCreatePostDraft() {
       function startMove(e) {
         const zoom = getEditorZoom();
         const { x, y } = getMediaTranslate(node);
-    
+      
         moveState = {
           pointerId: e.pointerId,
           startX: e.clientX,
@@ -8731,8 +8736,9 @@ async function restoreCreatePostDraft() {
           startTy: y,
           zoom
         };
-    
+      
         node.classList.add("is-moving");
+        node.style.transition = "none";
         mediaEl.setPointerCapture?.(e.pointerId);
       }
     
@@ -8741,6 +8747,7 @@ async function restoreCreatePostDraft() {
         try { mediaEl.releasePointerCapture?.(moveState.pointerId); } catch {}
         moveState = null;
         node.classList.remove("is-moving");
+        node.style.transition = "";
         scheduleDraftSave();
       }
     
