@@ -4439,34 +4439,34 @@
     }
 
     /* immagini published + preview */
-    .post-body img.media-align-left{
-      display:block;
-      margin: 10px auto 10px 0;
-    }
-
-    .post-body img.media-align-center{
-      display:block;
-      margin: 10px auto;
-    }
-
-    .post-body img.media-align-right{
-      display:block;
-      margin: 10px 0 10px auto;
-    }
-
+    .post-body img.media-align-left,
     .post-body video.media-align-left{
-      display:block;
-      margin: 10px auto 10px 0;
+      display: block;
+      float: left;
+      clear: none;
+      margin: 10px 14px 10px 0;
     }
-
+    
+    .post-body img.media-align-center,
     .post-body video.media-align-center{
-      display:block;
+      display: block;
+      float: none;
+      clear: both;
       margin: 10px auto;
     }
-
+    
+    .post-body img.media-align-right,
     .post-body video.media-align-right{
-      display:block;
-      margin: 10px 0 10px auto;
+      display: block;
+      float: right;
+      clear: none;
+      margin: 10px 0 10px 14px;
+    }
+    
+    .post-body::after{
+      content: "";
+      display: block;
+      clear: both;
     }
   </style>
 </head>
@@ -8183,6 +8183,36 @@ const logicalBtn = card.querySelector(".logical-btn");
       const maxLeft = Math.max(0, Math.round((editorRect.width / zoom) - (mediaRect.width / zoom) - 16));
       const nextLeft = Math.max(0, Math.min(maxLeft, desiredLeft));
     
+      const offsetFromRight = Math.max(0, maxLeft - nextLeft);
+      const useRight = nextLeft > (maxLeft / 2);
+    
+      node.style.transform = "none";
+      node.style.display = "block";
+      node.style.clear = "none";
+      node.style.marginTop = "10px";
+      node.style.marginBottom = "10px";
+    
+      if (useRight) {
+        node.dataset.align = "right";
+        node.style.float = "right";
+        node.style.marginLeft = "14px";
+        node.style.marginRight = offsetFromRight + "px";
+      } else {
+        node.dataset.align = "left";
+        node.style.float = "left";
+        node.style.marginLeft = nextLeft + "px";
+        node.style.marginRight = "14px";
+      }
+    }
+    
+      const zoom = getEditorZoom();
+      const editorRect = createPostContent.getBoundingClientRect();
+      const mediaRect = mediaEl.getBoundingClientRect();
+    
+      const desiredLeft = Math.round(((clientX - editorRect.left) / zoom) - 16);
+      const maxLeft = Math.max(0, Math.round((editorRect.width / zoom) - (mediaRect.width / zoom) - 16));
+      const nextLeft = Math.max(0, Math.min(maxLeft, desiredLeft));
+    
       node.dataset.align = "left";
       node.style.display = "block";
       node.style.float = "none";
@@ -8209,23 +8239,29 @@ const logicalBtn = card.querySelector(".logical-btn");
       node.dataset.align = safeAlign;
     
       node.style.display = "block";
-      node.style.float = "none";
-      node.style.clear = "both";
-      node.style.marginTop = "14px";
-      node.style.marginBottom = "14px";
+      node.style.transform = "none";
+      node.style.marginTop = "10px";
+      node.style.marginBottom = "10px";
     
       if (safeAlign === "left") {
+        node.style.float = "left";
+        node.style.clear = "none";
         node.style.marginLeft = "0";
-        node.style.marginRight = "auto";
-      } else if (safeAlign === "center") {
-        node.style.marginLeft = "auto";
-        node.style.marginRight = "auto";
-      } else {
-        node.style.marginLeft = "auto";
+        node.style.marginRight = "14px";
+      } else if (safeAlign === "right") {
+        node.style.float = "right";
+        node.style.clear = "none";
+        node.style.marginLeft = "14px";
         node.style.marginRight = "0";
+      } else {
+        node.style.float = "none";
+        node.style.clear = "both";
+        node.style.marginLeft = "auto";
+        node.style.marginRight = "auto";
       }
     
       applyMediaNodeTransform(node);
+      
     }
 
 
@@ -8767,18 +8803,16 @@ async function restoreCreatePostDraft() {
         clearPressTimer();
         startMove(e);
       });
-    
+
+      
       mediaEl.addEventListener("pointermove", (e) => {
         if (!moveState || e.pointerId !== moveState.pointerId) return;
       
         e.preventDefault();
       
-        const dx = Math.round((e.clientX - moveState.startX) / moveState.zoom);
-        const dy = Math.round((e.clientY - moveState.startY) / moveState.zoom);
-      
-        node.dataset.tx = String(moveState.startTx + dx);
-        node.dataset.ty = String(moveState.startTy + dy);
-        applyMediaNodeTransform(node);
+        node.dataset.tx = "0";
+        node.dataset.ty = "0";
+        moveMediaNodeInFlow(node, e.clientX, e.clientY);
       });
     
       mediaEl.addEventListener("pointerup", () => {
@@ -9235,9 +9269,13 @@ async function restoreCreatePostDraft() {
         if (w) cleanVid.style.width = w;
         
         const mlVid = (node.style && node.style.marginLeft) ? node.style.marginLeft : "";
-        if (mlVid && mlVid !== "0px" && mlVid !== "0") {
+        const mrVid = (node.style && node.style.marginRight) ? node.style.marginRight : "";
+        
+        if (mlVid && mlVid !== "auto" && mlVid !== "0px" && mlVid !== "0") {
           cleanVid.style.marginLeft = mlVid;
-          cleanVid.style.marginRight = "auto";
+        }
+        if (mrVid && mrVid !== "auto" && mrVid !== "0px" && mrVid !== "0") {
+          cleanVid.style.marginRight = mrVid;
         }
         
         const tfVid = (vid.style && vid.style.transform) ? vid.style.transform : "";
@@ -9273,9 +9311,13 @@ async function restoreCreatePostDraft() {
         if (w) cleanImg.style.width = w;
         
         const mlImg = (node.style && node.style.marginLeft) ? node.style.marginLeft : "";
-        if (mlImg && mlImg !== "0px" && mlImg !== "0") {
+        const mrImg = (node.style && node.style.marginRight) ? node.style.marginRight : "";
+        
+        if (mlImg && mlImg !== "auto" && mlImg !== "0px" && mlImg !== "0") {
           cleanImg.style.marginLeft = mlImg;
-          cleanImg.style.marginRight = "auto";
+        }
+        if (mrImg && mrImg !== "auto" && mrImg !== "0px" && mrImg !== "0") {
+          cleanImg.style.marginRight = mrImg;
         }
         
         const tfImg = (img.style && img.style.transform) ? img.style.transform : "";
