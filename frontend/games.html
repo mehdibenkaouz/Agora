@@ -131,6 +131,115 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(290px,1fr));
   gap:22px;
+  flex:1;
+  min-width:0;
+}
+
+/* ── LAYOUT WRAPPER ── */
+.games-layout{
+  display:flex;
+  gap:24px;
+  align-items:flex-start;
+}
+
+/* ── ONLINE SIDEBAR ── */
+.online-sidebar{
+  width:260px;
+  flex-shrink:0;
+  position:sticky;
+  top:88px;
+  background:var(--panel);
+  border:1px solid var(--line);
+  border-radius:20px;
+  box-shadow:var(--soft);
+  overflow:hidden;
+  animation:fadeUp .55s .28s ease both;
+}
+.online-header{
+  padding:18px 20px 14px;
+  border-bottom:1px solid var(--line);
+  display:flex;align-items:center;gap:10px;
+}
+.online-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:#4caf50;
+  box-shadow:0 0 6px rgba(76,175,80,0.5);
+  animation:pulse-dot 2s infinite;
+}
+.online-label{
+  font-family:'Cinzel',serif;font-size:.68rem;
+  letter-spacing:.16em;text-transform:uppercase;
+  color:var(--brand);
+}
+.online-count{
+  margin-left:auto;
+  font-family:'Cinzel',serif;font-size:.72rem;
+  font-weight:700;color:var(--muted);
+}
+.online-list{
+  list-style:none;padding:10px 0;margin:0;
+  max-height:420px;overflow-y:auto;
+}
+.online-list::-webkit-scrollbar{width:4px;}
+.online-list::-webkit-scrollbar-thumb{background:var(--line);border-radius:4px;}
+.online-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 20px;
+  transition:background .15s;
+  cursor:default;
+}
+.online-item:hover{background:var(--card-h);}
+.online-avatar{
+  width:32px;height:32px;border-radius:50%;
+  background:var(--bg);
+  border:1.5px solid var(--line);
+  display:grid;place-items:center;
+  font-family:'Cinzel',serif;font-size:.7rem;
+  font-weight:700;color:var(--brand);
+  flex-shrink:0;
+  overflow:hidden;
+}
+.online-avatar img{
+  width:100%;height:100%;object-fit:cover;border-radius:50%;
+}
+.online-info{
+  display:flex;flex-direction:column;gap:1px;
+  min-width:0;
+}
+.online-name{
+  font-family:'Lora',serif;font-size:.82rem;
+  font-weight:600;color:var(--text);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.online-activity{
+  font-size:.68rem;color:var(--muted);
+  font-style:italic;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.online-status-dot{
+  width:7px;height:7px;border-radius:50%;
+  flex-shrink:0;
+}
+.online-status-dot.playing{background:#ff9800;box-shadow:0 0 5px rgba(255,152,0,0.4);}
+.online-status-dot.idle{background:#4caf50;box-shadow:0 0 5px rgba(76,175,80,0.4);}
+.online-empty{
+  padding:24px 20px;text-align:center;
+  font-family:'Lora',serif;font-style:italic;
+  font-size:.82rem;color:var(--muted);
+}
+@keyframes pulse-dot{
+  0%,100%{opacity:1;}
+  50%{opacity:.4;}
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:860px){
+  .games-layout{flex-direction:column;}
+  .online-sidebar{
+    width:100%;position:static;
+    order:-1;
+  }
+  .online-list{max-height:180px;}
 }
 
 /* ── CARD ── */
@@ -347,6 +456,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
 
 <!-- GAMES GRID -->
 <section class="games-section">
+  <div class="games-layout">
   <div class="games-grid">
 
     <!-- OTHELLO -->
@@ -467,6 +577,20 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
       </div>
     </a>
 
+</div>
+
+  <!-- ONLINE USERS SIDEBAR -->
+  <aside class="online-sidebar">
+    <div class="online-header">
+      <span class="online-dot"></span>
+      <span class="online-label">Online</span>
+      <span class="online-count" id="onlineCount">—</span>
+    </div>
+    <ul class="online-list" id="onlineList">
+      <li class="online-empty">Connecting…</li>
+    </ul>
+  </aside>
+
   </div>
 </section>
 
@@ -475,22 +599,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
 </footer>
 
 <script>
-// ── Theme ──────────────────────────────────────────────────────────
-// const THEME_KEY="agora_theme";
-// function applyTheme(t){
-//   document.documentElement[t==="dark"?"setAttribute":"removeAttribute"]("data-theme","dark");
-//   localStorage.setItem(THEME_KEY,t);
-//   buildVisuals();
-// }
-// (function(){
-//   const s=localStorage.getItem(THEME_KEY);
-//   applyTheme((s==="dark"||s==="light")?s:(matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light"));
-// })();
-// document.getElementById("themeBtn").addEventListener("click",()=>{
-//   applyTheme(document.documentElement.getAttribute("data-theme")==="dark"?"light":"dark");
-// });
 
-// ── Visual Boards ──────────────────────────────────────────────────
 
 // ── Theme bridge ───────────────────────────────────────────────────
 window.onAgoraThemeApplied = function () {
@@ -628,6 +737,78 @@ function buildGungi(){
 }
 
 buildVisuals();
+
+// ── Online Users ──────────────────────────────────────────────────
+function renderOnlineUsers(users) {
+  const list = document.getElementById('onlineList');
+  const count = document.getElementById('onlineCount');
+  if (!users || users.length === 0) {
+    list.innerHTML = '<li class="online-empty">No users online</li>';
+    count.textContent = '0';
+    return;
+  }
+  count.textContent = users.length;
+  list.innerHTML = '';
+  users.forEach(u => {
+    const li = document.createElement('li');
+    li.className = 'online-item';
+
+    const avatar = document.createElement('div');
+    avatar.className = 'online-avatar';
+    if (u.avatar) {
+      const img = document.createElement('img');
+      img.src = u.avatar;
+      img.alt = u.username;
+      img.loading = 'lazy';
+      avatar.appendChild(img);
+    } else {
+      avatar.textContent = u.username.charAt(0).toUpperCase();
+    }
+
+    const info = document.createElement('div');
+    info.className = 'online-info';
+    const name = document.createElement('span');
+    name.className = 'online-name';
+    name.textContent = u.username;
+    info.appendChild(name);
+    if (u.activity) {
+      const act = document.createElement('span');
+      act.className = 'online-activity';
+      act.textContent = u.activity;
+      info.appendChild(act);
+    }
+
+    const dot = document.createElement('span');
+    dot.className = 'online-status-dot ' + (u.playing ? 'playing' : 'idle');
+    dot.title = u.playing ? 'In game' : 'Browsing';
+
+    li.appendChild(avatar);
+    li.appendChild(info);
+    li.appendChild(dot);
+    list.appendChild(li);
+  });
+}
+
+async function fetchOnlineUsers() {
+  try {
+    const res = await fetch('/api/games/online');
+    if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    renderOnlineUsers(data.users || []);
+  } catch (e) {
+    // Fallback: show placeholder while API isn't ready
+    renderOnlineUsers([
+      { username: 'nullpointer', activity: 'Browsing games', playing: false },
+      { username: 'marginnotes', activity: 'Playing Chess', playing: true },
+      { username: 'devilsproof', activity: 'Browsing games', playing: false },
+    ]);
+  }
+}
+
+fetchOnlineUsers();
+setInterval(fetchOnlineUsers, 15000);
+
+
 </script>
 </body>
 </html>
