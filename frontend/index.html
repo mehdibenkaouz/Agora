@@ -8861,9 +8861,9 @@ const logicalBtn = card.querySelector(".logical-btn");
         if (!moveState) return;
         moveState.rafId = 0;
 
-        node.dataset.tx = "0";
-        node.dataset.ty = "0";
-        moveMediaNodeInFlow(node, moveState.latestX, moveState.latestY, moveState);
+        const dx = (moveState.latestX - moveState.startX) / moveState.zoom;
+        const dy = (moveState.latestY - moveState.startY) / moveState.zoom;
+        node.style.transform = `translate(${moveState.startTx + dx}px, ${moveState.startTy + dy}px)`;
       }
 
       function queueMove() {
@@ -8877,6 +8877,13 @@ const logicalBtn = card.querySelector(".logical-btn");
         if (moveState.rafId) {
           cancelAnimationFrame(moveState.rafId);
           moveState.rafId = 0;
+        }
+
+        if (moveState.active) {
+          node.dataset.tx = "0";
+          node.dataset.ty = "0";
+          node.style.transform = "none";
+          moveMediaNodeInFlow(node, moveState.latestX, moveState.latestY, moveState);
         }
 
         try { mediaEl.releasePointerCapture?.(moveState.pointerId); } catch {}
