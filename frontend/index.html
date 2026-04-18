@@ -8938,6 +8938,11 @@ const logicalBtn = card.querySelector(".logical-btn");
       mediaEl.addEventListener("pointermove", (e) => {
         if (!moveState || e.pointerId !== moveState.pointerId) return;
 
+        if (e.buttons === 0) {
+          stopMove();
+          return;
+        }
+
         e.preventDefault();
 
         moveState.latestX = e.clientX;
