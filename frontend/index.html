@@ -8861,9 +8861,15 @@ const logicalBtn = card.querySelector(".logical-btn");
         if (!moveState) return;
         moveState.rafId = 0;
 
-        const dx = (moveState.latestX - moveState.startX) / moveState.zoom;
-        const dy = (moveState.latestY - moveState.startY) / moveState.zoom;
-        node.style.transform = `translate(${moveState.startTx + dx}px, ${moveState.startTy + dy}px)`;
+        node.dataset.tx = "0";
+        node.dataset.ty = "0";
+        node.style.transform = "none";
+        moveMediaNodeInFlow(node, moveState.latestX, moveState.latestY, moveState);
+
+        moveState.startX = moveState.latestX;
+        moveState.startY = moveState.latestY;
+        moveState.startTx = 0;
+        moveState.startTy = 0;
       }
 
       function queueMove() {
