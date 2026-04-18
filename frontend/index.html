@@ -8827,6 +8827,14 @@ const logicalBtn = card.querySelector(".logical-btn");
     
       let moveState = null;
 
+      function selectNode() {
+        const sel = window.getSelection();
+        const range = document.createRange();
+        range.selectNode(node);
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+
       function startMove(e) {
         const zoom = getEditorZoom();
         const { x, y } = getMediaTranslate(node);
