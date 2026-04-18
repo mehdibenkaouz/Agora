@@ -9352,11 +9352,19 @@ const logicalBtn = card.querySelector(".logical-btn");
         savedSrc = el.getAttribute("src");
       }
 
+      let savedMediaClass = null;
+      if (tag === "IMG" || tag === "VIDEO") {
+        var cls = el.getAttribute("class") || "";
+        var match = cls.match(/media-align-(?:left|center|right)/);
+        if (match) savedMediaClass = match[0];
+      }
+
       // rimuovi TUTTI gli attributi
       [...el.attributes].forEach(a => el.removeAttribute(a.name));
 
       // ripristina solo quelli permessi
       if (savedStyle) el.setAttribute("style", savedStyle);
+      if (savedMediaClass) el.setAttribute("class", savedMediaClass);
 
       if (tag === "A") {
         if (savedHref && !/^\s*javascript:/i.test(savedHref)) {
