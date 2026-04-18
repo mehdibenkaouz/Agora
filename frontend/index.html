@@ -8861,13 +8861,15 @@ const logicalBtn = card.querySelector(".logical-btn");
         if (!moveState) return;
         moveState.rafId = 0;
 
+        moveState.zoom = getEditorZoom();
+
         var dx = (moveState.latestX - moveState.startX) / moveState.zoom;
         var dy = (moveState.latestY - moveState.startY) / moveState.zoom;
         node.style.transform = "translate(" + (moveState.startTx + dx) + "px, " + (moveState.startTy + dy) + "px)";
 
         var now = Date.now();
         if (!moveState.lastReflowTime) moveState.lastReflowTime = 0;
-        if (now - moveState.lastReflowTime < 400) return;
+        if (now - moveState.lastReflowTime < 300) return;
 
         if (!moveState.lastReflowX) {
           moveState.lastReflowX = moveState.startX;
@@ -8879,26 +8881,47 @@ const logicalBtn = card.querySelector(".logical-btn");
           moveState.latestY - moveState.lastReflowY
         );
 
-        if (reflowDist > 40) {
-          var rectBefore = node.getBoundingClientRect();
+        if (reflowDist > 30) {
+          var visualRect = node.getBoundingClientRect();
 
           node.style.transform = "none";
           node.dataset.tx = "0";
           node.dataset.ty = "0";
           moveMediaNodeInFlow(node, moveState.latestX, moveState.latestY, moveState);
 
-          var rectAfter = node.getBoundingClientRect();
-          var jumpY = Math.abs(rectAfter.top - rectBefore.top);
+          var newDomRect = node.getBoundingClientRect();
+          var domJumpX = newDomRect.left - visualRect.left;
+          var domJumpY = newDomRect.top - visualRect.top;
 
-          if (jumpY > 120) {
-            node.style.transform = "translate(" + (moveState.startTx + dx) + "px, " + (moveState.startTy + dy) + "px)";
+          console.log("[DRAG:reflow]", {
+            zoom: moveState.zoom,
+            cursor: { x: moveState.latestX, y: moveState.latestY },
+            visualBefore: { top: Math.round(visualRect.top), left: Math.round(visualRect.left) },
+            domAfter: { top: Math.round(newDomRect.top), left: Math.round(newDomRect.left) },
+            jump: { x: Math.round(domJumpX), y: Math.round(domJumpY) },
+            reflowDist: Math.round(reflowDist)
+          });
+
+          if (Math.abs(domJumpY) > 150) {
+            console.warn("[DRAG:reflow] REJECTED — jump too large:", Math.round(domJumpY));
+            var compensateX = visualRect.left - newDomRect.left;
+            var compensateY = visualRect.top - newDomRect.top;
+            node.style.transform = "translate(" + compensateX + "px, " + compensateY + "px)";
+            moveState.startTx = compensateX;
+            moveState.startTy = compensateY;
+            moveState.startX = moveState.latestX;
+            moveState.startY = moveState.latestY;
             return;
           }
 
+          var compensateX = visualRect.left - newDomRect.left;
+          var compensateY = visualRect.top - newDomRect.top;
+          node.style.transform = "translate(" + compensateX + "px, " + compensateY + "px)";
+
+          moveState.startTx = compensateX;
+          moveState.startTy = compensateY;
           moveState.startX = moveState.latestX;
           moveState.startY = moveState.latestY;
-          moveState.startTx = 0;
-          moveState.startTy = 0;
           moveState.lastReflowX = moveState.latestX;
           moveState.lastReflowY = moveState.latestY;
           moveState.lastReflowTime = now;
