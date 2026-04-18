@@ -8861,15 +8861,33 @@ const logicalBtn = card.querySelector(".logical-btn");
         if (!moveState) return;
         moveState.rafId = 0;
 
-        node.dataset.tx = "0";
-        node.dataset.ty = "0";
-        node.style.transform = "none";
-        moveMediaNodeInFlow(node, moveState.latestX, moveState.latestY, moveState);
+        var dx = (moveState.latestX - moveState.startX) / moveState.zoom;
+        var dy = (moveState.latestY - moveState.startY) / moveState.zoom;
+        node.style.transform = "translate(" + (moveState.startTx + dx) + "px, " + (moveState.startTy + dy) + "px)";
 
-        moveState.startX = moveState.latestX;
-        moveState.startY = moveState.latestY;
-        moveState.startTx = 0;
-        moveState.startTy = 0;
+        if (!moveState.lastReflowX) {
+          moveState.lastReflowX = moveState.startX;
+          moveState.lastReflowY = moveState.startY;
+        }
+
+        var reflowDist = Math.hypot(
+          moveState.latestX - moveState.lastReflowX,
+          moveState.latestY - moveState.lastReflowY
+        );
+
+        if (reflowDist > 40) {
+          node.style.transform = "none";
+          node.dataset.tx = "0";
+          node.dataset.ty = "0";
+          moveMediaNodeInFlow(node, moveState.latestX, moveState.latestY, moveState);
+
+          moveState.startX = moveState.latestX;
+          moveState.startY = moveState.latestY;
+          moveState.startTx = 0;
+          moveState.startTy = 0;
+          moveState.lastReflowX = moveState.latestX;
+          moveState.lastReflowY = moveState.latestY;
+        }
       }
 
       function queueMove() {
