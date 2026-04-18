@@ -8865,6 +8865,10 @@ const logicalBtn = card.querySelector(".logical-btn");
         var dy = (moveState.latestY - moveState.startY) / moveState.zoom;
         node.style.transform = "translate(" + (moveState.startTx + dx) + "px, " + (moveState.startTy + dy) + "px)";
 
+        var now = Date.now();
+        if (!moveState.lastReflowTime) moveState.lastReflowTime = 0;
+        if (now - moveState.lastReflowTime < 400) return;
+
         if (!moveState.lastReflowX) {
           moveState.lastReflowX = moveState.startX;
           moveState.lastReflowY = moveState.startY;
@@ -8876,10 +8880,20 @@ const logicalBtn = card.querySelector(".logical-btn");
         );
 
         if (reflowDist > 40) {
+          var rectBefore = node.getBoundingClientRect();
+
           node.style.transform = "none";
           node.dataset.tx = "0";
           node.dataset.ty = "0";
           moveMediaNodeInFlow(node, moveState.latestX, moveState.latestY, moveState);
+
+          var rectAfter = node.getBoundingClientRect();
+          var jumpY = Math.abs(rectAfter.top - rectBefore.top);
+
+          if (jumpY > 120) {
+            node.style.transform = "translate(" + (moveState.startTx + dx) + "px, " + (moveState.startTy + dy) + "px)";
+            return;
+          }
 
           moveState.startX = moveState.latestX;
           moveState.startY = moveState.latestY;
@@ -8887,6 +8901,7 @@ const logicalBtn = card.querySelector(".logical-btn");
           moveState.startTy = 0;
           moveState.lastReflowX = moveState.latestX;
           moveState.lastReflowY = moveState.latestY;
+          moveState.lastReflowTime = now;
         }
       }
 
