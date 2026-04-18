@@ -795,18 +795,27 @@ async function fetchOnlineUsers() {
     if (!res.ok) throw new Error(res.status);
     const data = await res.json();
     renderOnlineUsers(data.users || []);
-  } catch (e) {
-    // Fallback: show placeholder while API isn't ready
-    renderOnlineUsers([
-      { username: 'nullpointer', activity: 'Browsing games', playing: false },
-      { username: 'marginnotes', activity: 'Playing Chess', playing: true },
-      { username: 'devilsproof', activity: 'Browsing games', playing: false },
-    ]);
+} catch (e) {
+    renderOnlineUsers([]);
   }
 }
 
 fetchOnlineUsers();
 setInterval(fetchOnlineUsers, 15000);
+
+// ── Heartbeat (presence ping) ─────────────────────────────────────
+async function sendHeartbeat() {
+  try {
+    await fetch('/api/games/heartbeat', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page: 'games' })
+    });
+  } catch (e) { /* silent */ }
+}
+sendHeartbeat();
+setInterval(sendHeartbeat, 60000);
 
 
 </script>
