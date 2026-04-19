@@ -438,11 +438,20 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
 
 <header class="topbar">
   <a href="index.html" class="topbar-brand">← AGORÀ</a>
-  <div class="topbar-right">
-    <button class="btn-icon" id="themeBtn" title="Toggle theme">
-      <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-    </button>
-  </div>
+<div class="topbar-right">
+  <button class="btn-icon" id="gamesNotifBtn" title="Notifications" aria-label="Notifications">
+    <span class="notif-dot" id="gamesNotifDot"></span>
+    <svg viewBox="0 5 25 25">
+      <path d="M15 18H9" />
+      <path d="M18 16H6l1.4-1.7a2 2 0 0 0 .46-1.27V10a4.14 4.14 0 0 1 8.28 0v3.03a2 2 0 0 0 .46 1.27L18 16Z"/>
+      <path d="M10.8 18a1.2 1.2 0 0 0 2.4 0"/>
+    </svg>
+  </button>
+
+  <button class="btn-icon" id="themeBtn" title="Toggle theme">
+    <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+  </button>
+</div>
 </header>
 
 <!-- HERO -->
@@ -843,5 +852,28 @@ window.addEventListener("focus", () => {
 
 
 </script>
+  <div id="gamesNotifModal" class="notif-modal" aria-hidden="true">
+  <div class="notif-card">
+    <div class="notif-card-head">
+      <span class="notif-card-title">Notifications</span>
+      <button id="gamesNotifClose" class="btn-icon" aria-label="Close">×</button>
+    </div>
+    <div class="notif-card-body" id="gamesNotifList"></div>
+  </div>
+</div>
+
+<div id="gamesDirectModal" class="notif-modal" aria-hidden="true">
+  <div class="notif-card">
+    <div class="notif-card-head">
+      <span class="notif-card-title" id="gamesDirectTitle">Direct</span>
+      <button id="gamesDirectClose" class="btn-icon" aria-label="Close">×</button>
+    </div>
+    <div class="notif-card-body" id="gamesDirectMessages" style="display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow:auto;"></div>
+    <div style="padding:14px 18px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:10px;">
+      <input id="gamesDirectInput" type="text" placeholder="Write a message…" style="width:100%;min-height:42px;border-radius:12px;border:1px solid var(--line);padding:0 12px;background:var(--panel2);color:var(--text);">
+      <button id="gamesDirectSend" class="btn-icon" aria-label="Send">➤</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
