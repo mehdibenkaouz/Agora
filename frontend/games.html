@@ -1018,18 +1018,20 @@ function updateGamesNotifDot(count) {
 
 async function loadGamesNotifications() {
   if (!getToken()) return;
+
   const data = await api("/api/notifications", { method: "GET" });
   const notifs = data.notifications || [];
   updateGamesNotifDot(data.unread || 0);
 
   if (!gamesNotifList) return;
+
   if (!notifs.length) {
-    gamesNotifList.innerHTML = `<div class="online-empty">No notifications yet.</div>`;
+    gamesNotifList.innerHTML = `<div class="online-empty" style="padding:18px 20px;">No notifications yet.</div>`;
     return;
   }
 
   gamesNotifList.innerHTML = notifs.map(n => `
-    <div class="online-item" data-thread-id="${n.direct_thread_id || ''}" data-post-id="${n.post_id || ''}">
+    <div class="online-item" data-thread-id="${escapeHtml(n.direct_thread_id || '')}" data-post-id="${escapeHtml(n.post_id || '')}">
       <div class="online-info">
         <span class="online-name">${escapeHtml(n.message || "")}</span>
         <span class="online-activity">${new Date(n.created_at).toLocaleString()}</span>
