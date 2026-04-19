@@ -850,7 +850,12 @@ window.addEventListener("focus", () => {
   fetchOnlineUsers();
 });
 
-
+(function openDirectFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const directId = params.get("direct");
+  if (!directId) return;
+  openDirectByThreadId(directId).catch(() => {});
+})();
 </script>
   <div id="gamesNotifModal" class="notif-modal" aria-hidden="true">
   <div class="notif-card">
