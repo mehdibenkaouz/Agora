@@ -928,12 +928,22 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     sendHeartbeat();
     fetchOnlineUsers();
+    if (getToken()) {
+      api("/api/notifications", { method: "GET" })
+        .then(data => updateGamesNotifDot(data.unread || 0))
+        .catch(() => {});
+    }
   }
 });
 
 window.addEventListener("focus", () => {
   sendHeartbeat();
   fetchOnlineUsers();
+  if (getToken()) {
+    api("/api/notifications", { method: "GET" })
+      .then(data => updateGamesNotifDot(data.unread || 0))
+      .catch(() => {});
+  }
 });
 
 (function openDirectFromUrl() {
@@ -1062,10 +1072,25 @@ gamesNotifBtn?.addEventListener("click", (e) => {
 
 gamesNotifClose?.addEventListener("click", closeGamesNotifModal);
 
-setInterval(() => {
-  if (!getToken()) return;
-  loadGamesNotifications().catch(() => {});
-}, 10000);
+let GAMES_NOTIF_POLL = null;
+
+function startGamesNotifPolling() {
+  if (GAMES_NOTIF_POLL) clearInterval(GAMES_NOTIF_POLL);
+
+  const tick = async () => {
+    if (!getToken()) return;
+    try {
+      const data = await api("/api/notifications", { method: "GET" });
+      updateGamesNotifDot(data.unread || 0);
+    } catch (e) {
+      console.warn("games notif poll failed", e);
+    }
+  };
+
+  tick(); // refresh immediato all'apertura pagina
+  GAMES_NOTIF_POLL = setInterval(tick, 4000);
+}
+startGamesNotifPolling();
 
 // ===== DIRECTS =====
 const gamesDirectModal    = document.getElementById("gamesDirectModal");
