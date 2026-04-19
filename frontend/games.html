@@ -186,7 +186,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
   display:flex;align-items:center;gap:10px;
   padding:9px 20px;
   transition:background .15s;
-  cursor:default;
+  cursor:pointer;
 }
 .online-item:hover{background:var(--card-h);}
 .online-avatar{
@@ -742,16 +742,20 @@ buildVisuals();
 function renderOnlineUsers(users) {
   const list = document.getElementById('onlineList');
   const count = document.getElementById('onlineCount');
+
   if (!users || users.length === 0) {
     list.innerHTML = '<li class="online-empty">No users online</li>';
     count.textContent = '0';
     return;
   }
+
   count.textContent = users.length;
   list.innerHTML = '';
+
   users.forEach(u => {
     const li = document.createElement('li');
     li.className = 'online-item';
+    li.dataset.userId = u.user_id || "";
 
     const avatar = document.createElement('div');
     avatar.className = 'online-avatar';
@@ -762,15 +766,17 @@ function renderOnlineUsers(users) {
       img.loading = 'lazy';
       avatar.appendChild(img);
     } else {
-      avatar.textContent = u.username.charAt(0).toUpperCase();
+      avatar.textContent = (u.username || '?').charAt(0).toUpperCase();
     }
 
     const info = document.createElement('div');
     info.className = 'online-info';
+
     const name = document.createElement('span');
     name.className = 'online-name';
-    name.textContent = u.username;
+    name.textContent = u.username || "User";
     info.appendChild(name);
+
     if (u.activity) {
       const act = document.createElement('span');
       act.className = 'online-activity';
@@ -785,6 +791,12 @@ function renderOnlineUsers(users) {
     li.appendChild(avatar);
     li.appendChild(info);
     li.appendChild(dot);
+
+    li.addEventListener('click', async () => {
+      if (!u.user_id) return;
+      await openDirectWithUser(u.user_id, u.username || "User");
+    });
+
     list.appendChild(li);
   });
 }
@@ -801,7 +813,7 @@ async function fetchOnlineUsers() {
 }
 
 fetchOnlineUsers();
-setInterval(fetchOnlineUsers, 2000);
+setInterval(fetchOnlineUsers, 1500);
 
 // ── Heartbeat (presence ping) ─────────────────────────────────────
 async function sendHeartbeat() {
@@ -815,7 +827,19 @@ async function sendHeartbeat() {
   } catch (e) { /* silent */ }
 }
 sendHeartbeat();
-setInterval(sendHeartbeat, 5000);
+setInterval(sendHeartbeat, 8000);
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") {
+    sendHeartbeat();
+    fetchOnlineUsers();
+  }
+});
+
+window.addEventListener("focus", () => {
+  sendHeartbeat();
+  fetchOnlineUsers();
+});
 
 
 </script>
