@@ -880,5 +880,223 @@ window.addEventListener("focus", () => {
     </div>
   </div>
 </div>
+
+
+<script>
+function getToken() {
+  const m = document.cookie.match(/(?:^|;\s*)agora_session=([^\s;]+)/);
+  return m ? m[1] : "";
+}
+
+async function api(url, options = {}) {
+  const token = getToken();
+  const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+  if (token) headers.Authorization = "Bearer " + token;
+
+  const res = await fetch(url, { ...options, headers, credentials: "same-origin" });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error || ("http_" + res.status));
+  return data;
+}
+
+const gamesNotifBtn   = document.getElementById("gamesNotifBtn");
+const gamesNotifDot   = document.getElementById("gamesNotifDot");
+const gamesNotifModal = document.getElementById("gamesNotifModal");
+const gamesNotifClose = document.getElementById("gamesNotifClose");
+const gamesNotifList  = document.getElementById("gamesNotifList");
+
+function updateGamesNotifDot(count) {
+  if (!gamesNotifDot) return;
+  if (count > 0) {
+    gamesNotifDot.textContent = count > 99 ? "99+" : String(count);
+    gamesNotifDot.style.display = "flex";
+  } else {
+    gamesNotifDot.style.display = "none";
+  }
+}
+
+async function loadGamesNotifications() {
+  if (!getToken()) return;
+  const data = await api("/api/notifications", { method: "GET" });
+  const notifs = data.notifications || [];
+  updateGamesNotifDot(data.unread || 0);
+
+  if (!gamesNotifList) return;
+  if (!notifs.length) {
+    gamesNotifList.innerHTML = `<div class="online-empty">No notifications yet.</div>`;
+    return;
+  }
+
+  gamesNotifList.innerHTML = notifs.map(n => `
+    <div class="online-item" data-thread-id="${n.direct_thread_id || ''}" data-post-id="${n.post_id || ''}">
+      <div class="online-info">
+        <span class="online-name">${escapeHtml(n.message || "")}</span>
+        <span class="online-activity">${new Date(n.created_at).toLocaleString()}</span>
+      </div>
+    </div>
+  `).join("");
+
+  gamesNotifList.querySelectorAll(".online-item").forEach(item => {
+    item.addEventListener("click", async () => {
+      const threadId = item.dataset.threadId;
+      if (threadId) {
+        await openDirectByThreadId(threadId);
+        closeGamesNotifModal();
+        return;
+      }
+
+      const postId = item.dataset.postId;
+      if (postId) {
+        window.location.href = "index.html?post=" + encodeURIComponent(postId);
+      }
+    });
+  });
+}
+
+function openGamesNotifModal() {
+  gamesNotifModal?.classList.add("open");
+  gamesNotifModal?.setAttribute("aria-hidden", "false");
+  loadGamesNotifications().catch(() => {});
+  if (getToken()) {
+    api("/api/notifications/read", { method: "POST" }).then(() => {
+      updateGamesNotifDot(0);
+    }).catch(() => {});
+  }
+}
+
+function closeGamesNotifModal() {
+  gamesNotifModal?.classList.remove("open");
+  gamesNotifModal?.setAttribute("aria-hidden", "true");
+}
+
+gamesNotifBtn?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  gamesNotifModal?.classList.contains("open") ? closeGamesNotifModal() : openGamesNotifModal();
+});
+
+gamesNotifClose?.addEventListener("click", closeGamesNotifModal);
+
+setInterval(() => {
+  if (!getToken()) return;
+  loadGamesNotifications().catch(() => {});
+}, 10000);
+
+// ===== DIRECTS =====
+const gamesDirectModal    = document.getElementById("gamesDirectModal");
+const gamesDirectTitle    = document.getElementById("gamesDirectTitle");
+const gamesDirectClose    = document.getElementById("gamesDirectClose");
+const gamesDirectMessages = document.getElementById("gamesDirectMessages");
+const gamesDirectInput    = document.getElementById("gamesDirectInput");
+const gamesDirectSend     = document.getElementById("gamesDirectSend");
+
+let CURRENT_DIRECT_ID = "";
+let CURRENT_DIRECT_NAME = "";
+let DIRECT_POLL = null;
+
+function closeDirectModal() {
+  CURRENT_DIRECT_ID = "";
+  CURRENT_DIRECT_NAME = "";
+  if (DIRECT_POLL) clearInterval(DIRECT_POLL);
+  DIRECT_POLL = null;
+  gamesDirectModal?.classList.remove("open");
+  gamesDirectModal?.setAttribute("aria-hidden", "true");
+}
+
+gamesDirectClose?.addEventListener("click", closeDirectModal);
+
+async function openDirectWithUser(targetUserId, targetName) {
+  const data = await api("/api/directs/open", {
+    method: "POST",
+    body: JSON.stringify({ target_user_id: targetUserId })
+  });
+
+  CURRENT_DIRECT_ID = data.thread.id;
+  CURRENT_DIRECT_NAME = targetName || "Direct";
+  gamesDirectTitle.textContent = "Direct · " + CURRENT_DIRECT_NAME;
+
+  gamesDirectModal?.classList.add("open");
+  gamesDirectModal?.setAttribute("aria-hidden", "false");
+
+  await loadDirectMessages();
+
+  if (DIRECT_POLL) clearInterval(DIRECT_POLL);
+  DIRECT_POLL = setInterval(loadDirectMessages, 4000);
+}
+
+async function openDirectByThreadId(threadId) {
+  CURRENT_DIRECT_ID = threadId;
+  CURRENT_DIRECT_NAME = "Direct";
+  gamesDirectTitle.textContent = "Direct";
+
+  gamesDirectModal?.classList.add("open");
+  gamesDirectModal?.setAttribute("aria-hidden", "false");
+
+  await loadDirectMessages();
+
+  if (DIRECT_POLL) clearInterval(DIRECT_POLL);
+  DIRECT_POLL = setInterval(loadDirectMessages, 4000);
+}
+
+async function loadDirectMessages() {
+  if (!CURRENT_DIRECT_ID) return;
+  try {
+    const data = await api("/api/directs/" + encodeURIComponent(CURRENT_DIRECT_ID) + "/messages", {
+      method: "GET"
+    });
+
+    const msgs = data.messages || [];
+    gamesDirectMessages.innerHTML = msgs.map(m => `
+      <div style="padding:10px 12px;border-radius:12px;background:var(--panel2);white-space:pre-wrap;">
+        ${escapeHtml(m.body || "")}
+        <div style="margin-top:4px;font-size:.72rem;color:var(--muted);">
+          ${new Date(m.created_at).toLocaleString()}
+        </div>
+      </div>
+    `).join("");
+
+    gamesDirectMessages.scrollTop = gamesDirectMessages.scrollHeight;
+  } catch (e) {
+    if (String(e.message || "").includes("thread_expired") || String(e.message || "").includes("not_found")) {
+      closeDirectModal();
+    }
+  }
+}
+
+gamesDirectSend?.addEventListener("click", async () => {
+  const body = String(gamesDirectInput?.value || "").trim();
+  if (!CURRENT_DIRECT_ID || !body) return;
+
+  gamesDirectSend.disabled = true;
+  try {
+    await api("/api/directs/" + encodeURIComponent(CURRENT_DIRECT_ID) + "/messages", {
+      method: "POST",
+      body: JSON.stringify({ body })
+    });
+    gamesDirectInput.value = "";
+    await loadDirectMessages();
+  } finally {
+    gamesDirectSend.disabled = false;
+  }
+});
+
+gamesDirectInput?.addEventListener("keydown", async (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    gamesDirectSend?.click();
+  }
+});
+
+function escapeHtml(s) {
+  return String(s || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+
+  
+</script>
 </body>
 </html>
