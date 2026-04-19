@@ -971,8 +971,21 @@ window.addEventListener("focus", () => {
       <button id="gamesDirectClose" class="btn-icon" aria-label="Close">×</button>
     </div>
     <div class="notif-card-body" id="gamesDirectMessages" style="display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow:auto;"></div>
-    <div style="padding:14px 18px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:10px;">
-      <input id="gamesDirectInput" type="text" placeholder="Write a message…" style="width:100%;min-height:42px;border-radius:12px;border:1px solid var(--line);padding:0 12px;background:var(--panel-2);color:var(--text);">
+    <div style="padding:14px 18px;border-top:1px solid var(--line);display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:end;position:relative;">
+      <div style="position:relative;">
+        <button id="gamesDirectPlus" class="btn-icon" aria-label="Open direct actions" title="Challenge">
+          +
+        </button>
+        <div id="gamesDirectMenu" style="display:none;position:absolute;left:0;bottom:calc(100% + 10px);min-width:230px;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:8px;z-index:20;"></div>
+      </div>
+    
+      <input
+        id="gamesDirectInput"
+        type="text"
+        placeholder="Write a message…"
+        style="width:100%;min-height:42px;border-radius:999px;border:1px solid var(--line);padding:0 14px;background:var(--panel-2);color:var(--text);"
+      >
+    
       <button id="gamesDirectSend" class="btn-icon" aria-label="Send">➤</button>
     </div>
   </div>
@@ -1090,21 +1103,91 @@ function startGamesNotifPolling() {
 }
 startGamesNotifPolling();
 
-// ===== DIRECTS =====
+
+  // ===== DIRECTS =====
 const gamesDirectModal    = document.getElementById("gamesDirectModal");
 const gamesDirectTitle    = document.getElementById("gamesDirectTitle");
 const gamesDirectClose    = document.getElementById("gamesDirectClose");
 const gamesDirectMessages = document.getElementById("gamesDirectMessages");
 const gamesDirectInput    = document.getElementById("gamesDirectInput");
 const gamesDirectSend     = document.getElementById("gamesDirectSend");
+const gamesDirectPlus     = document.getElementById("gamesDirectPlus");
+const gamesDirectMenu     = document.getElementById("gamesDirectMenu");
+
+const DIRECT_EVENT_PREFIX = "[[AGORA_DIRECT_EVENT]]";
+const DIRECT_GAME_OPTIONS = [
+  { key: "othello", label: "Othello", icon: "◐" },
+  { key: "tris9",   label: "Tris ×9", icon: "✕" },
+  { key: "go",      label: "Go",      icon: "●" },
+  { key: "chess",   label: "Chess",   icon: "♞" },
+  { key: "gungi",   label: "Gungi",   icon: "⬟" }
+];
 
 let CURRENT_DIRECT_ID = "";
 let CURRENT_DIRECT_NAME = "";
 let DIRECT_POLL = null;
+let ME_USER_ID = "";
+
+if (gamesDirectMessages) {
+  gamesDirectMessages.style.padding = "14px";
+  gamesDirectMessages.style.background =
+    "linear-gradient(180deg, rgba(87,25,41,.035), rgba(87,25,41,.01))";
+}
+
+async function ensureMeUserId() {
+  if (ME_USER_ID) return ME_USER_ID;
+  try {
+    const me = await api("/api/me", { method: "GET" });
+    ME_USER_ID = me?.user?.id || "";
+  } catch (_) {
+    ME_USER_ID = "";
+  }
+  return ME_USER_ID;
+}
+
+function parseDirectEvent(raw) {
+  const text = String(raw || "");
+  if (!text.startsWith(DIRECT_EVENT_PREFIX)) return null;
+  try {
+    return JSON.parse(text.slice(DIRECT_EVENT_PREFIX.length));
+  } catch (_) {
+    return null;
+  }
+}
+
+function formatDirectTime(iso) {
+  try {
+    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  } catch (_) {
+    return "";
+  }
+}
+
+function closeDirectMenu() {
+  if (gamesDirectMenu) gamesDirectMenu.style.display = "none";
+}
+
+function buildDirectMenu() {
+  if (!gamesDirectMenu) return;
+  gamesDirectMenu.innerHTML = DIRECT_GAME_OPTIONS.map(g => `
+    <button
+      type="button"
+      data-game-key="${escapeHtml(g.key)}"
+      style="width:100%;display:flex;align-items:center;gap:10px;border:none;background:transparent;padding:10px 12px;border-radius:12px;color:var(--text);cursor:pointer;text-align:left;"
+      onmouseover="this.style.background='var(--card-h)'"
+      onmouseout="this.style.background='transparent'"
+    >
+      <span style="width:22px;text-align:center;font-size:1rem;">${escapeHtml(g.icon)}</span>
+      <span style="font-weight:700;">${escapeHtml(g.label)}</span>
+    </button>
+  `).join("");
+}
+buildDirectMenu();
 
 function closeDirectModal() {
   CURRENT_DIRECT_ID = "";
   CURRENT_DIRECT_NAME = "";
+  closeDirectMenu();
   if (DIRECT_POLL) clearInterval(DIRECT_POLL);
   DIRECT_POLL = null;
   gamesDirectModal?.classList.remove("open");
@@ -1113,7 +1196,40 @@ function closeDirectModal() {
 
 gamesDirectClose?.addEventListener("click", closeDirectModal);
 
+gamesDirectPlus?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (!gamesDirectMenu) return;
+  gamesDirectMenu.style.display = gamesDirectMenu.style.display === "block" ? "none" : "block";
+});
+
+gamesDirectMenu?.addEventListener("click", async (e) => {
+  const btn = e.target.closest("[data-game-key]");
+  if (!btn) return;
+  const gameKey = String(btn.dataset.gameKey || "").trim();
+  if (!gameKey || !CURRENT_DIRECT_ID) return;
+
+  closeDirectMenu();
+  gamesDirectPlus.disabled = true;
+  try {
+    await api("/api/directs/" + encodeURIComponent(CURRENT_DIRECT_ID) + "/invite", {
+      method: "POST",
+      body: JSON.stringify({ game_key: gameKey })
+    });
+    await loadDirectMessages();
+  } finally {
+    gamesDirectPlus.disabled = false;
+  }
+});
+
+document.addEventListener("click", (e) => {
+  if (!e.target.closest("#gamesDirectMenu") && !e.target.closest("#gamesDirectPlus")) {
+    closeDirectMenu();
+  }
+});
+
 async function openDirectWithUser(targetUserId, targetName) {
+  await ensureMeUserId();
+
   const data = await api("/api/directs/open", {
     method: "POST",
     body: JSON.stringify({ target_user_id: targetUserId })
@@ -1125,6 +1241,7 @@ async function openDirectWithUser(targetUserId, targetName) {
 
   gamesDirectModal?.classList.add("open");
   gamesDirectModal?.setAttribute("aria-hidden", "false");
+  gamesDirectMessages.innerHTML = `<div class="online-empty">Loading conversation…</div>`;
 
   await loadDirectMessages();
 
@@ -1133,12 +1250,15 @@ async function openDirectWithUser(targetUserId, targetName) {
 }
 
 async function openDirectByThreadId(threadId) {
+  await ensureMeUserId();
+
   CURRENT_DIRECT_ID = threadId;
   CURRENT_DIRECT_NAME = "Direct";
   gamesDirectTitle.textContent = "Direct";
 
   gamesDirectModal?.classList.add("open");
   gamesDirectModal?.setAttribute("aria-hidden", "false");
+  gamesDirectMessages.innerHTML = `<div class="online-empty">Loading conversation…</div>`;
 
   await loadDirectMessages();
 
@@ -1146,23 +1266,182 @@ async function openDirectByThreadId(threadId) {
   DIRECT_POLL = setInterval(loadDirectMessages, 4000);
 }
 
+function getInviteResponseMap(messages) {
+  const map = new Map();
+  for (const m of messages || []) {
+    const ev = parseDirectEvent(m.body);
+    if (ev?.kind === "game_invite_response" && ev.invite_id) {
+      map.set(ev.invite_id, ev);
+    }
+  }
+  return map;
+}
+
+function renderPlainDirectMessage(m, mine) {
+  const bubbleBg = mine ? "var(--brand)" : "var(--panel-2)";
+  const bubbleColor = mine ? "#fff" : "var(--text)";
+  const metaColor = mine ? "rgba(255,255,255,.78)" : "var(--muted)";
+  const radius = mine ? "18px 18px 4px 18px" : "18px 18px 18px 4px";
+
+  return `
+    <div style="display:flex;justify-content:${mine ? "flex-end" : "flex-start"};">
+      <div style="max-width:78%;padding:10px 12px;border-radius:${radius};background:${bubbleBg};color:${bubbleColor};white-space:pre-wrap;box-shadow:var(--soft);">
+        ${escapeHtml(m.body || "")}
+        <div style="margin-top:6px;font-size:.72rem;color:${metaColor};text-align:right;">
+          ${formatDirectTime(m.created_at)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderInviteMessage(m, ev, responseEv, mine) {
+  const status = responseEv?.response || "pending";
+  const statusLabel =
+    status === "accepted" ? "Accepted" :
+    status === "declined" ? "Declined" :
+    mine ? "Sent" : "Pending";
+
+  const showActions = !mine && status === "pending";
+  const openGameLink = status === "accepted"
+    ? `<a href="${escapeHtml(ev.game_url || (ev.game_key + ".html"))}" style="display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 12px;border-radius:999px;text-decoration:none;background:var(--brand);color:#fff;font-weight:700;">Open game</a>`
+    : "";
+
+  return `
+    <div style="display:flex;justify-content:${mine ? "flex-end" : "flex-start"};">
+      <div style="max-width:82%;padding:12px;border-radius:${mine ? "18px 18px 4px 18px" : "18px 18px 18px 4px"};background:var(--panel);border:1px solid var(--line);box-shadow:var(--soft);">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div>
+            <div style="font-family:'Cinzel',serif;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--brand);">
+              Game Challenge
+            </div>
+            <div style="margin-top:4px;font-size:1rem;font-weight:800;color:var(--text);">
+              ${escapeHtml(ev.game_label || "Game")}
+            </div>
+          </div>
+          <div style="padding:6px 10px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);font-size:.72rem;color:var(--muted);white-space:nowrap;">
+            ${escapeHtml(statusLabel)}
+          </div>
+        </div>
+
+        <div style="margin-top:8px;font-size:.88rem;color:var(--muted);line-height:1.45;">
+          ${mine ? "You sent a challenge." : "You received a challenge."}
+        </div>
+
+        ${showActions ? `
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button
+              class="js-direct-invite-action"
+              data-invite-id="${escapeHtml(ev.invite_id || "")}"
+              data-action="accepted"
+              style="border:none;height:36px;padding:0 14px;border-radius:999px;background:var(--brand);color:#fff;font-weight:700;cursor:pointer;"
+            >
+              Accept
+            </button>
+            <button
+              class="js-direct-invite-action"
+              data-invite-id="${escapeHtml(ev.invite_id || "")}"
+              data-action="declined"
+              style="border:1px solid var(--line);height:36px;padding:0 14px;border-radius:999px;background:var(--panel2);color:var(--text);font-weight:700;cursor:pointer;"
+            >
+              Decline
+            </button>
+          </div>
+        ` : `
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+            ${openGameLink}
+          </div>
+        `}
+
+        <div style="margin-top:8px;font-size:.72rem;color:var(--muted);text-align:right;">
+          ${formatDirectTime(m.created_at)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderInviteResponseMessage(m, ev, mine) {
+  const accepted = ev.response === "accepted";
+  return `
+    <div style="display:flex;justify-content:${mine ? "flex-end" : "flex-start"};">
+      <div style="max-width:75%;padding:10px 12px;border-radius:${mine ? "18px 18px 4px 18px" : "18px 18px 18px 4px"};background:${accepted ? "rgba(76,175,80,.12)" : "rgba(180,80,80,.10)"};border:1px solid var(--line);box-shadow:var(--soft);">
+        <div style="font-weight:800;color:var(--text);">
+          ${accepted ? "Challenge accepted" : "Challenge declined"}
+        </div>
+        <div style="margin-top:4px;font-size:.86rem;color:var(--muted);">
+          ${escapeHtml(ev.game_label || "Game")}
+        </div>
+        ${accepted ? `
+          <div style="margin-top:10px;">
+            <a href="${escapeHtml(ev.game_url || (ev.game_key + ".html"))}" style="display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 12px;border-radius:999px;text-decoration:none;background:var(--brand);color:#fff;font-weight:700;">Open game</a>
+          </div>
+        ` : ""}
+        <div style="margin-top:8px;font-size:.72rem;color:var(--muted);text-align:right;">
+          ${formatDirectTime(m.created_at)}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderDirectMessagesHtml(messages) {
+  const responseMap = getInviteResponseMap(messages);
+  return (messages || []).map(m => {
+    const mine = m.sender_user_id === ME_USER_ID;
+    const ev = parseDirectEvent(m.body);
+
+    if (ev?.kind === "game_invite") {
+      return renderInviteMessage(m, ev, responseMap.get(ev.invite_id) || null, mine);
+    }
+    if (ev?.kind === "game_invite_response") {
+      return renderInviteResponseMessage(m, ev, mine);
+    }
+    return renderPlainDirectMessage(m, mine);
+  }).join("");
+}
+
+function bindInviteActionButtons() {
+  gamesDirectMessages?.querySelectorAll(".js-direct-invite-action").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const inviteId = String(btn.dataset.inviteId || "").trim();
+      const action = String(btn.dataset.action || "").trim();
+      if (!inviteId || !action || !CURRENT_DIRECT_ID) return;
+
+      btn.disabled = true;
+      try {
+        await api("/api/directs/" + encodeURIComponent(CURRENT_DIRECT_ID) + "/invite/respond", {
+          method: "POST",
+          body: JSON.stringify({
+            invite_id: inviteId,
+            action
+          })
+        });
+        await loadDirectMessages();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  });
+}
+
 async function loadDirectMessages() {
   if (!CURRENT_DIRECT_ID) return;
   try {
+    await ensureMeUserId();
+
     const data = await api("/api/directs/" + encodeURIComponent(CURRENT_DIRECT_ID) + "/messages", {
       method: "GET"
     });
 
-    const msgs = data.messages || [];
-    gamesDirectMessages.innerHTML = msgs.map(m => `
-      <div style="padding:10px 12px;border-radius:12px;background:var(--panel-2);white-space:pre-wrap;">
-        ${escapeHtml(m.body || "")}
-        <div style="margin-top:4px;font-size:.72rem;color:var(--muted);">
-          ${new Date(m.created_at).toLocaleString()}
-        </div>
-      </div>
-    `).join("");
+    if (data?.thread?.other_user?.display_name) {
+      CURRENT_DIRECT_NAME = data.thread.other_user.display_name;
+      gamesDirectTitle.textContent = "Direct · " + CURRENT_DIRECT_NAME;
+    }
 
+    const msgs = data.messages || [];
+    gamesDirectMessages.innerHTML = renderDirectMessagesHtml(msgs);
+    bindInviteActionButtons();
     gamesDirectMessages.scrollTop = gamesDirectMessages.scrollHeight;
   } catch (e) {
     if (String(e.message || "").includes("thread_expired") || String(e.message || "").includes("not_found")) {
@@ -1194,7 +1473,7 @@ gamesDirectInput?.addEventListener("keydown", async (e) => {
     gamesDirectSend?.click();
   }
 });
-
+  
 function escapeHtml(s) {
   return String(s || "")
     .replaceAll("&", "&amp;")
