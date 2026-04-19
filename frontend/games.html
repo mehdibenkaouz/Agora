@@ -61,10 +61,12 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
 }
 .topbar-right{display:flex;align-items:center;gap:10px;}
 .btn-icon{
+  position: relative;
   width:38px;height:38px;border-radius:50%;
   border:1px solid var(--line);background:transparent;
   cursor:pointer;display:grid;place-items:center;
   transition:background .15s;color:var(--text);
+  overflow: visible;
 }
 .btn-icon:hover{background:var(--line);}
 .btn-icon svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
@@ -474,8 +476,8 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
 
 .notif-dot {
   position: absolute;
-  top: 2px;
-  right: 2px;
+  top: -4px;
+  right: -4px;
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
@@ -488,6 +490,9 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
   align-items: center;
   justify-content: center;
   line-height: 1;
+  z-index: 3;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--panel);
 }
 
 :root[data-theme="dark"] .notif-dot {
@@ -1088,7 +1093,7 @@ function startGamesNotifPolling() {
   };
 
   tick(); // refresh immediato all'apertura pagina
-  GAMES_NOTIF_POLL = setInterval(tick, 4000);
+  GAMES_NOTIF_POLL = setInterval(tick, 2000);
 }
 startGamesNotifPolling();
 
