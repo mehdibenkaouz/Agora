@@ -10142,6 +10142,7 @@ function getNotifComplaintTime() { return document.getElementById("notifComplain
             data-message="${escapeAttr(n.message || '')}"
             data-created-at="${escapeAttr(n.created_at || '')}"
             data-proof-images-json="${escapeAttr(n.proof_images_json || '[]')}"
+            data-direct-thread-id="${escapeAttr(n.direct_thread_id || '')}"
             data-is-complaint="${isComplaintNotif ? '1' : '0'}"
           >
             <div class="notif-item-msg" style="white-space:pre-wrap">${escapeHtml(n.message)}</div>
