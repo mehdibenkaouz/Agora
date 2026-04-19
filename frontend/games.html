@@ -261,7 +261,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
   transform:translateY(-6px) scale(1.015);
   box-shadow:var(--shadow);
   border-color:var(--brand);
-  background:var(--panel2);
+  background:var(--panel-2);
 }
 .card:hover .card-arrow{opacity:1;transform:translateX(0);}
 .card:hover .card-board{transform:scale(1.04);}
@@ -358,7 +358,7 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
   display:grid;grid-template-columns:repeat(3,1fr);gap:5px;
 }
 .v-mini{
-  background:var(--panel2);border:1px solid var(--line);border-radius:5px;
+  background:var(--panel-2);border:1px solid var(--line);border-radius:5px;
   display:grid;grid-template-columns:repeat(3,1fr);gap:1px;padding:3px;
 }
 .v-tcell{font-size:.6rem;font-weight:800;display:flex;align-items:center;justify-content:center;aspect-ratio:1;}
@@ -427,7 +427,72 @@ html,body{min-height:100vh;background:var(--bg);color:var(--text);font-family:'L
   border-top:1px solid var(--line);
 }
 .hub-footer span{color:var(--brand);}
+.notif-modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 80px 18px 18px;
+  background: rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  z-index: 1500;
+}
+.notif-modal.open {
+  display: flex;
+}
 
+.notif-card {
+  width: min(480px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 26px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+}
+
+.notif-card-head {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notif-card-title {
+  font-weight: 800;
+  font-size: 1.1rem;
+}
+
+.notif-card-body {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.notif-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--brand);
+  color: #fff;
+  font-size: .7rem;
+  font-weight: 800;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+:root[data-theme="dark"] .notif-dot {
+  color: #000;
+}
 @keyframes fadeUp{
   from{opacity:0;transform:translateY(22px);}
   to{opacity:1;transform:translateY(0);}
@@ -896,7 +961,7 @@ window.addEventListener("focus", () => {
     </div>
     <div class="notif-card-body" id="gamesDirectMessages" style="display:flex;flex-direction:column;gap:8px;max-height:52vh;overflow:auto;"></div>
     <div style="padding:14px 18px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:10px;">
-      <input id="gamesDirectInput" type="text" placeholder="Write a message…" style="width:100%;min-height:42px;border-radius:12px;border:1px solid var(--line);padding:0 12px;background:var(--panel2);color:var(--text);">
+      <input id="gamesDirectInput" type="text" placeholder="Write a message…" style="width:100%;min-height:42px;border-radius:12px;border:1px solid var(--line);padding:0 12px;background:var(--panel-2);color:var(--text);">
       <button id="gamesDirectSend" class="btn-icon" aria-label="Send">➤</button>
     </div>
   </div>
@@ -1067,7 +1132,7 @@ async function loadDirectMessages() {
 
     const msgs = data.messages || [];
     gamesDirectMessages.innerHTML = msgs.map(m => `
-      <div style="padding:10px 12px;border-radius:12px;background:var(--panel2);white-space:pre-wrap;">
+      <div style="padding:10px 12px;border-radius:12px;background:var(--panel-2);white-space:pre-wrap;">
         ${escapeHtml(m.body || "")}
         <div style="margin-top:4px;font-size:.72rem;color:var(--muted);">
           ${new Date(m.created_at).toLocaleString()}
