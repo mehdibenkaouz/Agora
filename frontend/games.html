@@ -803,7 +803,28 @@ function renderOnlineUsers(users) {
 
     li.addEventListener('click', async () => {
       if (!u.user_id) return;
-      await openDirectWithUser(u.user_id, u.username || "User");
+    
+      console.log('ONLINE CLICK', {
+        clickedUserId: u.user_id,
+        clickedUsername: u.username
+      });
+    
+      try {
+        const me = await api('/api/me', { method: 'GET' });
+        console.log('ME USER', me?.user?.id);
+    
+        if (me?.user?.id && me.user.id === u.user_id) {
+          console.warn('SELF CLICK BLOCKED');
+          return;
+        }
+    
+        await openDirectWithUser(u.user_id, u.username || "User");
+        console.log('DIRECT OPENED', {
+          currentId: CURRENT_DIRECT_ID
+        });
+      } catch (err) {
+        console.error('ONLINE CLICK DIRECT ERROR', err);
+      }
     });
 
     list.appendChild(li);
