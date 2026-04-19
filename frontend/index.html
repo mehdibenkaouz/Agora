@@ -10250,7 +10250,32 @@ function getNotifComplaintTime() { return document.getElementById("notifComplain
       } catch(e) {}
     }, 30000);
   }
+// ===== GLOBAL PRESENCE =====
+let PRESENCE_TIMER = null;
 
+async function sendPresence(pageName = "home") {
+  if (!getToken()) return;
+  try {
+    await api("/api/games/heartbeat", {
+      method: "POST",
+      body: JSON.stringify({ page: pageName })
+    });
+  } catch (_) {}
+}
+
+function startPresence(pageName = "home") {
+  if (PRESENCE_TIMER) clearInterval(PRESENCE_TIMER);
+  sendPresence(pageName);
+  PRESENCE_TIMER = setInterval(() => sendPresence(pageName), 8000);
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") sendPresence("home");
+});
+
+window.addEventListener("focus", () => {
+  sendPresence("home");
+});
 
 // ===== SEARCH =====
 const searchOverlay   = document.getElementById("searchOverlay");
