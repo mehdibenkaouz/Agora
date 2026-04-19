@@ -933,24 +933,20 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     sendHeartbeat();
     fetchOnlineUsers();
-    if (getToken()) {
-      api("/api/notifications", { method: "GET" })
-        .then(data => updateGamesNotifDot(data.unread || 0))
-        .catch(() => {});
-    }
-  }
-});
-
-window.addEventListener("focus", () => {
-  sendHeartbeat();
-  fetchOnlineUsers();
-  if (getToken()) {
     api("/api/notifications", { method: "GET" })
       .then(data => updateGamesNotifDot(data.unread || 0))
       .catch(() => {});
   }
 });
 
+window.addEventListener("focus", () => {
+  sendHeartbeat();
+  fetchOnlineUsers();
+  api("/api/notifications", { method: "GET" })
+    .then(data => updateGamesNotifDot(data.unread || 0))
+    .catch(() => {});
+});
+  
 (function openDirectFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const directId = params.get("direct");
@@ -1017,8 +1013,6 @@ function updateGamesNotifDot(count) {
 }
 
 async function loadGamesNotifications() {
-  if (!getToken()) return;
-
   const data = await api("/api/notifications", { method: "GET" });
   const notifs = data.notifications || [];
   updateGamesNotifDot(data.unread || 0);
@@ -1060,11 +1054,9 @@ function openGamesNotifModal() {
   gamesNotifModal?.classList.add("open");
   gamesNotifModal?.setAttribute("aria-hidden", "false");
   loadGamesNotifications().catch(() => {});
-  if (getToken()) {
-    api("/api/notifications/read", { method: "POST" }).then(() => {
-      updateGamesNotifDot(0);
-    }).catch(() => {});
-  }
+  api("/api/notifications/read", { method: "POST" }).then(() => {
+    updateGamesNotifDot(0);
+  }).catch(() => {});
 }
 
 function closeGamesNotifModal() {
@@ -1085,7 +1077,6 @@ function startGamesNotifPolling() {
   if (GAMES_NOTIF_POLL) clearInterval(GAMES_NOTIF_POLL);
 
   const tick = async () => {
-    if (!getToken()) return;
     try {
       const data = await api("/api/notifications", { method: "GET" });
       updateGamesNotifDot(data.unread || 0);
