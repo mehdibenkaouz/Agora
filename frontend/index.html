@@ -10165,6 +10165,12 @@ function getNotifComplaintTime() { return document.getElementById("notifComplain
               return;
             }
 
+            const directThreadId = item.dataset.directThreadId || "";
+            if (directThreadId) {
+              window.location.href = "games.html?direct=" + encodeURIComponent(directThreadId);
+              return;
+            }
+            
             const postId = item.dataset.postId;
             if (!postId) return;
 
