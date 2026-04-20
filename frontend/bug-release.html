@@ -1155,14 +1155,14 @@
       if (!isAdmin()) return;
       const confirmBtn = e.target.closest("[data-confirm-id]");
       const rejectBtn  = e.target.closest("[data-reject-id]");
-      const adminToken = localStorage.getItem("agora_admin_token") || "";
-      if (!adminToken) { alert("Admin token not found. Log in via the admin panel first."); return; }
+      const adminToken = "";
 
       if (confirmBtn) {
         const id = confirmBtn.getAttribute("data-confirm-id");
         await fetch(API_BASE + `/api/admin/bugs/${id}/status`, {
           method: "POST",
-          headers: { "Content-Type":"application/json", "X-Admin-Token": adminToken },
+          headers: { "Content-Type":"application/json" },
+          credentials: "include",
           body: JSON.stringify({ status: "confirmed" })
         });
         loadBugs();
@@ -1171,7 +1171,8 @@
         const id = rejectBtn.getAttribute("data-reject-id");
         await fetch(API_BASE + `/api/admin/bugs/${id}/status`, {
           method: "POST",
-          headers: { "Content-Type":"application/json", "X-Admin-Token": adminToken },
+          headers: { "Content-Type":"application/json" },
+          credentials: "include",
           body: JSON.stringify({ status: "wontfix" })
         });
         loadBugs();

@@ -1070,10 +1070,9 @@
 
 <script>
   const API_BASE   = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
-  const ADMIN_KEY  = "agora_admin_token";
-  const USER_KEY   = "agora_logged_in";
+  const USER_KEY = "agora_logged_in";
 
-  let adminToken   = localStorage.getItem(ADMIN_KEY) || "";
+  let adminToken = "";
   let rejectSpamComplaintId = null;
   let pendingBanUserId = null;
   let pendingBanUserName = "";
@@ -1089,9 +1088,18 @@
 
   // ── API ─────────────────────────────────────────────────
   async function adminApi(path, opts = {}) {
-    const headers = { "Content-Type": "application/json", "X-Admin-Token": adminToken, ...(opts.headers || {}) };
-    const fetchOpts = { ...opts, headers };
-    if (!API_BASE) fetchOpts.credentials = "include";
+    const headers = { ...(opts.headers || {}) };
+
+    if (!(opts.body instanceof FormData) && !headers["Content-Type"]) {
+      headers["Content-Type"] = "application/json";
+    }
+
+    const fetchOpts = {
+      ...opts,
+      headers,
+      credentials: "include"
+    };
+
     const res = await fetch((API_BASE || "") + path, fetchOpts);
     return res.json();
   }
@@ -1143,8 +1151,7 @@
       const data = await res.json();
 
       if (data.ok) {
-        adminToken = data.admin_token;
-        localStorage.setItem(ADMIN_KEY, adminToken);
+        adminToken = "";
         showAdminPanel();
       } else {
         err.textContent = data.error === "forbidden" ? "Accesso non autorizzato." : "Password errata.";
@@ -1162,8 +1169,11 @@
   document.getElementById("pwdInput").addEventListener("keydown", e => { if (e.key === "Enter") doLogin(); });
 
   // ── LOGOUT ──────────────────────────────────────────────
-  document.getElementById("logoutBtn").onclick = () => {
-    localStorage.removeItem(ADMIN_KEY);
+  document.getElementById("logoutBtn").onclick = async () => {
+    try {
+      await adminApi("/api/admin/logout", { method: "POST" });
+    } catch (_) {}
+
     adminToken = "";
     document.getElementById("adminPanel").classList.remove("visible");
     document.getElementById("loginScreen").classList.remove("hidden");
@@ -1179,11 +1189,15 @@
 
   // ── TABS ────────────────────────────────────────────────
   document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.onclick = () => {
+    btn.onclick = async () => {
       document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
       document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
       btn.classList.add("active");
       document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
+
+      if (typeof forceStopLiveForSensitiveTab === "function" && isLiveForbiddenTab(btn.dataset.tab)) {
+        await forceStopLiveForSensitiveTab(btn.dataset.tab);
+      }
     };
   });
 
@@ -1208,7 +1222,13 @@
   }
 
   function avatarHtml(pic, name) {
-    if (pic) return `<img class="user-avatar" src="${pic}" alt="" onerror="this.style.display='none'" />`;
+    const raw = String(pic || "").trim();
+    const safe = raw.startsWith("/media/") ? raw : "";
+
+    if (safe) {
+      return `<img class="user-avatar" src="${safe}" alt="" onerror="this.remove()" />`;
+    }
+
     const initials = (name || "?").charAt(0).toUpperCase();
     return `<div class="user-avatar" style="display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--muted);font-weight:700">${initials}</div>`;
   }
@@ -2007,7 +2027,6 @@ const contentHtml = r.content || "";
   function handleAdminError(data) {
     if (data.error === "forbidden") {
       showToast("Sessione admin scaduta. Rieffettua il login.", true);
-      localStorage.removeItem(ADMIN_KEY);
       adminToken = "";
       document.getElementById("adminPanel").classList.remove("visible");
       document.getElementById("loginScreen").classList.remove("hidden");
@@ -2020,9 +2039,12 @@ const contentHtml = r.content || "";
   }
 
   // ── INIT ─────────────────────────────────────────────────
-  if (adminToken) {
-    showAdminPanel();
-  }
+  (async () => {
+    try {
+      const probe = await adminApi("/api/admin/live-region", { method: "GET" });
+      if (probe && probe.ok !== false) showAdminPanel();
+    } catch (_) {}
+  })();
 
 setInterval(() => {
   if (adminToken) {
@@ -2040,7 +2062,6 @@ setInterval(() => {
     ? ""
     : "https://agora-api.convergegame.workers.dev";
 
-  const ADMIN_TOKEN_KEY = "agora_admin_token";
   const LIVE_REGION_CHANNEL = ("BroadcastChannel" in window)
     ? new BroadcastChannel("agora-admin-live-region")
     : null;
@@ -2056,10 +2077,23 @@ setInterval(() => {
     startClientX: 0,
     startClientY: 0
   };
+  const FORBIDDEN_LIVE_TABS = new Set(["users", "complaints"]);
 
-  function getAdminToken() {
-    return localStorage.getItem(ADMIN_TOKEN_KEY) || "";
+  function getActiveAdminTab() {
+    return String(document.querySelector(".tab-btn.active")?.dataset?.tab || "");
   }
+
+  function isLiveForbiddenTab(tabName = getActiveAdminTab()) {
+    return FORBIDDEN_LIVE_TABS.has(String(tabName || ""));
+  }
+
+  function getLiveForbiddenText(tabName = getActiveAdminTab()) {
+    if (tabName === "users") return "Live disabled on Users tab";
+    if (tabName === "complaints") return "Live disabled on Complaints tab";
+    return "Live disabled here";
+  }
+
+
 
   async function ensureHtml2Canvas() {
     if (window.html2canvas) return window.html2canvas;
@@ -2193,15 +2227,17 @@ setInterval(() => {
   }
 
   async function adminFetch(path, options = {}) {
-    const token = getAdminToken();
-    if (!token) throw new Error("Missing admin token");
-    const headers = Object.assign({}, options.headers || {}, {
-      "X-Admin-Token": token
-    });
+    const headers = Object.assign({}, options.headers || {});
     if (!(options.body instanceof Blob) && options.body && !headers["Content-Type"]) {
       headers["Content-Type"] = "application/json";
     }
-    const res = await fetch((API_BASE || "") + path, { ...options, headers });
+
+    const res = await fetch((API_BASE || "") + path, {
+      ...options,
+      headers,
+      credentials: "include"
+    });
+
     const data = await res.json().catch(() => ({}));
     if (!res.ok || !data.ok) throw new Error(data?.error || `http_${res.status}`);
     return data;
@@ -2321,9 +2357,32 @@ setInterval(() => {
   }
 
   function beginSelection() {
+    if (isLiveForbiddenTab()) {
+      setStatus(getLiveForbiddenText());
+      return;
+    }
+
     state.selecting = true;
     ui.overlay.style.display = "block";
     setStatus("Drag to select the live region");
+  }
+  async function forceStopLiveForSensitiveTab(tabName) {
+    state.streaming = false;
+    if (state.timer) clearInterval(state.timer);
+    state.timer = null;
+
+    ui.overlay.style.display = "none";
+    ui.selection.style.display = "none";
+    state.selecting = false;
+    state.dragging = false;
+    state.pointerId = null;
+    state.rect = null;
+
+    try {
+      await clearRegionOnServer();
+    } catch (_) {}
+
+    setStatus(getLiveForbiddenText(tabName));
   }
 
   function endSelection() {
