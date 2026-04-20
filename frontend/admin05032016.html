@@ -1069,7 +1069,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  const API_BASE   = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
+  const API_BASE = "";
   const USER_KEY = "agora_logged_in";
 
   let adminToken = "";
@@ -2058,9 +2058,7 @@ setInterval(() => {
 
 <script>
 (async function () {
-  const API_BASE = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org"
-    ? ""
-    : "https://agora-api.convergegame.workers.dev";
+  const API_BASE = "";
 
   const LIVE_REGION_CHANNEL = ("BroadcastChannel" in window)
     ? new BroadcastChannel("agora-admin-live-region")
