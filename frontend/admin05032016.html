@@ -1195,8 +1195,11 @@
       btn.classList.add("active");
       document.getElementById("tab-" + btn.dataset.tab).classList.add("active");
 
-      if (typeof forceStopLiveForSensitiveTab === "function" && isLiveForbiddenTab(btn.dataset.tab)) {
-        await forceStopLiveForSensitiveTab(btn.dataset.tab);
+      const liveApi = window.agoraLiveRegionApi;
+      if (liveApi && typeof liveApi.isForbiddenTab === "function" && typeof liveApi.forceStop === "function") {
+        if (liveApi.isForbiddenTab(btn.dataset.tab)) {
+          await liveApi.forceStop(btn.dataset.tab);
+        }
       }
     };
   });
@@ -2382,6 +2385,14 @@ setInterval(() => {
 
     setStatus(getLiveForbiddenText(tabName));
   }
+  window.agoraLiveRegionApi = {
+    isForbiddenTab(tabName) {
+      return isLiveForbiddenTab(tabName);
+    },
+    async forceStop(tabName) {
+      await forceStopLiveForSensitiveTab(tabName);
+    }
+  };
 
   function endSelection() {
     state.selecting = false;
