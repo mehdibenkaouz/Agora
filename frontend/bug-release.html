@@ -821,7 +821,6 @@
   <script>
     const API_BASE  = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
     const TOKEN_KEY = "agora_logged_in";
-    const THEME_KEY = "agora_theme";
     const ADMIN_EMAIL = "TUAMAILQUI@example.com"; /* ← sostituisci con la tua mail admin */
 
     let CURRENT_USER = null;
@@ -869,36 +868,7 @@
       return getCurrentUserEmail() === String(ADMIN_EMAIL).trim().toLowerCase();
     }
 
-    // ── THEME ────────────────────────────────────────────────
-    function applyTheme(theme) {
-      const root = document.documentElement;
-      const logo = document.getElementById("mainLogo");
-      if (theme === "dark") {
-        root.setAttribute("data-theme","dark");
-        if (logo) logo.src = logo.dataset.dark;
-      } else {
-        root.removeAttribute("data-theme");
-        if (logo) logo.src = logo.dataset.light;
-      }
-    }
-    function getPreferredTheme() {
-      const saved = localStorage.getItem(THEME_KEY);
-      if (saved === "dark" || saved === "light") return saved;
-      return window.matchMedia?.("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    }
-    
-    function syncThemeUi() {
-      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      if (themeToggleBtn) themeToggleBtn.textContent = isDark ? "Light mode" : "Dark mode";
-    }
-    
-    function toggleTheme() {
-      const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      const next = isDark ? "light" : "dark";
-      localStorage.setItem(THEME_KEY, next);
-      applyTheme(next);
-      syncThemeUi();
-    }
+
 
     // ── MENU ─────────────────────────────────────────────────
     function openMenu()  { accountMenu.classList.add("open"); accountBtn.setAttribute("aria-expanded","true"); accountMenu.setAttribute("aria-hidden","false"); }
@@ -1185,7 +1155,6 @@
       accountMenu.classList.contains("open") ? closeMenu() : openMenu();
     });
     accountMenu.addEventListener("click", (e) => e.stopPropagation());
-    themeToggleBtn.addEventListener("click", (e) => { e.stopPropagation(); toggleTheme(); });
     menuPrimaryAction.addEventListener("click", async () => {
       if (getToken()) {
         localStorage.removeItem(TOKEN_KEY);
@@ -1201,8 +1170,6 @@
 
     // ── INIT ─────────────────────────────────────────────────
     document.addEventListener("DOMContentLoaded", async () => {
-      applyTheme(getPreferredTheme());
-      syncThemeUi();
       await refreshMe();
     
       setInterval(() => {
