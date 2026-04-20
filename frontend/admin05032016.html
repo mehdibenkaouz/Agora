@@ -2048,6 +2048,8 @@ setInterval(() => {
   const state = {
     rect: null,
     selecting: false,
+    dragging: false,
+    pointerId: null,
     streaming: false,
     timer: null,
     startClientX: 0,
@@ -2285,32 +2287,82 @@ setInterval(() => {
     state.timer = setInterval(sendFrame, 900);
   });
 
-  ui.overlay.addEventListener("mousedown", (event) => {
-    state.startClientX = event.clientX;
-    state.startClientY = event.clientY;
-    ui.selection.style.display = "block";
-    ui.selection.style.left = `${event.clientX}px`;
-    ui.selection.style.top = `${event.clientY}px`;
-    ui.selection.style.width = "0px";
-    ui.selection.style.height = "0px";
-  });
+ui.overlay.addEventListener("pointerdown", (event) => {
+  if (!state.selecting) return;
 
-  ui.overlay.addEventListener("mousemove", (event) => {
-    if (!state.selecting) return;
-    const left = Math.min(state.startClientX, event.clientX);
-    const top = Math.min(state.startClientY, event.clientY);
-    const width = Math.abs(event.clientX - state.startClientX);
-    const height = Math.abs(event.clientY - state.startClientY);
+  state.dragging = true;
+  state.pointerId = event.pointerId;
+  state.startClientX = event.clientX;
+  state.startClientY = event.clientY;
 
-    ui.selection.style.display = "block";
-    ui.selection.style.left = `${left}px`;
-    ui.selection.style.top = `${top}px`;
-    ui.selection.style.width = `${width}px`;
-    ui.selection.style.height = `${height}px`;
-  });
+  ui.overlay.setPointerCapture?.(event.pointerId);
 
+  ui.selection.style.display = "block";
+  ui.selection.style.left = `${event.clientX}px`;
+  ui.selection.style.top = `${event.clientY}px`;
+  ui.selection.style.width = "0px";
+  ui.selection.style.height = "0px";
+
+  event.preventDefault();
+});
+
+ui.overlay.addEventListener("pointermove", (event) => {
+  if (!state.selecting || !state.dragging) return;
+  if (state.pointerId !== null && event.pointerId !== state.pointerId) return;
+
+  const left = Math.min(state.startClientX, event.clientX);
+  const top = Math.min(state.startClientY, event.clientY);
+  const width = Math.abs(event.clientX - state.startClientX);
+  const height = Math.abs(event.clientY - state.startClientY);
+
+  ui.selection.style.display = "block";
+  ui.selection.style.left = `${left}px`;
+  ui.selection.style.top = `${top}px`;
+  ui.selection.style.width = `${width}px`;
+  ui.selection.style.height = `${height}px`;
+});
+
+ui.overlay.addEventListener("pointerup", async (event) => {
+  if (!state.selecting || !state.dragging) return;
+  if (state.pointerId !== null && event.pointerId !== state.pointerId) return;
+
+  const left = Math.min(state.startClientX, event.clientX);
+  const top = Math.min(state.startClientY, event.clientY);
+  const width = Math.abs(event.clientX - state.startClientX);
+  const height = Math.abs(event.clientY - state.startClientY);
+
+  state.dragging = false;
+  state.pointerId = null;
+  endSelection();
+
+  if (width < 40 || height < 40) {
+    ui.selection.style.display = "none";
+    setStatus("Region too small, drag a bigger area");
+    return;
+  }
+
+  state.rect = {
+    x: Math.round(left + window.scrollX),
+    y: Math.round(top + window.scrollY),
+    width: Math.round(width),
+    height: Math.round(height)
+  };
+
+  drawSelectionFromDocumentRect();
+  await saveRegion();
+  setStatus(`Region saved ${state.rect.width}×${state.rect.height} px`);
+});
+
+ui.overlay.addEventListener("pointercancel", () => {
+  state.dragging = false;
+  state.pointerId = null;
+  endSelection();
+  ui.selection.style.display = "none";
+  setStatus("Selection cancelled");
+});
   ui.overlay.addEventListener("mouseup", async (event) => {
-    if (!state.selecting) return;
+   
+   if (!state.selecting) return;
 
     const left = Math.min(state.startClientX, event.clientX);
     const top = Math.min(state.startClientY, event.clientY);
