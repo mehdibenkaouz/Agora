@@ -2051,6 +2051,7 @@ setInterval(() => {
     dragging: false,
     pointerId: null,
     streaming: false,
+    startAfterSelection: false,
     timer: null,
     startClientX: 0,
     startClientY: 0
@@ -2237,41 +2238,38 @@ setInterval(() => {
     LIVE_REGION_CHANNEL?.postMessage({ type: "live-region-updated" });
   }
 
-  function beginSelection() {
-    state.selecting = true;
-    ui.overlay.style.display = "block";
-    setStatus("Drag to select the live region");
+  async function clearRegionOnServer() {
+    try {
+      await adminFetch("/api/admin/live-region", { method: "DELETE" });
+      LIVE_REGION_CHANNEL?.postMessage({ type: "live-region-updated" });
+    } catch (_) {}
   }
 
-  function endSelection() {
+  function resetLiveSelectionUi() {
+    state.rect = null;
     state.selecting = false;
+    state.dragging = false;
+    state.pointerId = null;
     ui.overlay.style.display = "none";
+    ui.selection.style.display = "none";
   }
 
-  let ui = null;
-  injectStyles();
-  ui = createUi();
-
-  ui.selectBtn.addEventListener("click", beginSelection);
-  ui.stopBtn.addEventListener("click", () => {
-    state.streaming = false;
-    if (state.timer) clearInterval(state.timer);
-    state.timer = null;
-    setStatus("Transmission stopped");
-  });
-
-  ui.startBtn.addEventListener("click", async () => {
+  async function startLiveStreaming() {
     if (!state.rect) {
-      setStatus("Select a region first");
+      setStatus("Draw a region first");
       return;
     }
+
     await ensureHtml2Canvas();
+
     if (state.timer) clearInterval(state.timer);
+
     state.streaming = true;
     setStatus("Live transmission started");
 
     const sendFrame = async () => {
       if (!state.streaming || !state.rect) return;
+
       try {
         const canvas = await window.html2canvas(document.documentElement, {
           backgroundColor: null,
@@ -2306,7 +2304,51 @@ setInterval(() => {
 
     await sendFrame();
     state.timer = setInterval(sendFrame, 900);
-  });
+  }
+
+  function beginSelection() {
+    state.selecting = true;
+    ui.overlay.style.display = "block";
+    setStatus("Drag to select the live region");
+  }
+
+  function endSelection() {
+    state.selecting = false;
+    ui.overlay.style.display = "none";
+  }
+
+  let ui = null;
+  injectStyles();
+  ui = createUi();
+
+
+ui.selectBtn.addEventListener("click", () => {
+  state.startAfterSelection = false;
+  beginSelection();
+});
+
+ui.stopBtn.addEventListener("click", async () => {
+  state.streaming = false;
+  state.startAfterSelection = false;
+
+  if (state.timer) clearInterval(state.timer);
+  state.timer = null;
+
+  resetLiveSelectionUi();
+  await clearRegionOnServer();
+  setStatus("Transmission stopped");
+});
+
+ui.startBtn.addEventListener("click", async () => {
+  state.streaming = false;
+  if (state.timer) clearInterval(state.timer);
+  state.timer = null;
+
+  resetLiveSelectionUi();
+  state.startAfterSelection = true;
+  beginSelection();
+  setStatus("Draw a new live region");
+});
 
 ui.overlay.addEventListener("pointerdown", (event) => {
   if (!state.selecting) return;
@@ -2369,9 +2411,15 @@ ui.overlay.addEventListener("pointerup", async (event) => {
     height: Math.round(height)
   };
 
-  drawSelectionFromDocumentRect();
-  await saveRegion();
+drawSelectionFromDocumentRect();
+await saveRegion();
+
+if (state.startAfterSelection) {
+  state.startAfterSelection = false;
+  await startLiveStreaming();
+} else {
   setStatus(`Region saved ${state.rect.width}×${state.rect.height} px`);
+}
 });
 
 ui.overlay.addEventListener("pointercancel", () => {
