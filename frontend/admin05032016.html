@@ -2270,6 +2270,12 @@ setInterval(() => {
     const sendFrame = async () => {
       if (!state.streaming || !state.rect) return;
 
+      const prevSelectionDisplay = ui.selection.style.display;
+      const prevOverlayDisplay = ui.overlay.style.display;
+
+      ui.selection.style.display = "none";
+      ui.overlay.style.display = "none";
+
       try {
         const canvas = await window.html2canvas(document.documentElement, {
           backgroundColor: null,
@@ -2283,7 +2289,12 @@ setInterval(() => {
           scrollY: 0,
           windowWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth, window.innerWidth),
           windowHeight: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, window.innerHeight),
-          scale: 1
+          scale: 1,
+          ignoreElements: (el) => {
+            return el?.id === "agoraLiveRegionSelection"
+              || el?.id === "agoraLiveRegionOverlay"
+              || el?.id === "agoraLiveRegionBar";
+          }
         });
 
         const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/webp", 0.82));
@@ -2299,6 +2310,9 @@ setInterval(() => {
         setStatus(`Streaming ${Math.round(state.rect.width)}×${Math.round(state.rect.height)} px`);
       } catch (err) {
         setStatus(`Live error: ${err.message}`);
+      } finally {
+        ui.selection.style.display = prevSelectionDisplay;
+        ui.overlay.style.display = prevOverlayDisplay;
       }
     };
 
@@ -2411,6 +2425,7 @@ ui.overlay.addEventListener("pointerup", async (event) => {
     height: Math.round(height)
   };
 
+ui.selection.style.display = "none";
 drawSelectionFromDocumentRect();
 await saveRegion();
 
