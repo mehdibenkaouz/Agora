@@ -2491,6 +2491,33 @@ export default {
         "UPDATE direct_threads SET deleted_at = ?1 WHERE deleted_at IS NULL AND expires_at <= ?1"
       ).bind(now).run();
     }
+        async function ensureAdminLiveRegionTable() {
+      await env.dbagora.prepare(`
+        CREATE TABLE IF NOT EXISTS admin_live_region (
+          id TEXT PRIMARY KEY,
+          source_path TEXT NOT NULL DEFAULT '/admin',
+          x REAL NOT NULL DEFAULT 0,
+          y REAL NOT NULL DEFAULT 0,
+          width REAL NOT NULL DEFAULT 0,
+          height REAL NOT NULL DEFAULT 0,
+          updated_at TEXT NOT NULL,
+          updated_by TEXT,
+          frame_key TEXT,
+          frame_mime TEXT,
+          frame_updated_at TEXT
+        )
+      `).run();
+    }
+
+    async function getAdminLiveRegionRow() {
+      await ensureAdminLiveRegionTable();
+      return await env.dbagora.prepare(`
+        SELECT id, source_path, x, y, width, height, updated_at, updated_by, frame_key, frame_mime, frame_updated_at
+        FROM admin_live_region
+        WHERE id = 'main'
+        LIMIT 1
+      `).first();
+    }
 
       // GET /api/admin/spam — lista spam flags
       if (url.pathname === "/api/admin/spam" && request.method === "GET") {
@@ -3328,7 +3355,169 @@ export default {
       }
 
 
+            // GET /api/live-region — pubblico
+      if (url.pathname === "/api/live-region" && request.method === "GET") {
+        const row = await getAdminLiveRegionRow();
+        return json({
+          ok: true,
+          region: row ? {
+            id: row.id,
+            source_path: row.source_path,
+            x: Number(row.x || 0),
+            y: Number(row.y || 0),
+            width: Number(row.width || 0),
+            height: Number(row.height || 0),
+            updated_at: row.updated_at || "",
+            frame_mime: row.frame_mime || "",
+            frame_updated_at: row.frame_updated_at || "",
+            frame_url: row.frame_key ? `/media/${encodeURIComponent(row.frame_key)}` : ""
+          } : null
+        }, 200, ALLOWED_ORIGIN);
+      }
 
+      // GET /api/admin/live-region — admin
+      if (url.pathname === "/api/admin/live-region" && request.method === "GET") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const row = await getAdminLiveRegionRow();
+        return json({
+          ok: true,
+          region: row ? {
+            id: row.id,
+            source_path: row.source_path,
+            x: Number(row.x || 0),
+            y: Number(row.y || 0),
+            width: Number(row.width || 0),
+            height: Number(row.height || 0),
+            updated_at: row.updated_at || "",
+            frame_mime: row.frame_mime || "",
+            frame_updated_at: row.frame_updated_at || "",
+            frame_url: row.frame_key ? `/media/${encodeURIComponent(row.frame_key)}` : ""
+          } : null
+        }, 200, ALLOWED_ORIGIN);
+      }
+
+      // POST /api/admin/live-region — admin config
+      if (url.pathname === "/api/admin/live-region" && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const body = await request.json().catch(() => ({}));
+        const sourcePath = String(body.source_path || "/admin").trim() || "/admin";
+        const x = Number(body.x);
+        const y = Number(body.y);
+        const width = Number(body.width);
+        const height = Number(body.height);
+
+        if (![x, y, width, height].every(Number.isFinite)) {
+          return json({ ok: false, error: "invalid_region" }, 400, ALLOWED_ORIGIN);
+        }
+        if (x < 0 || y < 0 || width < 40 || height < 40) {
+          return json({ ok: false, error: "invalid_region" }, 400, ALLOWED_ORIGIN);
+        }
+
+        const now = new Date().toISOString();
+        const existing = await getAdminLiveRegionRow();
+
+        if (existing) {
+          await env.dbagora.prepare(`
+            UPDATE admin_live_region
+            SET source_path = ?1,
+                x = ?2,
+                y = ?3,
+                width = ?4,
+                height = ?5,
+                updated_at = ?6,
+                updated_by = ?7
+            WHERE id = 'main'
+          `).bind(
+            sourcePath,
+            Math.round(x),
+            Math.round(y),
+            Math.round(width),
+            Math.round(height),
+            now,
+            String(adm.user_id || "")
+          ).run();
+        } else {
+          await env.dbagora.prepare(`
+            INSERT INTO admin_live_region (
+              id, source_path, x, y, width, height, updated_at, updated_by, frame_key, frame_mime, frame_updated_at
+            ) VALUES ('main', ?1, ?2, ?3, ?4, ?5, ?6, ?7, NULL, NULL, NULL)
+          `).bind(
+            sourcePath,
+            Math.round(x),
+            Math.round(y),
+            Math.round(width),
+            Math.round(height),
+            now,
+            String(adm.user_id || "")
+          ).run();
+        }
+
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // POST /api/admin/live-region/frame — admin frame upload
+      if (url.pathname === "/api/admin/live-region/frame" && request.method === "POST") {
+        const adm = await requireAdmin(request);
+        if (!adm) return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+
+        const contentType = String(request.headers.get("Content-Type") || "").trim().toLowerCase();
+        if (!contentType.startsWith("image/")) {
+          return json({ ok: false, error: "expected_image" }, 400, ALLOWED_ORIGIN);
+        }
+
+        const buf = await request.arrayBuffer();
+        if (!buf || !buf.byteLength) {
+          return json({ ok: false, error: "empty_frame" }, 400, ALLOWED_ORIGIN);
+        }
+        if (buf.byteLength > 4 * 1024 * 1024) {
+          return json({ ok: false, error: "frame_too_large" }, 413, ALLOWED_ORIGIN);
+        }
+
+        const row = await getAdminLiveRegionRow();
+        const ext =
+          contentType.includes("png")  ? "png"  :
+          contentType.includes("jpeg") ? "jpg"  :
+          contentType.includes("jpg")  ? "jpg"  :
+          contentType.includes("webp") ? "webp" :
+          "bin";
+
+        const key = `admin/live-region/latest.${ext}`;
+        const now = new Date().toISOString();
+
+        if (row?.frame_key && row.frame_key !== key) {
+          try { await env.AGORA_MEDIA.delete(row.frame_key); } catch (_) {}
+        }
+
+        await env.AGORA_MEDIA.put(key, buf, {
+          httpMetadata: { contentType }
+        });
+
+        if (row) {
+          await env.dbagora.prepare(`
+            UPDATE admin_live_region
+            SET frame_key = ?1,
+                frame_mime = ?2,
+                frame_updated_at = ?3
+            WHERE id = 'main'
+          `).bind(key, contentType, now).run();
+        } else {
+          await env.dbagora.prepare(`
+            INSERT INTO admin_live_region (
+              id, source_path, x, y, width, height, updated_at, updated_by, frame_key, frame_mime, frame_updated_at
+            ) VALUES ('main', '/admin', 0, 0, 0, 0, ?1, ?2, ?3, ?4, ?1)
+          `).bind(now, String(adm.user_id || ""), key, contentType).run();
+        }
+
+        return json({
+          ok: true,
+          frame_url: `/media/${encodeURIComponent(key)}`,
+          updated_at: now
+        }, 200, ALLOWED_ORIGIN);
+      }
 
       // GET /api/admin/tag-reports — lista segnalazioni tag
       if (url.pathname === "/api/admin/tag-reports" && request.method === "GET") {
