@@ -2033,5 +2033,315 @@ setInterval(() => {
   }
 }, 30000);
 </script>
+
+<script>
+(async function () {
+  const API_BASE = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org"
+    ? ""
+    : "https://agora-api.convergegame.workers.dev";
+
+  const ADMIN_TOKEN_KEY = "agora_admin_token";
+  const LIVE_REGION_CHANNEL = ("BroadcastChannel" in window)
+    ? new BroadcastChannel("agora-admin-live-region")
+    : null;
+
+  const state = {
+    rect: null,
+    selecting: false,
+    streaming: false,
+    timer: null,
+    startClientX: 0,
+    startClientY: 0
+  };
+
+  function getAdminToken() {
+    return localStorage.getItem(ADMIN_TOKEN_KEY) || "";
+  }
+
+  async function ensureHtml2Canvas() {
+    if (window.html2canvas) return window.html2canvas;
+    await new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js";
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    return window.html2canvas;
+  }
+
+  function injectStyles() {
+    const style = document.createElement("style");
+    style.textContent = `
+      #agoraLiveRegionBar{
+        position: fixed;
+        right: 18px;
+        bottom: 18px;
+        z-index: 999999;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+        padding: 12px 14px;
+        border-radius: 18px;
+        background: rgba(15,17,21,0.92);
+        color: #fff;
+        box-shadow: 0 18px 42px rgba(0,0,0,0.34);
+        backdrop-filter: blur(10px);
+        font: 600 13px/1.2 Inter, Arial, sans-serif;
+      }
+      #agoraLiveRegionBar button{
+        border: 0;
+        border-radius: 999px;
+        padding: 10px 14px;
+        cursor: pointer;
+        font: inherit;
+      }
+      #agoraLiveRegionSelect{ background:#f6d365; color:#111; }
+      #agoraLiveRegionStart{ background:#7ef0b5; color:#111; }
+      #agoraLiveRegionStop{ background:#ffb4b4; color:#111; }
+      #agoraLiveRegionStatus{ opacity:.9; min-width: 180px; }
+      #agoraLiveRegionOverlay{
+        position: fixed;
+        inset: 0;
+        z-index: 999998;
+        display: none;
+        background: rgba(0,0,0,0.12);
+        cursor: crosshair;
+      }
+      #agoraLiveRegionSelection{
+        position: fixed;
+        z-index: 999999;
+        display: none;
+        border: 2px solid #7ef0b5;
+        background: rgba(126,240,181,0.14);
+        box-shadow: 0 0 0 99999px rgba(0,0,0,0.18);
+        pointer-events: none;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  function createUi() {
+    const bar = document.createElement("div");
+    bar.id = "agoraLiveRegionBar";
+    bar.innerHTML = `
+      <button id="agoraLiveRegionSelect" type="button">Select live region</button>
+      <button id="agoraLiveRegionStart" type="button">Start live</button>
+      <button id="agoraLiveRegionStop" type="button">Stop</button>
+      <div id="agoraLiveRegionStatus">Idle</div>
+    `;
+    document.body.appendChild(bar);
+
+    const overlay = document.createElement("div");
+    overlay.id = "agoraLiveRegionOverlay";
+    document.body.appendChild(overlay);
+
+    const selection = document.createElement("div");
+    selection.id = "agoraLiveRegionSelection";
+    document.body.appendChild(selection);
+
+    return {
+      bar,
+      overlay,
+      selection,
+      status: bar.querySelector("#agoraLiveRegionStatus"),
+      selectBtn: bar.querySelector("#agoraLiveRegionSelect"),
+      startBtn: bar.querySelector("#agoraLiveRegionStart"),
+      stopBtn: bar.querySelector("#agoraLiveRegionStop")
+    };
+  }
+
+  function setStatus(text) {
+    ui.status.textContent = text;
+  }
+
+  function drawSelectionFromDocumentRect() {
+    if (!state.rect) {
+      ui.selection.style.display = "none";
+      return;
+    }
+    ui.selection.style.display = "block";
+    ui.selection.style.left = `${Math.round(state.rect.x - window.scrollX)}px`;
+    ui.selection.style.top = `${Math.round(state.rect.y - window.scrollY)}px`;
+    ui.selection.style.width = `${Math.round(state.rect.width)}px`;
+    ui.selection.style.height = `${Math.round(state.rect.height)}px`;
+  }
+
+  async function adminFetch(path, options = {}) {
+    const token = getAdminToken();
+    if (!token) throw new Error("Missing admin token");
+    const headers = Object.assign({}, options.headers || {}, {
+      "X-Admin-Token": token
+    });
+    if (!(options.body instanceof Blob) && options.body && !headers["Content-Type"]) {
+      headers["Content-Type"] = "application/json";
+    }
+    const res = await fetch((API_BASE || "") + path, { ...options, headers });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.ok) throw new Error(data?.error || `http_${res.status}`);
+    return data;
+  }
+
+  async function loadExistingRegion() {
+    try {
+      const data = await adminFetch("/api/admin/live-region", { method: "GET" });
+      if (data?.region && Number(data.region.width) > 0 && Number(data.region.height) > 0) {
+        state.rect = {
+          x: Number(data.region.x || 0),
+          y: Number(data.region.y || 0),
+          width: Number(data.region.width || 0),
+          height: Number(data.region.height || 0)
+        };
+        drawSelectionFromDocumentRect();
+        setStatus(`Loaded ${Math.round(state.rect.width)}×${Math.round(state.rect.height)} px`);
+      }
+    } catch (_) {}
+  }
+
+  async function saveRegion() {
+    if (!state.rect) return;
+    await adminFetch("/api/admin/live-region", {
+      method: "POST",
+      body: JSON.stringify({
+        source_path: location.pathname,
+        x: Math.round(state.rect.x),
+        y: Math.round(state.rect.y),
+        width: Math.round(state.rect.width),
+        height: Math.round(state.rect.height)
+      })
+    });
+    LIVE_REGION_CHANNEL?.postMessage({ type: "live-region-updated" });
+  }
+
+  function beginSelection() {
+    state.selecting = true;
+    ui.overlay.style.display = "block";
+    setStatus("Drag to select the live region");
+  }
+
+  function endSelection() {
+    state.selecting = false;
+    ui.overlay.style.display = "none";
+  }
+
+  let ui = null;
+  injectStyles();
+  ui = createUi();
+
+  ui.selectBtn.addEventListener("click", beginSelection);
+  ui.stopBtn.addEventListener("click", () => {
+    state.streaming = false;
+    if (state.timer) clearInterval(state.timer);
+    state.timer = null;
+    setStatus("Transmission stopped");
+  });
+
+  ui.startBtn.addEventListener("click", async () => {
+    if (!state.rect) {
+      setStatus("Select a region first");
+      return;
+    }
+    await ensureHtml2Canvas();
+    if (state.timer) clearInterval(state.timer);
+    state.streaming = true;
+    setStatus("Live transmission started");
+
+    const sendFrame = async () => {
+      if (!state.streaming || !state.rect) return;
+      try {
+        const canvas = await window.html2canvas(document.documentElement, {
+          backgroundColor: null,
+          useCORS: true,
+          logging: false,
+          x: Math.round(state.rect.x),
+          y: Math.round(state.rect.y),
+          width: Math.round(state.rect.width),
+          height: Math.round(state.rect.height),
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: Math.max(document.documentElement.scrollWidth, document.body.scrollWidth, window.innerWidth),
+          windowHeight: Math.max(document.documentElement.scrollHeight, document.body.scrollHeight, window.innerHeight),
+          scale: 1
+        });
+
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/webp", 0.82));
+        if (!blob) throw new Error("frame_blob_failed");
+
+        await adminFetch("/api/admin/live-region/frame", {
+          method: "POST",
+          headers: { "Content-Type": blob.type },
+          body: blob
+        });
+
+        LIVE_REGION_CHANNEL?.postMessage({ type: "live-region-frame" });
+        setStatus(`Streaming ${Math.round(state.rect.width)}×${Math.round(state.rect.height)} px`);
+      } catch (err) {
+        setStatus(`Live error: ${err.message}`);
+      }
+    };
+
+    await sendFrame();
+    state.timer = setInterval(sendFrame, 900);
+  });
+
+  ui.overlay.addEventListener("mousedown", (event) => {
+    state.startClientX = event.clientX;
+    state.startClientY = event.clientY;
+    ui.selection.style.display = "block";
+    ui.selection.style.left = `${event.clientX}px`;
+    ui.selection.style.top = `${event.clientY}px`;
+    ui.selection.style.width = "0px";
+    ui.selection.style.height = "0px";
+  });
+
+  ui.overlay.addEventListener("mousemove", (event) => {
+    if (!state.selecting) return;
+    const left = Math.min(state.startClientX, event.clientX);
+    const top = Math.min(state.startClientY, event.clientY);
+    const width = Math.abs(event.clientX - state.startClientX);
+    const height = Math.abs(event.clientY - state.startClientY);
+
+    ui.selection.style.display = "block";
+    ui.selection.style.left = `${left}px`;
+    ui.selection.style.top = `${top}px`;
+    ui.selection.style.width = `${width}px`;
+    ui.selection.style.height = `${height}px`;
+  });
+
+  ui.overlay.addEventListener("mouseup", async (event) => {
+    if (!state.selecting) return;
+
+    const left = Math.min(state.startClientX, event.clientX);
+    const top = Math.min(state.startClientY, event.clientY);
+    const width = Math.abs(event.clientX - state.startClientX);
+    const height = Math.abs(event.clientY - state.startClientY);
+
+    endSelection();
+
+    if (width < 40 || height < 40) {
+      ui.selection.style.display = "none";
+      setStatus("Region too small");
+      return;
+    }
+
+    state.rect = {
+      x: Math.round(left + window.scrollX),
+      y: Math.round(top + window.scrollY),
+      width: Math.round(width),
+      height: Math.round(height)
+    };
+
+    drawSelectionFromDocumentRect();
+    await saveRegion();
+    setStatus(`Region saved ${state.rect.width}×${state.rect.height} px`);
+  });
+
+  window.addEventListener("scroll", drawSelectionFromDocumentRect, { passive: true });
+  window.addEventListener("resize", drawSelectionFromDocumentRect);
+
+  await loadExistingRegion();
+})();
+</script>
 </body>
 </html>

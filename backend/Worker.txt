@@ -46,7 +46,7 @@ export default {
     }
 
     try {
-      const WORKER_BUILD = "emoji-hotfix-3";
+      const WORKER_BUILD = "direct-chat-1";
 
       if (url.pathname === "/api/health") {
         return json({ ok: true, build: WORKER_BUILD }, 200, ALLOWED_ORIGIN);
@@ -1709,7 +1709,84 @@ export default {
         ).bind(sessionId, session.user_id).run();
         return json({ ok: true }, 200, ALLOWED_ORIGIN);
       }
-            // ── GAMES: MATCHMAKING + ONLINE SESSIONS ──────────────────────
+      // ── GAMES PRESENCE: heartbeat ──────────────────────────────────
+      if (url.pathname === "/api/games/heartbeat" && request.method === "POST") {
+        const authUser = await requireAuthUserId(request, env, ALLOWED_ORIGIN);
+        if (authUser.error) return authUser.error;
+
+        let activity = "Browsing home";
+        try {
+          const body = await request.json();
+          const page = String(body.page || "").trim().toLowerCase();
+
+          if (page === "games") {
+            activity = "Browsing games";
+          } else if (page) {
+            activity = "Browsing " + page.charAt(0).toUpperCase() + page.slice(1);
+          }
+        } catch (e) {}
+
+        const userRow = await env.dbagora.prepare(
+          `SELECT
+            COALESCE(NULLIF(TRIM(display_name), ''), substr(email, 1, instr(email, '@') - 1)) AS display_name,
+            COALESCE(picture_url, '') AS picture_url
+          FROM users WHERE id = ?1`
+        ).bind(authUser.userId).first();
+
+        const now = new Date().toISOString();
+        await env.dbagora.prepare(
+          `INSERT INTO games_presence (user_id, display_name, picture_url, activity, last_seen_at)
+           VALUES (?1, ?2, ?3, ?4, ?5)
+           ON CONFLICT(user_id) DO UPDATE SET
+             display_name = excluded.display_name,
+             picture_url = excluded.picture_url,
+             activity = excluded.activity,
+             last_seen_at = excluded.last_seen_at`
+        ).bind(
+          authUser.userId,
+          userRow?.display_name || "User",
+          userRow?.picture_url || "",
+          activity,
+          now
+        ).run();
+
+        return json({ ok: true }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── GAMES PRESENCE: online list ────────────────────────────────
+      if (url.pathname === "/api/games/online" && request.method === "GET") {
+        const token = getRequestToken(request);
+        const session = token ? await env.dbagora.prepare(
+          "SELECT user_id FROM sessions WHERE token = ?1 AND expires_at > ?2"
+        ).bind(token, new Date().toISOString()).first() : null;
+        const currentUserId = session?.user_id || null;
+
+        const cutoff = new Date(Date.now() - 15 * 1000).toISOString();
+
+        await env.dbagora.prepare(
+          "DELETE FROM games_presence WHERE last_seen_at < ?1"
+        ).bind(cutoff).run();
+
+        const { results } = await env.dbagora.prepare(
+          `SELECT user_id, display_name, picture_url, activity
+          FROM games_presence
+          WHERE last_seen_at >= ?1
+            AND (?2 IS NULL OR user_id != ?2)
+          ORDER BY last_seen_at DESC`
+        ).bind(cutoff, currentUserId).all();
+
+        const users = (results || []).map(r => ({
+          user_id: r.user_id,
+          username: r.display_name,
+          avatar: r.picture_url || null,
+          activity: r.activity,
+          playing: String(r.activity || "").toLowerCase().startsWith("playing ")
+        }));
+
+        return json({ ok: true, users }, 200, ALLOWED_ORIGIN);
+      }
+
+      // ── GAMES: MATCHMAKING + ONLINE SESSIONS ──────────────────────
       if (url.pathname === "/api/games/matchmaking/join" && request.method === "POST") {
         const body = await request.json().catch(() => ({}));
         const gameKey = String(body.game_key || "").trim().slice(0, 80);
@@ -2197,8 +2274,8 @@ export default {
         if (!session) return json({ ok: false, error: "invalid_token" }, 401, ALLOWED_ORIGIN);
 
         const rows = await env.dbagora.prepare(
-          `SELECT id, type, message, post_id, comment_id, proof_images_json, read, created_at
-           FROM notifications WHERE user_id = ?1
+          `SELECT id, type, message, post_id, comment_id, proof_images_json, read, created_at, direct_thread_id
+          FROM notifications WHERE user_id = ?1
            ORDER BY created_at DESC LIMIT 50`
         ).bind(session.user_id).all();
 
@@ -2407,6 +2484,14 @@ export default {
       return row;
     }
 
+    async function cleanupExpiredDirects(env) {
+      const now = new Date().toISOString();
+
+      await env.dbagora.prepare(
+        "UPDATE direct_threads SET deleted_at = ?1 WHERE deleted_at IS NULL AND expires_at <= ?1"
+      ).bind(now).run();
+    }
+
       // GET /api/admin/spam — lista spam flags
       if (url.pathname === "/api/admin/spam" && request.method === "GET") {
         const adm = await requireAdmin(request);
@@ -2440,7 +2525,349 @@ export default {
         `).all();
         return json({ ok: true, flags: rows.results || [] }, 200, ALLOWED_ORIGIN);
       }
+      
+      //POST /api/directs/open
 
+      if (url.pathname === "/api/directs/open" && request.method === "POST") {
+        const authUser = await requireAuthUserId(request, env, ALLOWED_ORIGIN);
+        if (authUser.error) return authUser.error;
+
+        await cleanupExpiredDirects(env);
+
+        const body = await request.json().catch(() => ({}));
+        const targetUserId = String(body.target_user_id || "").trim();
+        const me = authUser.userId;
+
+        if (!targetUserId) return json({ ok: false, error: "missing_target_user_id" }, 400, ALLOWED_ORIGIN);
+        if (targetUserId === me) return json({ ok: false, error: "cannot_direct_self" }, 400, ALLOWED_ORIGIN);
+
+        const targetUser = await env.dbagora.prepare(
+          "SELECT id FROM users WHERE id = ?1 AND COALESCE(banned,0) = 0"
+        ).bind(targetUserId).first();
+        if (!targetUser) return json({ ok: false, error: "target_not_found" }, 404, ALLOWED_ORIGIN);
+
+        const existing = await env.dbagora.prepare(
+          `SELECT id, created_at, updated_at, expires_at
+          FROM direct_threads
+          WHERE deleted_at IS NULL
+            AND ((user_a_id = ?1 AND user_b_id = ?2) OR (user_a_id = ?2 AND user_b_id = ?1))
+            AND expires_at > ?3
+          ORDER BY updated_at DESC
+          LIMIT 1`
+        ).bind(me, targetUserId, new Date().toISOString()).first();
+
+        if (existing) {
+          return json({ ok: true, thread: existing }, 200, ALLOWED_ORIGIN);
+        }
+
+        const now = new Date().toISOString();
+        const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+        const id = crypto.randomUUID();
+
+        await env.dbagora.prepare(
+          `INSERT INTO direct_threads (id, user_a_id, user_b_id, created_at, updated_at, expires_at, deleted_at)
+          VALUES (?1, ?2, ?3, ?4, ?4, ?5, NULL)`
+        ).bind(id, me, targetUserId, now, expiresAt).run();
+
+        return json({
+          ok: true,
+          thread: { id, created_at: now, updated_at: now, expires_at: expiresAt }
+        }, 200, ALLOWED_ORIGIN);
+      }
+
+      const DIRECT_EVENT_PREFIX = "[[AGORA_DIRECT_EVENT]]";
+      const DIRECT_GAME_MAP = {
+        othello: { label: "Othello", url: "othello.html" },
+        tris9:   { label: "Tris ×9",  url: "tris9.html" },
+        go:      { label: "Go",       url: "go.html" },
+        chess:   { label: "Chess",    url: "chess.html" },
+        gungi:   { label: "Gungi",    url: "gungi.html" }
+      };
+
+      function encodeDirectEvent(payload) {
+        return DIRECT_EVENT_PREFIX + JSON.stringify(payload);
+      }
+
+      function decodeDirectEvent(raw) {
+        const text = String(raw || "");
+        if (!text.startsWith(DIRECT_EVENT_PREFIX)) return null;
+        try {
+          return JSON.parse(text.slice(DIRECT_EVENT_PREFIX.length));
+        } catch (_) {
+          return null;
+        }
+      }
+
+      async function getDirectUserInfo(env, userId) {
+        return await env.dbagora.prepare(
+          `SELECT
+            id,
+            COALESCE(NULLIF(TRIM(display_name),''), CASE WHEN instr(email,'@')>1 THEN substr(email,1,instr(email,'@')-1) ELSE email END) AS display_name,
+            COALESCE(picture_url,'') AS picture_url
+          FROM users
+          WHERE id = ?1
+          LIMIT 1`
+        ).bind(userId).first();
+      }
+
+      async function getDirectThreadForUser(env, threadId, userId) {
+        const thread = await env.dbagora.prepare(
+          `SELECT id, user_a_id, user_b_id, expires_at, deleted_at
+           FROM direct_threads
+           WHERE id = ?1
+           LIMIT 1`
+        ).bind(threadId).first();
+
+        if (!thread || thread.deleted_at) {
+          return { error: json({ ok: false, error: "not_found" }, 404, ALLOWED_ORIGIN) };
+        }
+        if (thread.user_a_id !== userId && thread.user_b_id !== userId) {
+          return { error: json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN) };
+        }
+        if (new Date(thread.expires_at).getTime() <= Date.now()) {
+          return { error: json({ ok: false, error: "thread_expired" }, 410, ALLOWED_ORIGIN) };
+        }
+
+        return {
+          thread,
+          otherUserId: thread.user_a_id === userId ? thread.user_b_id : thread.user_a_id
+        };
+      }
+
+      async function insertDirectMessageAndMaybeNotify(env, threadId, senderUserId, recipientUserId, rawBody, notificationMessage = null) {
+        const now = new Date().toISOString();
+        const msgId = crypto.randomUUID();
+
+        await env.dbagora.prepare(
+          `INSERT INTO direct_messages (id, thread_id, sender_user_id, recipient_user_id, body, created_at, read)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)`
+        ).bind(msgId, threadId, senderUserId, recipientUserId, rawBody, now).run();
+
+        await env.dbagora.prepare(
+          "UPDATE direct_threads SET updated_at = ?1 WHERE id = ?2"
+        ).bind(now, threadId).run();
+
+        if (notificationMessage) {
+          await env.dbagora.prepare(
+            `INSERT INTO notifications (id, user_id, type, message, post_id, comment_id, proof_images_json, read, created_at, direct_thread_id)
+             VALUES (?1, ?2, 'direct_message', ?3, NULL, NULL, '[]', 0, ?4, ?5)`
+          ).bind(
+            crypto.randomUUID(),
+            recipientUserId,
+            notificationMessage,
+            now,
+            threadId
+          ).run();
+        }
+
+        return {
+          id: msgId,
+          thread_id: threadId,
+          sender_user_id: senderUserId,
+          recipient_user_id: recipientUserId,
+          body: rawBody,
+          created_at: now,
+          read: 0
+        };
+      }
+
+      //GET /api/directs/:id/messages
+      const directMessagesMatch = url.pathname.match(/^\/api\/directs\/([^/]+)\/messages$/);
+      if (directMessagesMatch && request.method === "GET") {
+        const authUser = await requireAuthUserId(request, env, ALLOWED_ORIGIN);
+        if (authUser.error) return authUser.error;
+
+        await cleanupExpiredDirects(env);
+
+        const threadId = decodeURIComponent(directMessagesMatch[1] || "").trim();
+        const directCtx = await getDirectThreadForUser(env, threadId, authUser.userId);
+        if (directCtx.error) return directCtx.error;
+
+        const rows = await env.dbagora.prepare(
+          `SELECT id, thread_id, sender_user_id, recipient_user_id, body, created_at, read
+           FROM direct_messages
+           WHERE thread_id = ?1
+           ORDER BY created_at ASC`
+        ).bind(threadId).all();
+
+        await env.dbagora.prepare(
+          "UPDATE direct_messages SET read = 1 WHERE thread_id = ?1 AND recipient_user_id = ?2"
+        ).bind(threadId, authUser.userId).run();
+
+        const otherUser = await getDirectUserInfo(env, directCtx.otherUserId);
+
+        return json({
+          ok: true,
+          thread: {
+            id: directCtx.thread.id,
+            expires_at: directCtx.thread.expires_at,
+            other_user: otherUser ? {
+              id: otherUser.id,
+              display_name: otherUser.display_name,
+              picture_url: otherUser.picture_url
+            } : null
+          },
+          messages: rows.results || []
+        }, 200, ALLOWED_ORIGIN);
+      }
+
+      //POST /api/directs/:id/messages
+      if (directMessagesMatch && request.method === "POST") {
+        const authUser = await requireAuthUserId(request, env, ALLOWED_ORIGIN);
+        if (authUser.error) return authUser.error;
+
+        await cleanupExpiredDirects(env);
+
+        const threadId = decodeURIComponent(directMessagesMatch[1] || "").trim();
+        const body = await request.json().catch(() => ({}));
+        const text = String(body.body || "").trim();
+
+        if (!text) return json({ ok: false, error: "empty_message" }, 400, ALLOWED_ORIGIN);
+        if (text.length > 1000) return json({ ok: false, error: "message_too_long" }, 400, ALLOWED_ORIGIN);
+
+        const directCtx = await getDirectThreadForUser(env, threadId, authUser.userId);
+        if (directCtx.error) return directCtx.error;
+
+        const sender = await getDirectUserInfo(env, authUser.userId);
+        const message = await insertDirectMessageAndMaybeNotify(
+          env,
+          threadId,
+          authUser.userId,
+          directCtx.otherUserId,
+          text,
+          `${sender?.display_name || "Someone"} sent you a direct message.`
+        );
+
+        return json({ ok: true, message }, 200, ALLOWED_ORIGIN);
+      }
+
+      //POST /api/directs/:id/invite
+      const directInviteMatch = url.pathname.match(/^\/api\/directs\/([^/]+)\/invite$/);
+      if (directInviteMatch && request.method === "POST") {
+        const authUser = await requireAuthUserId(request, env, ALLOWED_ORIGIN);
+        if (authUser.error) return authUser.error;
+
+        await cleanupExpiredDirects(env);
+
+        const threadId = decodeURIComponent(directInviteMatch[1] || "").trim();
+        const body = await request.json().catch(() => ({}));
+        const gameKey = String(body.game_key || "").trim().toLowerCase();
+        const game = DIRECT_GAME_MAP[gameKey];
+
+        if (!game) return json({ ok: false, error: "invalid_game_key" }, 400, ALLOWED_ORIGIN);
+
+        const directCtx = await getDirectThreadForUser(env, threadId, authUser.userId);
+        if (directCtx.error) return directCtx.error;
+
+        const sender = await getDirectUserInfo(env, authUser.userId);
+        const inviteEvent = {
+          kind: "game_invite",
+          invite_id: crypto.randomUUID(),
+          game_key: gameKey,
+          game_label: game.label,
+          game_url: game.url,
+          status: "pending"
+        };
+
+        const message = await insertDirectMessageAndMaybeNotify(
+          env,
+          threadId,
+          authUser.userId,
+          directCtx.otherUserId,
+          encodeDirectEvent(inviteEvent),
+          `${sender?.display_name || "Someone"} challenged you to ${game.label}.`
+        );
+
+        return json({
+          ok: true,
+          invite: inviteEvent,
+          message
+        }, 200, ALLOWED_ORIGIN);
+      }
+
+      //POST /api/directs/:id/invite/respond
+      const directInviteRespondMatch = url.pathname.match(/^\/api\/directs\/([^/]+)\/invite\/respond$/);
+      if (directInviteRespondMatch && request.method === "POST") {
+        const authUser = await requireAuthUserId(request, env, ALLOWED_ORIGIN);
+        if (authUser.error) return authUser.error;
+
+        await cleanupExpiredDirects(env);
+
+        const threadId = decodeURIComponent(directInviteRespondMatch[1] || "").trim();
+        const body = await request.json().catch(() => ({}));
+        const inviteId = String(body.invite_id || "").trim();
+        const action = String(body.action || "").trim().toLowerCase();
+
+        if (!inviteId) return json({ ok: false, error: "missing_invite_id" }, 400, ALLOWED_ORIGIN);
+        if (action !== "accepted" && action !== "declined") {
+          return json({ ok: false, error: "invalid_action" }, 400, ALLOWED_ORIGIN);
+        }
+
+        const directCtx = await getDirectThreadForUser(env, threadId, authUser.userId);
+        if (directCtx.error) return directCtx.error;
+
+        const rows = await env.dbagora.prepare(
+          `SELECT id, sender_user_id, recipient_user_id, body, created_at
+           FROM direct_messages
+           WHERE thread_id = ?1
+           ORDER BY created_at ASC`
+        ).bind(threadId).all();
+
+        let inviteMessage = null;
+        let existingResponse = null;
+
+        for (const row of (rows.results || [])) {
+          const ev = decodeDirectEvent(row.body);
+          if (!ev) continue;
+
+          if (ev.kind === "game_invite" && ev.invite_id === inviteId) {
+            inviteMessage = { row, event: ev };
+          }
+          if (ev.kind === "game_invite_response" && ev.invite_id === inviteId) {
+            existingResponse = { row, event: ev };
+          }
+        }
+
+        if (!inviteMessage) {
+          return json({ ok: false, error: "invite_not_found" }, 404, ALLOWED_ORIGIN);
+        }
+        if (existingResponse) {
+          return json({ ok: false, error: "invite_already_answered" }, 409, ALLOWED_ORIGIN);
+        }
+        if (inviteMessage.row.recipient_user_id !== authUser.userId) {
+          return json({ ok: false, error: "forbidden" }, 403, ALLOWED_ORIGIN);
+        }
+
+        const responder = await getDirectUserInfo(env, authUser.userId);
+
+        const responseEvent = {
+          kind: "game_invite_response",
+          invite_id: inviteId,
+          game_key: inviteMessage.event.game_key,
+          game_label: inviteMessage.event.game_label,
+          game_url: inviteMessage.event.game_url,
+          response: action,
+          invite_message_id: inviteMessage.row.id
+        };
+
+        const message = await insertDirectMessageAndMaybeNotify(
+          env,
+          threadId,
+          authUser.userId,
+          inviteMessage.row.sender_user_id,
+          encodeDirectEvent(responseEvent),
+          action === "accepted"
+            ? `${responder?.display_name || "Someone"} accepted your ${inviteMessage.event.game_label} challenge.`
+            : null
+        );
+
+        return json({
+          ok: true,
+          response: action,
+          message
+        }, 200, ALLOWED_ORIGIN);
+      }
+      
       // POST /api/admin/spam/:id/dismiss — ignora spam flag
       if (url.pathname.startsWith("/api/admin/spam/") && url.pathname.endsWith("/dismiss") && request.method === "POST") {
         const adm = await requireAdmin(request);
@@ -3281,7 +3708,7 @@ const CENSOR_WORDS = {
       "cazzo","merda","stronzo","puttana","troia","vaffanculo","bastardo","coglione","figa","minchia","porca","porco","culo","scemo","idiota","imbecille","deficiente","cretino","pirla","testa di cazzo",
   "fuck","shit","bitch","asshole","bastard","dick","pussy","motherfucker","cunt","slut","whore","dumbass","jackass","dipshit","bullshit","son of a bitch","prick","twat","wanker","bloody hell",
   "puta","mierda","gilipollas","cabron","coño","hijo de puta","pendejo","verga","idiota","estupido","imbecil","perra","zorra","culo","chingar","chingada","joder","maricon","boludo","pelotudo",
-  "pute","merde","connard","salope","encule","bordel","con","bite","couille","fils de pute","abruti","debile","idiot","chiant","putain","nique","batard","clochard","crevard","enfoire",
+  "pute","merde","connard","salope","encule","bordel","bite","couille","fils de pute","abruti","debile","idiot","chiant","putain","nique","batard","clochard","crevard","enfoire",
   "scheisse","arschloch","hure","mist","ficken","wichser","hurensohn","idiot","trottel","spast","dummkopf","verdammt","kacke","penner","schwein","arsch","blodmann","depp","lusche","vollidiot",
     "كس","شرموطة","قحبة","زب","طيز","ابن الكلب","ابن القحبة","كلب","حمار","غبي","تافه","سافل","حقير","لعنة","تباً","وسخ","قذر","منحط","قليل ادب","عديم الشرف",
   "操","妈的","他妈的","傻逼","牛逼","傻屌","混蛋","贱人","王八蛋","狗屎","白痴","蠢货","死鬼","垃圾","恶心","去死","滚蛋","废物","脑残","下贱",
