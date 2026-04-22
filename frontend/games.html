@@ -1303,8 +1303,9 @@ function renderInviteMessage(m, ev, responseEv, mine) {
     mine ? "Sent" : "Pending";
 
   const showActions = !mine && status === "pending";
+  const sessionParam = (responseEv?.session_id) ? "?session=" + encodeURIComponent(responseEv.session_id) : "";
   const openGameLink = status === "accepted"
-    ? `<a href="${escapeHtml(ev.game_url || (ev.game_key + ".html"))}" style="display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 12px;border-radius:999px;text-decoration:none;background:var(--brand);color:#fff;font-weight:700;">Open game</a>`
+    ? `<a href="${escapeHtml(ev.game_url || (ev.game_key + ".html"))}${sessionParam}" style="display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 12px;border-radius:999px;text-decoration:none;background:var(--brand);color:#fff;font-weight:700;">Open game</a>`
     : "";
 
   return `
@@ -1374,8 +1375,7 @@ function renderInviteResponseMessage(m, ev, mine) {
         </div>
         ${accepted ? `
           <div style="margin-top:10px;">
-            <a href="${escapeHtml(ev.game_url || (ev.game_key + ".html"))}" style="display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 12px;border-radius:999px;text-decoration:none;background:var(--brand);color:#fff;font-weight:700;">Open game</a>
-          </div>
+            <a href="${escapeHtml(ev.game_url || (ev.game_key + ".html"))}${ev.session_id ? "?session=" + encodeURIComponent(ev.session_id) : ""}" style="display:inline-flex;align-items:center;justify-content:center;height:34px;padding:0 12px;border-radius:999px;text-decoration:none;background:var(--brand);color:#fff;font-weight:700;">Open game</a>          </div>
         ` : ""}
         <div style="margin-top:8px;font-size:.72rem;color:var(--muted);text-align:right;">
           ${formatDirectTime(m.created_at)}
