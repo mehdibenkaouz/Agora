@@ -748,7 +748,34 @@ async function matchmakingTick(){ const {data}=await apiJson("/api/games/matchma
 async function syncOnlineState(){ if(!onlineMode||!onlineSessionId) return; const {data}=await apiJson(`/api/games/session/${encodeURIComponent(onlineSessionId)}`); if(!data?.ok||!data.session) return; if((data.session.version||0)!==onlineVersion){ onlineVersion=data.session.version||0; applySerializedState(data.session.state); } }
 async function pushOnlineState(){ if(!onlineMode||!onlineSessionId) return; const {data}=await apiJson(`/api/games/session/${encodeURIComponent(onlineSessionId)}/move`,{method:"POST",body: JSON.stringify({ version: onlineVersion, state: serializeGameState() })}); if(data?.ok) onlineVersion=data.version; else if(data?.error==="version_conflict"){ onlineVersion=data.version||onlineVersion; if(data.state) applySerializedState(data.state); } }
 
-// ── Controls ─────────────────────────────────────────────────────────
+// ── Direct invite: auto-join session from URL ───────────────────
+(async function joinDirectSession(){
+  const sid = new URLSearchParams(window.location.search).get("session");
+  if (!sid) return;
+  try {
+    const meRes = await apiJson("/api/me");
+    const myId = meRes.data?.user?.id;
+    if (!myId) return;
+    const { data } = await apiJson("/api/games/session/" + encodeURIComponent(sid));
+    if (!data?.ok || !data.session || data.session.status !== "active") return;
+    stopOnlineSession();
+    vsAI = false;
+    onlineMode = true;
+    onlineSessionId = data.session.id;
+    onlineVersion = data.session.version || 1;
+    mySeat = data.session.player1_id === myId ? "player1" : "player2";
+    flipped = mySeat === "player2";
+    updateSideLabels();
+    if (data.session.state) applySerializedState(data.session.state);
+    clearInterval(sessionTimer);
+    sessionTimer = setInterval(syncOnlineState, 1500);
+    document.getElementById("modeVs2P").classList.add("active");
+    document.getElementById("modeVsAI").classList.remove("active");
+    document.getElementById("aiBar").style.display = "none";
+  } catch(_) {}
+})();
+
+// ── Controls ─
 document.getElementById("restartBtn").addEventListener("click",()=>{ if(onlineMode){ startOnlineLobby(); return; } initGame(); });
 document.getElementById("flipBtn").addEventListener("click",()=>{flipped=!flipped;renderBoard();});
 document.getElementById("undoBtn").addEventListener("click",()=>{
