@@ -830,7 +830,7 @@
     <div class="section-header">
       <div class="section-title">Utenti Registrati</div>
       <div style="display:flex;gap:10px;align-items:center">
-        <input type="text" class="search-bar" id="userSearch" placeholder="Cerca email o nome..." oninput="filterUsers()" />
+          <input type="text" class="search-bar" id="userSearch" placeholder="Cerca nome..." oninput="filterUsers()" />
         <button class="refresh-btn" onclick="loadUsers()">↻ Aggiorna</button>
       </div>
     </div>
@@ -1264,13 +1264,12 @@
 
         return `<tr>
           <td>
-            <a href="account.html?user=${esc(f.email)}" target="_blank" style="color:inherit;text-decoration:none;">
-              ${esc(f.display_name || f.email)}
+            <a href="account.html?user=${esc(f.user_id)}" target="_blank" style="color:inherit;text-decoration:none;">
+              ${esc(f.display_name)}
             </a>
               ${avatarHtml(f.picture_url, f.display_name)}
               <div>
                 <div class="user-name">${esc(f.display_name)}</div>
-                <div class="user-email">${esc(f.email)}</div>
               </div>
             </div>
           </td>
@@ -1359,7 +1358,6 @@
             ${avatarHtml(u.picture_url, u.display_name)}
             <div>
               <div class="user-name">${esc(u.display_name)}</div>
-              <div class="user-email">${esc(u.email)}</div>
             </div>
           </div>
         </td>
@@ -1380,7 +1378,7 @@
 
   function filterUsers() {
     const q = document.getElementById("userSearch").value.toLowerCase();
-    renderUsers(q ? allUsers.filter(u => u.email.includes(q) || u.display_name.toLowerCase().includes(q)) : allUsers);
+    renderUsers(q ? allUsers.filter(u => u.display_name.toLowerCase().includes(q)) : allUsers);
   }
 
   // ════════════════════════════════════════════════════════
@@ -1415,13 +1413,11 @@
                 ${avatarHtml(c.complainant_picture, c.complainant_name)}
                 <div>
                   <div class="user-name">${esc(c.complainant_name)}</div>
-                  <div class="user-email">${esc(c.complainant_email)}</div>
                 </div>
               </div>
             </td>
             <td>
               <div class="user-name">${esc(c.blocker_name)}</div>
-              <div class="user-email">${esc(c.blocker_email)}</div>
             </td>
             <td><span class="badge badge-spam">Tipo ${c.block_type}</span></td>
             <td style="color:var(--muted);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis">${esc(c.block_reason || '—')}</td>
@@ -1453,7 +1449,6 @@
                 ${avatarHtml(c.complainant_picture, c.complainant_name)}
                 <div>
                   <div class="user-name">${esc(c.complainant_name)}</div>
-                  <div class="user-email">${esc(c.complainant_email)}</div>
                 </div>
               </div>
             </td>
@@ -1889,7 +1884,6 @@ const contentHtml = r.content || "";
               ${avatarHtml(null, r.reporter_name)}
               <div>
                 <div class="user-name">${esc(r.reporter_name)}</div>
-                <div class="user-email">${esc(r.reporter_email)}</div>
               </div>
             </div>
           </td>
@@ -1898,7 +1892,6 @@ const contentHtml = r.content || "";
               ${avatarHtml(r.author_picture, r.author_name)}
               <div>
                 <div class="user-name">${esc(r.author_name)}</div>
-                <div class="user-email">${esc(r.author_email)}</div>
               </div>
             </div>
           </td>
