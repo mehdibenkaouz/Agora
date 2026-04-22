@@ -821,7 +821,7 @@
   <script>
     const API_BASE  = location.hostname === "agorapolis.org" || location.hostname === "www.agorapolis.org" ? "" : "https://agora-api.convergegame.workers.dev";
     const TOKEN_KEY = "agora_logged_in";
-    const ADMIN_EMAIL = "TUAMAILQUI@example.com"; /* ← sostituisci con la tua mail admin */
+    
 
     let CURRENT_USER = null;
 
@@ -865,7 +865,7 @@
     }
 
     function isAdmin() {
-      return getCurrentUserEmail() === String(ADMIN_EMAIL).trim().toLowerCase();
+      return !!CURRENT_USER?._is_admin;
     }
 
 
@@ -1075,7 +1075,8 @@
           id:           me?.user?.id || "",
           email:        me?.user?.email || "",
           display_name: me?.user?.display_name || "",
-          picture_url:  me?.user?.picture_url || ""
+          picture_url:  me?.user?.picture_url || "",
+          _is_admin:    !!me?.user?.is_admin
         };
         accountMenuSub.textContent = CURRENT_USER.display_name || CURRENT_USER.email || "Logged in";
         menuPrimaryAction.textContent = "Logout";
@@ -1157,6 +1158,7 @@
     accountMenu.addEventListener("click", (e) => e.stopPropagation());
     menuPrimaryAction.addEventListener("click", async () => {
       if (getToken()) {
+        try { await api("/api/logout", { method: "POST" }); } catch(_) {}
         localStorage.removeItem(TOKEN_KEY);
         CURRENT_USER = null;
         await refreshMe();
@@ -1174,9 +1176,9 @@
     
       setInterval(() => {
         loadBugs();
-        loadReleases();
         loadLiveAdminRegion();
-      }, 2500);
+      }, 10000);
+      setInterval(loadReleases, 60000);
     });
   </script>
 </body>
