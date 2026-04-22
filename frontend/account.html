@@ -3276,7 +3276,13 @@ async function saveProfileManually(){
     if (profileStatus) profileStatus.textContent = "Profile saved.";
   } catch (err){
     console.error(err);
-    if (profileStatus) profileStatus.textContent = "Save failed.";
+    const reason = String(err.message || "");
+    const msgs = {
+      display_name_taken: "Nome utente già in uso.",
+      invalid_display_name: "Nome utente non valido.",
+      invalid_picture_url: "Immagine profilo non valida."
+    };
+    if (profileStatus) profileStatus.textContent = msgs[reason] || ("Save failed: " + reason);
   }
 }
 
